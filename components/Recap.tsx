@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { fmtDist, fmtDuration } from "@/lib/geo";
 import { projectTrack, summarize } from "@/lib/stats";
 import type { Fix, SavedYonder } from "@/lib/types";
+import ShareControl from "./ShareControl";
 
 type Props = {
   saved: SavedYonder;
@@ -171,6 +172,7 @@ export default function Recap({
       </div>
 
       <div className="flex flex-col gap-2 mt-auto">
+        <ShareControl saved={saved} />
         {(onDoAgain || onSaveForLater) && (
           <div className="flex items-center gap-2">
             {onDoAgain && (

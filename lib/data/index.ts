@@ -7,3 +7,8 @@ export * from "./favourites";
 export * from "./maps";
 export * from "./saved";
 export * from "./import";
+export * from "./profiles";
+export * from "./social";
+export * from "./sharing";
+export * from "./feed";
+export * from "./settings";

@@ -1,41 +1,36 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { useAuthUser } from "./auth";
+import { DEFAULT_SETTINGS, loadSettings, saveSettings } from "./data/settings";
+import type { Settings } from "./types";
 
-const KEY = "vibe-yonder.settings.v1";
+export type { Settings };
 
-export type Settings = {
-  hideNumbers: boolean;
-};
-
-const DEFAULT: Settings = {
-  hideNumbers: false,
-};
-
+/**
+ * Dual-mode settings. hideNumbers + privacy prefs persist to the cloud `settings`
+ * table when signed in (so they follow you across devices), and mirror to
+ * localStorage for instant/offline reads on the walk. Falls back to localStorage
+ * for guests.
+ */
 export function useSettings() {
-  const [settings, setSettings] = useState<Settings>(DEFAULT);
+  const { user } = useAuthUser();
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = window.localStorage.getItem(KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<Settings>;
-        setSettings({ ...DEFAULT, ...parsed });
-      }
-    } catch {
-      // ignore corrupt persisted state
-    }
-  }, []);
+    let cancelled = false;
+    void loadSettings().then((s) => {
+      if (!cancelled) setSettings(s);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
-  const update = useCallback((next: Partial<Settings>) => {
+  const update = useCallback((patch: Partial<Settings>) => {
     setSettings((s) => {
-      const merged = { ...s, ...next };
-      try {
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem(KEY, JSON.stringify(merged));
-        }
-      } catch {}
-      return merged;
+      const next = { ...s, ...patch };
+      void saveSettings(next);
+      return next;
     });
   }, []);
 

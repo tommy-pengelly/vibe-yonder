@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { importGuestData } from "./data";
+import { getMyProfile, importGuestData } from "./data";
 import { getSupabase, isSupabaseConfigured } from "./supabase/client";
 import type { AuthUser } from "./types";
 
@@ -19,27 +19,35 @@ export function useAuthUser(): {
       return;
     }
     let cancelled = false;
+
+    const apply = (u: { id: string; email?: string | null } | null) => {
+      setUser(u ? { id: u.id, email: u.email ?? undefined } : null);
+      if (!u) return;
+      // Fold any guest data into the account (module-guarded), then hydrate the
+      // social identity (username/avatar) from the profile row.
+      void importGuestData();
+      void getMyProfile().then((p) => {
+        if (!p || cancelled) return;
+        setUser((prev) =>
+          prev
+            ? {
+                ...prev,
+                username: p.username,
+                displayName: p.displayName,
+                avatarUrl: p.avatarUrl,
+              }
+            : prev,
+        );
+      });
+    };
+
     sb.auth.getSession().then(({ data }) => {
       if (cancelled) return;
-      const u = data.session?.user;
-      setUser(
-        u
-          ? { id: u.id, email: u.email ?? undefined }
-          : null,
-      );
+      apply(data.session?.user ?? null);
       setLoading(false);
-      // Fold any guest data into the account once a session is present. The
-      // call is module-guarded, so concurrent callers run it at most once.
-      if (u) void importGuestData();
     });
     const { data: sub } = sb.auth.onAuthStateChange((_event, session) => {
-      const u = session?.user;
-      setUser(
-        u
-          ? { id: u.id, email: u.email ?? undefined }
-          : null,
-      );
-      if (u) void importGuestData();
+      apply(session?.user ?? null);
     });
     return () => {
       cancelled = true;

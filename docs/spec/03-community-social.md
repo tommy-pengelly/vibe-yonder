@@ -6,6 +6,8 @@ Two rules that keep it on-brand (from CLAUDE.md): **you share places, not routes
 
 Doc series: 1. Solo MVP · 2. Account & History · **3. Community & Social** ← here.
 
+> **Status (Social MVP shipped).** Built: usernames + public profiles (`/u/[username]`), asymmetric follow, per-yonder visibility via an obfuscated `shared_yonders` copy (the precise track stays owner-only), real Mine · Following · Community feeds, shared-yonder view (`/yonder/[id]`), Load / Save / Duplicate, grubs, privacy zones + trace obfuscation (`lib/privacy.ts`), and block/report. The data layer lives in `lib/data/*` (`profiles`, `social`, `sharing`, `feed`, `settings`). **Deferred:** private accounts + follow-request approval (schema supports it via `status`/`is_private`), notifications, a moderation dashboard, richer Community search, and full followers/following list pages.
+
 ---
 
 ## What "sharing a yonder" means

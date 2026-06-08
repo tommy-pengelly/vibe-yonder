@@ -40,6 +40,7 @@ Metrics serve the story; they are not the point. The app offers a **"hide the nu
 | a **yonder** (the *activity* — a walk you do/did); "to yonder", "you yondered 32×" | a walk / a run / a workout |
 | a **map** (the *plan* — a saved, reusable, shareable set of places to yonder); "make a map", "yonder this map", "your maps" | a list / a collection / a route / an itinerary |
 | **Yondered** (the wander multiplier, e.g. `32×`) | wander factor |
+| a **grub** (the one-tap kudos on a shared yonder); "grub it" | like / kudos / heart (in the social feed) |
 | **Direct** (straight-line start→finish) | (the idiom "as the crow flies" is fine in Explain copy only) |
 | **scope** (the full-bleed view), **the dot** (you), **the marker / directional head** | minimap / radar / arrow |
 | **places seen**, **explore**, **wander** | — |
@@ -83,7 +84,11 @@ Guest-first. Active walk is a full-screen takeover (no nav). Membership is light
                                        "Yonder this map".
 /favourites                          — saved places, each can start a yonder.
 /saved                               — save-for-later bookmarks; tap to yonder.
+/u/[username]                        — public profile: shared yonders, exploration stats, follow.
+/yonder/[id]                         — a shared yonder (obfuscated): grub, Save, Yonder this, report.
 ```
+
+**Privacy invariant (Doc 3).** The precise `yonders.track` is owner-only — there is no public/followers read path on `yonders`. Sharing publishes an *obfuscated copy* into `shared_yonders` (home zone removed, start/finish trimmed, coordinates stripped to a 0–100 memento). You share **places + a memento, never a route**. Grubs are kudos; there are no comments and no leaderboards.
 
 Nav: a **Feed · ⊕ · Me** bottom bar (Strava-shaped; the centre ⊕ launches a yonder). The active walk is a full takeover with no nav. Auth is a **contextual sheet**, never a page; on sign-up, import the guest's local yonders.
 

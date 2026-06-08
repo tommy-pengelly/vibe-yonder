@@ -105,5 +105,60 @@ export type SavedYonder = {
 export type AuthUser = {
   id: string;
   email?: string;
+  username?: string;
   displayName?: string;
+  avatarUrl?: string;
+};
+
+// ----- Social (Doc 3) -----
+
+export type Visibility = "private" | "followers" | "public";
+
+export type Profile = {
+  id: string;
+  username: string;
+  displayName?: string;
+  bio?: string;
+  avatarUrl?: string;
+  isPrivate: boolean;
+};
+
+/** A shared yonder as the Feed / profile cards consume it (obfuscated copy). */
+export type FeedYonder = {
+  id: string;
+  userId: string;
+  who: string; // display name, falls back to @username
+  handle: string; // @username
+  avatarUrl?: string;
+  when: string; // relative time, e.g. "2h ago"
+  caption: string | null;
+  area: string; // vague "near X", never coordinates
+  walked: number;
+  mins: number;
+  places: number;
+  yondered: number;
+  trace: number[][]; // obfuscated normalized 0–100 memento
+  destinations: Destination[]; // the shared places (to "Yonder this")
+  grubs: number;
+  grubbed: boolean;
+};
+
+/** A public map (collection) as the Community cards consume it. */
+export type FeedMap = {
+  id: string;
+  name: string;
+  who: string; // @username of author
+  places: number;
+  grubs: number;
+  grubbed: boolean;
+  destinations: Destination[];
+  previewDots: number[][]; // place scatter in 0–100 for the card preview
+};
+
+export type FollowCounts = { followers: number; following: number };
+
+export type Settings = {
+  hideNumbers: boolean;
+  defaultVisibility: Visibility;
+  privacyZone: { lat: number; lon: number; radiusM: number } | null;
 };
