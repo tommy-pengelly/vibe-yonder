@@ -1,5 +1,6 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { haversine } from "@/lib/geo";
 import { externalDirectionsUrl } from "@/lib/maps";
 import type { Destination, Fix, ListJourney } from "@/lib/types";
 import Scope from "./Scope";
@@ -16,14 +17,15 @@ type Props = {
   paused: boolean;
   geoError: string | null;
   mpp: number;
+  hideNumbers: boolean;
+  onToggleHideNumbers: () => void;
   onPause: () => void;
   onResume: () => void;
   onFinish: () => void;
   onDiscard: () => void;
   onAdvanceJourney: () => void;
+  onCalibrate: () => void;
 };
-
-import { haversine } from "@/lib/geo";
 
 const NEAR_WAYPOINT_M = 30;
 
@@ -38,14 +40,15 @@ export default function WalkScreen({
   paused,
   geoError,
   mpp,
+  hideNumbers,
+  onToggleHideNumbers,
   onPause,
   onResume,
   onFinish,
   onDiscard,
   onAdvanceJourney,
+  onCalibrate,
 }: Props) {
-  const [headingUp, setHeadingUp] = useState(false);
-
   const waypointLabel = useMemo(() => {
     if (!journey) return null;
     return `Waypoint ${journey.activeIndex + 1} of ${journey.list.items.length}`;
@@ -60,15 +63,17 @@ export default function WalkScreen({
   const isLastWaypoint =
     journey != null && journey.activeIndex === journey.list.items.length - 1;
 
+  const needsCalibration = position != null && heading == null;
+
   return (
     <div className="fixed inset-0 flex flex-col">
       <Scope
         position={position}
         heading={heading}
-        headingUp={headingUp}
         track={track}
         destination={destination}
         mpp={mpp}
+        hideNumbers={hideNumbers}
       />
 
       <header className="relative z-10 flex items-start justify-between gap-3 px-5 pt-6">
@@ -84,22 +89,16 @@ export default function WalkScreen({
         </div>
         <button
           type="button"
-          onClick={() => setHeadingUp((v) => !v)}
-          disabled={heading == null}
-          aria-label="Toggle orientation"
-          title={
-            heading == null
-              ? "No compass available"
-              : headingUp
-                ? "Heading-up"
-                : "North-up"
-          }
-          className="size-10 rounded-full border border-[var(--border)] bg-[var(--surface)]/40 backdrop-blur-sm flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-30"
+          onClick={onToggleHideNumbers}
+          aria-label={hideNumbers ? "Show numbers" : "Hide numbers"}
+          title={hideNumbers ? "Show numbers" : "Hide numbers"}
+          className="size-9 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]"
         >
-          <OrientationIcon
-            className="w-4 h-4"
-            headingUp={headingUp && heading != null}
-          />
+          {hideNumbers ? (
+            <EyeOffIcon className="w-4 h-4" />
+          ) : (
+            <EyeIcon className="w-4 h-4" />
+          )}
         </button>
       </header>
 
@@ -108,6 +107,19 @@ export default function WalkScreen({
           <p className="text-center text-xs text-[var(--muted)]">
             Searching for signal…
           </p>
+        )}
+
+        {needsCalibration && (
+          <div className="self-center text-center text-xs text-[var(--muted)] max-w-xs">
+            Wave the phone in a figure-8 to calibrate the compass.
+            <button
+              type="button"
+              onClick={onCalibrate}
+              className="block mx-auto mt-2 text-[var(--accent)] hover:opacity-80"
+            >
+              Tap to ask permission again
+            </button>
+          </div>
         )}
 
         {nearActiveWaypoint && (
@@ -120,13 +132,15 @@ export default function WalkScreen({
           </button>
         )}
 
-        <div className="rounded-2xl bg-black/40 backdrop-blur-md border border-[var(--border)] px-5 py-4 flex flex-col gap-3">
-          <StatStrip
-            track={track}
-            startTime={startTime}
-            pausedMs={pausedMs}
-            paused={paused}
-          />
+        <div className="flex flex-col gap-3">
+          {!hideNumbers && (
+            <StatStrip
+              track={track}
+              startTime={startTime}
+              pausedMs={pausedMs}
+              paused={paused}
+            />
+          )}
 
           <div className="flex items-center justify-between gap-3 pt-1">
             {paused ? (
@@ -183,18 +197,18 @@ export default function WalkScreen({
           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-2 text-[10px] text-[var(--muted)] tabular-nums">
+        <div className="flex items-center justify-center gap-2 text-[10px] text-[var(--muted)] tabular-nums min-h-4">
           {geoError && (
             <span className="flex items-center gap-1.5">
               <span className="inline-block size-1.5 rounded-full bg-[var(--accent)]" />
               {geoError === "permission-denied"
                 ? "Location permission denied"
                 : geoError === "timeout"
-                  ? "GPS slow to acquire"
-                  : "Location unavailable"}
+                  ? "Slow signal"
+                  : "Signal unavailable"}
             </span>
           )}
-          {!geoError && position?.acc != null && (
+          {!geoError && !hideNumbers && position?.acc != null && (
             <span>±{Math.round(position.acc)} m</span>
           )}
         </div>
@@ -217,13 +231,7 @@ function PauseIcon({ className }: { className?: string }) {
   );
 }
 
-function OrientationIcon({
-  className,
-  headingUp,
-}: {
-  className?: string;
-  headingUp: boolean;
-}) {
+function EyeIcon({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -233,18 +241,26 @@ function OrientationIcon({
       className={className}
       aria-hidden="true"
     >
-      <circle cx="12" cy="12" r="9" />
-      {headingUp ? (
-        <>
-          <path d="M12 7l-3 6h6l-3-6z" fill="currentColor" />
-          <path d="M12 17v-3" />
-        </>
-      ) : (
-        <>
-          <path d="M12 3v3" />
-          <path d="M12 12l-2 4h4l-2-4z" fill="currentColor" />
-        </>
-      )}
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOffIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M3 3l18 18" />
+      <path d="M10.6 6.1A11.5 11.5 0 0112 6c6.5 0 10 7 10 7a18 18 0 01-3.2 4" />
+      <path d="M6.1 6.1A18 18 0 002 13s3.5 7 10 7a11 11 0 005.4-1.4" />
+      <path d="M9.5 9.5a3 3 0 004.2 4.2" />
     </svg>
   );
 }

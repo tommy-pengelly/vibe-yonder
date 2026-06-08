@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useHeading } from "@/hooks/useHeading";
+import { useSettings } from "@/lib/settings";
 import {
   importGuestYonders,
   persistYonder,
@@ -83,6 +84,7 @@ export default function App() {
   const { heading, requestAccess } = useHeading();
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
+  const { settings, update: updateSettings } = useSettings();
 
   const { user, configured: authConfigured } = useAuthUser();
 
@@ -554,11 +556,16 @@ export default function App() {
         paused={paused}
         geoError={error}
         mpp={mpp}
+        hideNumbers={settings.hideNumbers}
+        onToggleHideNumbers={() =>
+          updateSettings({ hideNumbers: !settings.hideNumbers })
+        }
         onPause={pause}
         onResume={resume}
         onFinish={finish}
         onDiscard={discard}
         onAdvanceJourney={advanceJourney}
+        onCalibrate={() => void requestAccess()}
       />
     );
   }
