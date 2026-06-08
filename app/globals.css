@@ -6,6 +6,8 @@
   --muted: #8a8a8a;
   --border: #1f1f1f;
   --accent: #f5a524;
+  --surface: #101010;
+  --surface-2: #161616;
 }
 
 @theme inline {
@@ -14,6 +16,7 @@
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-accent: var(--accent);
+  --color-surface: var(--surface);
   --font-sans: var(--font-geist-sans);
 }
 
@@ -23,8 +26,38 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 button {
   font: inherit;
+}
+
+.minimap-wrap {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  -webkit-mask-image: radial-gradient(
+    ellipse 72% 68% at 50% 50%,
+    #000 42%,
+    transparent 92%
+  );
+  mask-image: radial-gradient(
+    ellipse 72% 68% at 50% 50%,
+    #000 42%,
+    transparent 92%
+  );
+}
+
+.recap-trace {
+  -webkit-mask-image: radial-gradient(
+    ellipse 80% 78% at 50% 50%,
+    #000 58%,
+    transparent 96%
+  );
+  mask-image: radial-gradient(
+    ellipse 80% 78% at 50% 50%,
+    #000 58%,
+    transparent 96%
+  );
 }

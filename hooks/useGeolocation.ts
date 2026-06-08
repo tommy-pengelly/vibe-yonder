@@ -23,7 +23,6 @@ export function useGeolocation(active: boolean, onFix?: (f: Fix) => void) {
           lat: p.coords.latitude,
           lon: p.coords.longitude,
           acc: p.coords.accuracy ?? null,
-          alt: p.coords.altitude ?? null,
           t: Date.now(),
         };
         setFix(f);

@@ -1,5 +1,5 @@
-import CompassApp from "@/components/CompassApp";
+import App from "@/components/App";
 
 export default function Home() {
-  return <CompassApp />;
+  return <App />;
 }

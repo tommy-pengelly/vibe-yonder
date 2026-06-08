@@ -1,3 +1,5 @@
+import type { LatLon } from "./types";
+
 export const toRad = (d: number) => (d * Math.PI) / 180;
 export const toDeg = (r: number) => (r * 180) / Math.PI;
 
@@ -44,10 +46,45 @@ export const fmtDuration = (ms: number) => {
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
   const s = totalSec % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${s.toString().padStart(2, "0")}s`;
-  return `${s}s`;
+  if (h > 0) return `${h}h ${m.toString().padStart(2, "0")}m`;
+  return `${m}:${s.toString().padStart(2, "0")}`;
 };
+
+export const fmtPace = (minPerKm: number) =>
+  minPerKm > 0 && Number.isFinite(minPerKm)
+    ? `${Math.floor(minPerKm)}'${Math.round((minPerKm % 1) * 60)
+        .toString()
+        .padStart(2, "0")}"`
+    : "—";
+
+/** World → screen, user fixed at centre, north-up. */
+export function toScreen(
+  p: LatLon,
+  me: LatLon,
+  w: number,
+  h: number,
+  mpp: number,
+) {
+  const kx = Math.cos(toRad(me.lat));
+  const east = (p.lon - me.lon) * kx * 111320;
+  const north = (p.lat - me.lat) * 110540;
+  return { x: w / 2 + east / mpp, y: h / 2 - north / mpp };
+}
+
+/** Place an arrow on a ring of radius R at a compass bearing (north-up). */
+export function edgeArrow(
+  bearingDeg: number,
+  R: number,
+  w: number,
+  h: number,
+) {
+  const a = toRad(bearingDeg);
+  return {
+    x: w / 2 + R * Math.sin(a),
+    y: h / 2 - R * Math.cos(a),
+    rot: bearingDeg,
+  };
+}
 
 /**
  * Shortest-path angle smoother. Returns a stateful function that converts a
