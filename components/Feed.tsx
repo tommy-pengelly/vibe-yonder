@@ -38,6 +38,7 @@ export default function Feed() {
   const [following, setFollowing] = useState<FeedYonder[] | null>(null);
   const [community, setCommunity] = useState<{ yonders: FeedYonder[]; maps: FeedMap[] } | null>(null);
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState<"recent" | "popular">("recent");
 
   const [grubs, setGrubs] = useState<GrubMap>({});
   const [saved, setSaved] = useState<Record<string, boolean>>({});
@@ -83,7 +84,7 @@ export default function Feed() {
     let c = false;
     setCommunity(null);
     const handle = setTimeout(() => {
-      void loadCommunity(q).then((r) => {
+      void loadCommunity(q, sort).then((r) => {
         if (c) return;
         setCommunity(r);
         seedGrubs(r.yonders);
@@ -94,7 +95,7 @@ export default function Feed() {
       c = true;
       clearTimeout(handle);
     };
-  }, [tab, q]);
+  }, [tab, q, sort]);
 
   const requireAuth = (reason: string) => {
     if (user) return true;
@@ -259,6 +260,22 @@ export default function Feed() {
                   className="w-full bg-transparent border-b border-[var(--border)] px-1 py-2.5 text-base outline-none focus:border-[var(--accent)] placeholder:text-[var(--muted)]/60"
                   inputMode="search"
                 />
+                <div className="flex gap-2 text-xs">
+                  {(["recent", "popular"] as const).map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setSort(s)}
+                      className={`rounded-full px-3 py-1 capitalize transition-colors ${
+                        sort === s
+                          ? "bg-[var(--surface)] border border-[var(--accent)] text-[var(--accent)]"
+                          : "border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)]"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
                 {community.maps.length === 0 && community.yonders.length === 0 ? (
                   <Empty
                     title="Nothing public yet"

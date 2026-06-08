@@ -1,13 +1,20 @@
 "use client";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useAuthUser, signOut } from "@/lib/auth";
+import { amAdmin } from "@/lib/data";
 import { useSettings } from "@/lib/settings";
 import type { Visibility } from "@/lib/types";
 
 export default function SettingsView() {
   const { settings, update } = useSettings();
   const { user, configured } = useAuthUser();
+  const [admin, setAdmin] = useState(false);
+
+  useEffect(() => {
+    void amAdmin().then(setAdmin);
+  }, [user]);
 
   const setHomeZone = () => {
     if (typeof navigator === "undefined" || !navigator.geolocation) return;
@@ -115,6 +122,11 @@ export default function SettingsView() {
         {user?.username && (
           <Link href={`/u/${user.username}`} className="text-sm text-[var(--accent)] hover:opacity-80 self-start">
             View your public profile
+          </Link>
+        )}
+        {admin && (
+          <Link href="/admin" className="text-sm text-[var(--accent)] hover:opacity-80 self-start">
+            Moderation queue
           </Link>
         )}
         {user ? (

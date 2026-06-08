@@ -162,3 +162,23 @@ export type Settings = {
   defaultVisibility: Visibility;
   privacyZone: { lat: number; lon: number; radiusM: number } | null;
 };
+
+export type NotificationItem = {
+  id: string;
+  type: "follow" | "follow_request" | "grub";
+  actor: { username: string; displayName?: string } | null;
+  subjectType?: "yonder" | "map";
+  subjectId?: string;
+  when: string;
+  read: boolean;
+};
+
+export type ReportItem = {
+  id: string;
+  reporter: { username: string; displayName?: string } | null;
+  targetType: string;
+  targetId: string;
+  reason: string | null;
+  resolved: boolean;
+  when: string;
+};

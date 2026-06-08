@@ -12,3 +12,5 @@ export * from "./social";
 export * from "./sharing";
 export * from "./feed";
 export * from "./settings";
+export * from "./notifications";
+export * from "./admin";

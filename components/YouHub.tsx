@@ -1,11 +1,18 @@
 "use client";
-import { Bookmark, ChevronRight, Heart, Map as MapIcon, Settings as SettingsIcon } from "lucide-react";
+import { Bell, Bookmark, ChevronRight, Heart, Map as MapIcon, Settings as SettingsIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
 import BottomNav from "@/components/BottomNav";
+import FollowRequests from "@/components/FollowRequests";
 import { useAuthUser, signOut } from "@/lib/auth";
-import { loadFavourites, loadMaps, loadSaved, loadYonders } from "@/lib/data";
+import {
+  loadFavourites,
+  loadMaps,
+  loadSaved,
+  loadYonders,
+  unreadNotificationCount,
+} from "@/lib/data";
 import { fmtDist } from "@/lib/geo";
 import type { FavouritePlace, SavedYonder, StoredMap, StoredSaved } from "@/lib/types";
 
@@ -15,6 +22,7 @@ export default function YouHub() {
   const [favourites, setFavourites] = useState<FavouritePlace[]>([]);
   const [maps, setMaps] = useState<StoredMap[]>([]);
   const [saved, setSaved] = useState<StoredSaved[]>([]);
+  const [unread, setUnread] = useState(0);
   const [authOpen, setAuthOpen] = useState(false);
 
   useEffect(() => {
@@ -24,12 +32,14 @@ export default function YouHub() {
       loadFavourites(),
       loadMaps(),
       loadSaved(),
-    ]).then(([y, f, m, s]) => {
+      unreadNotificationCount(),
+    ]).then(([y, f, m, s, n]) => {
       if (cancelled) return;
       setYonders(y);
       setFavourites(f);
       setMaps(m);
       setSaved(s);
+      setUnread(n);
     });
     return () => {
       cancelled = true;
@@ -47,6 +57,14 @@ export default function YouHub() {
             <h1 className="font-display text-4xl tracking-tight leading-none mt-1">
               {user?.email ?? "Guest"}
             </h1>
+            {user?.username && (
+              <Link
+                href={`/u/${user.username}`}
+                className="text-xs text-[var(--accent)] hover:opacity-80 mt-1.5 inline-block"
+              >
+                @{user.username} · View profile
+              </Link>
+            )}
           </div>
           <Link
             href="/you/settings"
@@ -78,6 +96,9 @@ export default function YouHub() {
         <Row href="/favourites" Icon={Heart} label="Favourites" count={favourites.length} />
         <Row href="/maps" Icon={MapIcon} label="Maps" count={maps.length} />
         <Row href="/saved" Icon={Bookmark} label="Saved for later" count={saved.length} />
+        {user && <Row href="/you/notifications" Icon={Bell} label="Notifications" count={unread} />}
+
+        {user && <FollowRequests />}
 
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">

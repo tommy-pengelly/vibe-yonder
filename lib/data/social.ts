@@ -1,18 +1,85 @@
 "use client";
 import { getSupabase } from "../supabase/client";
-import type { FollowCounts } from "../types";
+import type { FollowCounts, Profile } from "../types";
 import { ctx } from "./ctx";
+import { getProfileById, getProfilesByIds } from "./profiles";
 
 type Subject = "yonder" | "map";
 
 // ----- Follows -----
 
-export async function follow(userId: string): Promise<void> {
+export type FollowState = "none" | "pending" | "accepted";
+
+/** Follow. Private accounts get a pending request; public accounts accept now. */
+export async function follow(userId: string): Promise<FollowState> {
   const c = await ctx();
-  if (!c || c.uid === userId) return;
+  if (!c || c.uid === userId) return "none";
+  const target = await getProfileById(userId);
+  const status: FollowState = target?.isPrivate ? "pending" : "accepted";
+  await c.sb.from("follows").upsert({ follower_id: c.uid, following_id: userId, status });
+  return status;
+}
+
+export async function followState(userId: string): Promise<FollowState> {
+  const c = await ctx();
+  if (!c) return "none";
+  const { data } = await c.sb
+    .from("follows")
+    .select("status")
+    .eq("follower_id", c.uid)
+    .eq("following_id", userId)
+    .maybeSingle();
+  return (data as { status: FollowState } | null)?.status ?? "none";
+}
+
+export async function listFollowers(userId: string): Promise<Profile[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+  const { data } = await sb
+    .from("follows")
+    .select("follower_id")
+    .eq("following_id", userId)
+    .eq("status", "accepted");
+  return getProfilesByIds((data as { follower_id: string }[] | null)?.map((f) => f.follower_id) ?? []);
+}
+
+export async function listFollowing(userId: string): Promise<Profile[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+  const { data } = await sb
+    .from("follows")
+    .select("following_id")
+    .eq("follower_id", userId)
+    .eq("status", "accepted");
+  return getProfilesByIds((data as { following_id: string }[] | null)?.map((f) => f.following_id) ?? []);
+}
+
+/** Pending follow requests awaiting MY approval (I'm the following_id). */
+export async function listFollowRequests(): Promise<Profile[]> {
+  const c = await ctx();
+  if (!c) return [];
+  const { data } = await c.sb
+    .from("follows")
+    .select("follower_id")
+    .eq("following_id", c.uid)
+    .eq("status", "pending");
+  return getProfilesByIds((data as { follower_id: string }[] | null)?.map((f) => f.follower_id) ?? []);
+}
+
+export async function acceptFollowRequest(followerId: string): Promise<void> {
+  const c = await ctx();
+  if (!c) return;
   await c.sb
     .from("follows")
-    .upsert({ follower_id: c.uid, following_id: userId, status: "accepted" });
+    .update({ status: "accepted" })
+    .eq("follower_id", followerId)
+    .eq("following_id", c.uid);
+}
+
+export async function rejectFollowRequest(followerId: string): Promise<void> {
+  const c = await ctx();
+  if (!c) return;
+  await c.sb.from("follows").delete().eq("follower_id", followerId).eq("following_id", c.uid);
 }
 
 export async function unfollow(userId: string): Promise<void> {

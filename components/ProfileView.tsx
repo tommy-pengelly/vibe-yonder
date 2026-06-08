@@ -8,8 +8,8 @@ import { useAuthUser } from "@/lib/auth";
 import {
   follow,
   followCounts,
+  followState,
   getProfileByUsername,
-  isFollowing,
   loadUserShared,
   unfollow,
   updateProfile,
@@ -26,7 +26,7 @@ export default function ProfileView({ username }: { username: string }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [counts, setCounts] = useState<FollowCounts>({ followers: 0, following: 0 });
-  const [followed, setFollowed] = useState(false);
+  const [fstate, setFstate] = useState<"none" | "pending" | "accepted">("none");
   const [shared, setShared] = useState<FeedYonder[]>([]);
   const [authOpen, setAuthOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -42,7 +42,7 @@ export default function ProfileView({ username }: { username: string }) {
       if (!p) return;
       void followCounts(p.id).then((cc) => !c && setCounts(cc));
       void loadUserShared(p.id).then((s) => !c && setShared(s));
-      void isFollowing(p.id).then((f) => !c && setFollowed(f));
+      void followState(p.id).then((f) => !c && setFstate(f));
     });
     return () => {
       c = true;
@@ -59,17 +59,27 @@ export default function ProfileView({ username }: { username: string }) {
     );
   }
 
-  const toggleFollow = () => {
+  const toggleFollow = async () => {
     if (!user) {
       setAuthOpen(true);
       return;
     }
-    const next = !followed;
-    setFollowed(next);
-    setCounts((c) => ({ ...c, followers: c.followers + (next ? 1 : -1) }));
-    if (next) void follow(profile.id);
-    else void unfollow(profile.id);
+    if (fstate === "none") {
+      const target = profile.isPrivate ? "pending" : "accepted";
+      setFstate(target);
+      if (target === "accepted") setCounts((c) => ({ ...c, followers: c.followers + 1 }));
+      await follow(profile.id);
+    } else {
+      const wasAccepted = fstate === "accepted";
+      setFstate("none");
+      if (wasAccepted) setCounts((c) => ({ ...c, followers: c.followers - 1 }));
+      await unfollow(profile.id);
+    }
   };
+
+  const followLabel =
+    fstate === "accepted" ? "Following" : fstate === "pending" ? "Requested" : profile.isPrivate ? "Request" : "Follow";
+  const lockedPrivate = profile.isPrivate && fstate !== "accepted" && !isMe;
 
   const stats = {
     places: shared.reduce((s, y) => s + y.places, 0),
@@ -93,8 +103,13 @@ export default function ProfileView({ username }: { username: string }) {
               {profile.displayName ?? `@${profile.username}`}
             </h1>
             <div className="text-sm text-[var(--muted)]">@{profile.username}</div>
-            <div className="text-xs text-[var(--muted)] mt-1 font-mono tabular-nums">
-              {counts.followers} followers · {counts.following} following
+            <div className="text-xs text-[var(--muted)] mt-1 font-mono tabular-nums flex gap-3">
+              <Link href={`/u/${profile.username}/followers`} className="hover:text-[var(--accent)]">
+                {counts.followers} followers
+              </Link>
+              <Link href={`/u/${profile.username}/following`} className="hover:text-[var(--accent)]">
+                {counts.following} following
+              </Link>
             </div>
           </div>
         </header>
@@ -112,14 +127,14 @@ export default function ProfileView({ username }: { username: string }) {
         ) : (
           <button
             type="button"
-            onClick={toggleFollow}
+            onClick={() => void toggleFollow()}
             className={`self-start rounded-full text-sm font-semibold px-5 py-2 ${
-              followed
+              fstate !== "none"
                 ? "border border-[var(--border)] text-[var(--foreground)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
                 : "bg-[var(--accent)] text-black active:opacity-80"
             }`}
           >
-            {followed ? "Following" : "Follow"}
+            {followLabel}
           </button>
         )}
 
@@ -131,7 +146,11 @@ export default function ProfileView({ username }: { username: string }) {
 
         <section className="flex flex-col gap-3">
           <h2 className="text-[10px] uppercase tracking-widest text-[var(--muted)]">Shared yonders</h2>
-          {shared.length === 0 ? (
+          {lockedPrivate ? (
+            <p className="text-sm text-[var(--muted)]">
+              This account is private. Follow {profile.displayName ?? `@${profile.username}`} to see their wanders.
+            </p>
+          ) : shared.length === 0 ? (
             <p className="text-sm text-[var(--muted)]">Nothing shared yet.</p>
           ) : (
             <ul className="flex flex-col divide-y divide-[var(--border)]">
@@ -181,19 +200,26 @@ function EditProfile({
   const [username, setUsername] = useState(profile.username);
   const [displayName, setDisplayName] = useState(profile.displayName ?? "");
   const [bio, setBio] = useState(profile.bio ?? "");
+  const [isPrivate, setIsPrivate] = useState(profile.isPrivate);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const save = async () => {
     setBusy(true);
     setErr(null);
-    const res = await updateProfile({ username, displayName, bio });
+    const res = await updateProfile({ username, displayName, bio, isPrivate });
     setBusy(false);
     if (!res.ok) {
       setErr(res.error ?? "Could not save.");
       return;
     }
-    onSaved({ ...profile, username: username.trim().toLowerCase(), displayName: displayName.trim() || undefined, bio: bio.trim() || undefined });
+    onSaved({
+      ...profile,
+      username: username.trim().toLowerCase(),
+      displayName: displayName.trim() || undefined,
+      bio: bio.trim() || undefined,
+      isPrivate,
+    });
   };
 
   return (
@@ -207,6 +233,21 @@ function EditProfile({
           <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={2}
             className="w-full resize-none rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]" />
         </label>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={isPrivate}
+          onClick={() => setIsPrivate((v) => !v)}
+          className="flex items-center gap-3 text-left rounded-xl border border-[var(--border)] px-3 py-2.5 hover:border-[var(--muted)]"
+        >
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium">Private account</div>
+            <div className="text-xs text-[var(--muted)]">New followers need your approval; only they see your yonders.</div>
+          </div>
+          <div className={`relative shrink-0 w-10 h-6 rounded-full transition-colors ${isPrivate ? "bg-[var(--accent)]" : "bg-[var(--border)]"}`}>
+            <span className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-[var(--foreground)] transition-transform ${isPrivate ? "translate-x-4" : "translate-x-0"}`} />
+          </div>
+        </button>
         {err && <p className="text-sm text-red-400">{err}</p>}
         <button type="button" onClick={() => void save()} disabled={busy}
           className="rounded-full bg-[var(--accent)] text-black font-semibold py-3 active:opacity-80 disabled:opacity-50">

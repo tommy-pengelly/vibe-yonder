@@ -38,6 +38,13 @@ export async function getProfileById(id: string): Promise<Profile | null> {
   return data ? rowToProfile(data as ProfileRow) : null;
 }
 
+export async function getProfilesByIds(ids: string[]): Promise<Profile[]> {
+  const sb = getSupabase();
+  if (!sb || ids.length === 0) return [];
+  const { data } = await sb.from("profiles").select("*").in("id", [...new Set(ids)]);
+  return ((data as ProfileRow[]) ?? []).map(rowToProfile);
+}
+
 export async function getMyProfile(): Promise<Profile | null> {
   const c = await ctx();
   if (!c) return null;
@@ -50,6 +57,7 @@ export async function updateProfile(patch: {
   displayName?: string;
   bio?: string;
   avatarUrl?: string;
+  isPrivate?: boolean;
 }): Promise<{ ok: boolean; error?: string }> {
   const c = await ctx();
   if (!c) return { ok: false, error: "Not signed in." };
@@ -58,6 +66,7 @@ export async function updateProfile(patch: {
   if (patch.displayName !== undefined) row.display_name = patch.displayName.trim() || null;
   if (patch.bio !== undefined) row.bio = patch.bio.trim() || null;
   if (patch.avatarUrl !== undefined) row.avatar_url = patch.avatarUrl || null;
+  if (patch.isPrivate !== undefined) row.is_private = patch.isPrivate;
   const { error } = await c.sb.from("profiles").update(row).eq("id", c.uid);
   if (error) {
     return { ok: false, error: error.code === "23505" ? "That username is taken." : error.message };

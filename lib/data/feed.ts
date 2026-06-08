@@ -156,6 +156,7 @@ function scatter(dests: Destination[]): number[][] {
 
 export async function loadCommunity(
   q = "",
+  sort: "recent" | "popular" = "recent",
 ): Promise<{ yonders: FeedYonder[]; maps: FeedMap[] }> {
   const sb = getSupabase();
   if (!sb) return { yonders: [], maps: [] };
@@ -207,12 +208,13 @@ export async function loadCommunity(
   }
 
   const term = q.trim().toLowerCase();
-  if (term) {
-    const yf = yonders.filter((y) =>
-      (y.who + y.handle + y.area + (y.caption ?? "")).toLowerCase().includes(term),
-    );
-    const mf = maps.filter((m) => (m.name + m.who).toLowerCase().includes(term));
-    return { yonders: yf, maps: mf };
+  let ys = term
+    ? yonders.filter((y) => (y.who + y.handle + y.area + (y.caption ?? "")).toLowerCase().includes(term))
+    : yonders;
+  let ms = term ? maps.filter((m) => (m.name + m.who).toLowerCase().includes(term)) : maps;
+  if (sort === "popular") {
+    ys = [...ys].sort((a, b) => b.grubs - a.grubs);
+    ms = [...ms].sort((a, b) => b.grubs - a.grubs);
   }
-  return { yonders, maps };
+  return { yonders: ys, maps: ms };
 }
