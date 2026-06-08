@@ -16,7 +16,7 @@ import {
   pushYonder,
   saveList,
   updateYonder,
-} from "@/lib/storage";
+} from "@/lib/data";
 import type {
   ActiveYonder,
   Destination,
@@ -226,17 +226,19 @@ export default function App() {
       const listId = sourceListIdRef.current;
       const listItemId = targetToListItemRef.current[targetId];
       if (listId && listItemId) {
-        const list = getList(listId);
-        if (list) {
-          saveList({
-            ...list,
-            items: list.items.map((it) =>
-              it.id === listItemId
-                ? { ...it, visited: true, visitedAt: now }
-                : it,
-            ),
-          });
-        }
+        void (async () => {
+          const list = await getList(listId);
+          if (list) {
+            await saveList({
+              ...list,
+              items: list.items.map((it) =>
+                it.id === listItemId
+                  ? { ...it, visited: true, visitedAt: now }
+                  : it,
+              ),
+            });
+          }
+        })();
       }
 
       setYonder((y) => {
@@ -360,14 +362,14 @@ export default function App() {
     setSavedYonder((y) => {
       if (!y) return y;
       const next = { ...y, name };
-      if (savedLocally) updateYonder(next);
+      if (savedLocally) void updateYonder(next);
       return next;
     });
   }, [savedLocally]);
 
   const saveYonderAction = useCallback(() => {
     if (!savedYonder) return;
-    pushYonder(savedYonder);
+    void pushYonder(savedYonder);
     setSavedLocally(true);
     // Cloud sync is wired but optional; offer it only when actually available.
     if (!user && authConfigured) {
@@ -377,11 +379,12 @@ export default function App() {
 
   const saveForLater = useCallback(() => {
     if (!savedYonder || savedForLater) return;
+    setSavedForLater(true);
     // "Save for later" on a finished yonder bookmarks its destinations so the
     // user can do them again from /you without re-searching.
     if (savedYonder.destinations.length === 1) {
       const d = savedYonder.destinations[0];
-      pushSaved({
+      void pushSaved({
         kind: "place",
         refId: savedYonder.id,
         name: d.name,
@@ -389,13 +392,12 @@ export default function App() {
         lon: d.lon,
       });
     } else {
-      pushSaved({
+      void pushSaved({
         kind: "list",
         refId: savedYonder.id,
         name: savedYonder.name,
       });
     }
-    setSavedForLater(true);
   }, [savedYonder, savedForLater]);
 
   const doAgain = useCallback(() => {

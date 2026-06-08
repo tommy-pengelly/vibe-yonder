@@ -4,16 +4,24 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import BottomNav from "@/components/BottomNav";
-import { loadFavourites, removeFavourite } from "@/lib/storage";
+import { useAuthUser } from "@/lib/auth";
+import { loadFavourites, removeFavourite } from "@/lib/data";
 import type { FavouritePlace } from "@/lib/types";
 
 export default function FavouritesView() {
   const [favourites, setFavourites] = useState<FavouritePlace[]>([]);
   const router = useRouter();
+  const { user } = useAuthUser();
 
   useEffect(() => {
-    setFavourites(loadFavourites());
-  }, []);
+    let cancelled = false;
+    void loadFavourites().then((f) => {
+      if (!cancelled) setFavourites(f);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const startYonder = (f: FavouritePlace) => {
     if (typeof window === "undefined") return;
@@ -36,9 +44,9 @@ export default function FavouritesView() {
     router.push("/");
   };
 
-  const remove = (id: string) => {
-    removeFavourite(id);
-    setFavourites(loadFavourites());
+  const remove = async (id: string) => {
+    await removeFavourite(id);
+    setFavourites(await loadFavourites());
   };
 
   return (
@@ -87,7 +95,7 @@ export default function FavouritesView() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => remove(f.id)}
+                  onClick={() => void remove(f.id)}
                   className="size-8 flex items-center justify-center text-[var(--muted)] hover:text-red-400"
                   aria-label="Remove"
                 >

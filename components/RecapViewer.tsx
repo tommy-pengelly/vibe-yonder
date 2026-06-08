@@ -4,19 +4,33 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Recap from "@/components/Recap";
-import { getYonder, pushSaved, updateYonder } from "@/lib/storage";
+import { useAuthUser } from "@/lib/auth";
+import { getYonder, pushSaved, updateYonder } from "@/lib/data";
 import type { SavedYonder, Target } from "@/lib/types";
 
 export default function RecapViewer({ id }: { id: string }) {
   const router = useRouter();
+  const { user } = useAuthUser();
   const [yonder, setYonder] = useState<SavedYonder | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [savedForLater, setSavedForLater] = useState(false);
 
   useEffect(() => {
-    setYonder(getYonder(id));
-  }, [id]);
+    let cancelled = false;
+    void getYonder(id).then((y) => {
+      if (cancelled) return;
+      setYonder(y);
+      setLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, user]);
 
   if (!yonder) {
+    if (!loaded) {
+      return <div className="flex-1" />;
+    }
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-5 gap-3">
         <p className="text-sm text-[var(--muted)]">Recap not found.</p>
@@ -32,8 +46,8 @@ export default function RecapViewer({ id }: { id: string }) {
 
   const renameTitle = (name: string) => {
     const next = { ...yonder, name };
-    updateYonder(next);
     setYonder(next);
+    void updateYonder(next);
   };
 
   const doAgain = () => {
@@ -60,9 +74,10 @@ export default function RecapViewer({ id }: { id: string }) {
 
   const saveForLater = () => {
     if (savedForLater) return;
+    setSavedForLater(true);
     if (yonder.destinations.length === 1) {
       const d = yonder.destinations[0];
-      pushSaved({
+      void pushSaved({
         kind: "place",
         refId: yonder.id,
         name: d.name,
@@ -70,13 +85,12 @@ export default function RecapViewer({ id }: { id: string }) {
         lon: d.lon,
       });
     } else {
-      pushSaved({
+      void pushSaved({
         kind: "list",
         refId: yonder.id,
         name: yonder.name,
       });
     }
-    setSavedForLater(true);
   };
 
   return (

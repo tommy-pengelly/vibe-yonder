@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { fmtDist } from "@/lib/geo";
+import { saveList } from "@/lib/data";
 import { rankResults } from "@/lib/rank";
-import { saveList } from "@/lib/storage";
 import type {
   GeocodeResult,
   RankedResult,
@@ -85,7 +85,7 @@ export default function ListEditor() {
     });
   };
 
-  const save = () => {
+  const save = async () => {
     const finalName =
       name.trim() ||
       items[0]?.name ||
@@ -98,7 +98,7 @@ export default function ListEditor() {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-    saveList(list);
+    await saveList(list);
     router.push(`/lists/${list.id}`);
   };
 
@@ -242,7 +242,7 @@ export default function ListEditor() {
 
       <button
         type="button"
-        onClick={save}
+        onClick={() => void save()}
         disabled={items.length === 0}
         className="mt-auto rounded-full bg-[var(--accent)] text-black font-semibold py-3 active:opacity-80 disabled:opacity-30"
       >

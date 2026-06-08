@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
 import BottomNav from "@/components/BottomNav";
 import { useAuthUser, signOut } from "@/lib/auth";
+import { loadFavourites, loadLists, loadSaved, loadYonders } from "@/lib/data";
 import { fmtDist } from "@/lib/geo";
-import { loadFavourites, loadLists, loadSaved, loadYonders } from "@/lib/storage";
 import type { FavouritePlace, SavedYonder, StoredList, StoredSaved } from "@/lib/types";
 
 export default function YouHub() {
@@ -18,11 +18,23 @@ export default function YouHub() {
   const [authOpen, setAuthOpen] = useState(false);
 
   useEffect(() => {
-    setYonders(loadYonders());
-    setFavourites(loadFavourites());
-    setLists(loadLists());
-    setSaved(loadSaved());
-  }, []);
+    let cancelled = false;
+    void Promise.all([
+      loadYonders(),
+      loadFavourites(),
+      loadLists(),
+      loadSaved(),
+    ]).then(([y, f, l, s]) => {
+      if (cancelled) return;
+      setYonders(y);
+      setFavourites(f);
+      setLists(l);
+      setSaved(s);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   return (
     <>

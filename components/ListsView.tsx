@@ -3,15 +3,23 @@ import { ArrowLeft, Plus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import BottomNav from "@/components/BottomNav";
-import { loadLists } from "@/lib/storage";
+import { useAuthUser } from "@/lib/auth";
+import { loadLists } from "@/lib/data";
 import type { StoredList } from "@/lib/types";
 
 export default function ListsView() {
   const [lists, setLists] = useState<StoredList[]>([]);
+  const { user } = useAuthUser();
 
   useEffect(() => {
-    setLists(loadLists());
-  }, []);
+    let cancelled = false;
+    void loadLists().then((l) => {
+      if (!cancelled) setLists(l);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   return (
     <>

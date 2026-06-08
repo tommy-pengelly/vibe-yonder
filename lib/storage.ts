@@ -60,6 +60,14 @@ export function clearYonders() {
   write(KEYS.yonders, []);
 }
 
+/** Wipe all guest data after a successful cloud import on first sign-in. */
+export function clearGuestData() {
+  write(KEYS.yonders, []);
+  write(KEYS.favourites, []);
+  write(KEYS.lists, []);
+  write(KEYS.saved, []);
+}
+
 // ----- Favourites -----
 export function loadFavourites(): FavouritePlace[] {
   return read<FavouritePlace[]>(KEYS.favourites, []);

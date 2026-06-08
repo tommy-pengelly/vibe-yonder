@@ -4,17 +4,25 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import BottomNav from "@/components/BottomNav";
-import { deleteList, getList, saveList } from "@/lib/storage";
+import { useAuthUser } from "@/lib/auth";
+import { deleteList, getList, saveList } from "@/lib/data";
 import type { StoredList, Target } from "@/lib/types";
 
 export default function ListDetail({ id }: { id: string }) {
   const router = useRouter();
+  const { user } = useAuthUser();
   const [list, setList] = useState<StoredList | null>(null);
   const [seenOpen, setSeenOpen] = useState(false);
 
   useEffect(() => {
-    setList(getList(id));
-  }, [id]);
+    let cancelled = false;
+    void getList(id).then((l) => {
+      if (!cancelled) setList(l);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, user]);
 
   if (!list) {
     return (
@@ -37,8 +45,8 @@ export default function ListDetail({ id }: { id: string }) {
           : it,
       ),
     };
-    saveList(next);
     setList(next);
+    void saveList(next);
   };
 
   const startYonder = () => {
@@ -70,8 +78,8 @@ export default function ListDetail({ id }: { id: string }) {
     router.push("/");
   };
 
-  const onDelete = () => {
-    deleteList(list.id);
+  const onDelete = async () => {
+    await deleteList(list.id);
     router.push("/lists");
   };
 
@@ -179,7 +187,7 @@ export default function ListDetail({ id }: { id: string }) {
           </button>
           <button
             type="button"
-            onClick={onDelete}
+            onClick={() => void onDelete()}
             className="self-center text-xs text-[var(--muted)] hover:text-red-400 inline-flex items-center gap-1.5 pt-1"
           >
             <Trash2 className="w-3 h-3" strokeWidth={1.75} />
