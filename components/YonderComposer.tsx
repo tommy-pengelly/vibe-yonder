@@ -109,13 +109,16 @@ export default function YonderComposer({
   return (
     <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-8 pb-10 gap-5">
       <header className="flex items-start justify-between gap-3">
-        <div>
-          <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
+        <div className="flex flex-col gap-2">
+          <span className="text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">
             New yonder
           </span>
-          <h1 className="font-display text-3xl tracking-tight leading-none mt-1">
-            Pick your places
+          <h1 className="font-display text-4xl tracking-tight leading-[0.95]">
+            Build a yonder
           </h1>
+          <p className="text-sm text-[var(--warm)] leading-snug">
+            One place is a destination. A few is an afternoon.
+          </p>
         </div>
         <button
           type="button"
@@ -128,9 +131,8 @@ export default function YonderComposer({
 
       <ol className="flex flex-col">
         {targets.length === 0 && (
-          <li className="text-sm text-[var(--muted)] py-2">
-            Add a place below. One picks a destination; two or more lets you
-            wander between them.
+          <li className="text-sm text-[var(--muted)] py-3">
+            Add a place to begin.
           </li>
         )}
         {targets.map((t, i) => (
@@ -259,12 +261,12 @@ export default function YonderComposer({
         className="mt-auto rounded-full bg-[var(--accent)] text-black font-semibold py-3 active:opacity-80 disabled:opacity-30"
       >
         {targets.length === 0
-          ? "Add a place to start"
+          ? "Add a place"
           : targets.length === 1
             ? "Start"
             : effectiveMode === "ordered"
-              ? `Start · step through ${targets.length}`
-              : `Start · wander ${targets.length}`}
+              ? `Step through ${targets.length}`
+              : `Wander ${targets.length}`}
       </button>
     </div>
   );

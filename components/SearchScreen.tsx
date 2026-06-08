@@ -63,13 +63,18 @@ export default function SearchScreen({
   const empty = q.trim().length < 3;
 
   return (
-    <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-12 pb-10 gap-6">
-      <header className="flex flex-col gap-2">
-        <h1 className="font-display text-4xl tracking-tight leading-none">
+    <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-10 pb-10 gap-6">
+      <header className="flex flex-col gap-3">
+        <span className="text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">
+          Vibe Yonder
+        </span>
+        <h1 className="font-display text-5xl tracking-tight leading-[0.95]">
           Where to?
         </h1>
-        <p className="text-sm text-[var(--warm)]">
+        <p className="text-base text-[var(--warm)] leading-snug">
           Pick a place. Walk toward the arrow.
+          <br />
+          <span className="text-[var(--muted)]">Detours encouraged.</span>
         </p>
       </header>
 
@@ -151,13 +156,18 @@ export default function SearchScreen({
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => onComposeMulti(null)}
-        className="self-start text-sm text-[var(--accent)] hover:opacity-80"
-      >
-        Build a multi-place yonder →
-      </button>
+      {empty && (
+        <button
+          type="button"
+          onClick={() => onComposeMulti(null)}
+          className="rounded-2xl border border-[var(--border)] px-4 py-3 text-left hover:border-[var(--accent)] transition-colors"
+        >
+          <div className="font-display text-base">Build a yonder</div>
+          <div className="text-xs text-[var(--muted)] mt-0.5">
+            Wander between several places or step through them in order.
+          </div>
+        </button>
+      )}
 
       <div className="mt-auto flex items-center justify-center pt-6">
         <Link
