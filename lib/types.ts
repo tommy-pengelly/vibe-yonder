@@ -21,7 +21,9 @@ export type RankedResult = GeocodeResult & {
   score?: number;
 };
 
-export type ListItemState = {
+export type YonderMode = "single" | "collection" | "ordered";
+
+export type Target = {
   id: string;
   name: string;
   label?: string;
@@ -31,17 +33,13 @@ export type ListItemState = {
   visitedAt?: number;
 };
 
-export type StoredList = {
+export type ActiveYonder = {
   id: string;
-  name: string;
-  items: ListItemState[];
-  createdAt: number;
-  updatedAt: number;
-};
-
-export type ListJourney = {
-  list: StoredList;
-  activeIndex: number;
+  mode: YonderMode;
+  targets: Target[];
+  /** Index of the bold/full-amber target. `null` for Collection (no current focus). */
+  activeIndex: number | null;
+  name?: string;
 };
 
 export type FavouritePlace = {
@@ -64,15 +62,8 @@ export type SavedYonder = {
   yondered: number;
   track: Fix[];
   pausedMs: number;
+  /** Snapshot of the primary destination (for Single/Ordered) or yonder centroid. */
   destination: Destination;
-};
-
-export type Poi = {
-  id: string;
-  name: string;
-  lat: number;
-  lon: number;
-  seen: boolean;
 };
 
 export type AuthUser = {

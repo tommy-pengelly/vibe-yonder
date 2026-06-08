@@ -7,11 +7,10 @@ import type { Fix, SavedYonder } from "@/lib/types";
 
 type Props = {
   saved: SavedYonder;
+  savedLocally: boolean;
   onRenameTitle: (next: string) => void;
   onNewWalk: () => void;
   onSave: () => void;
-  saveLabel: string;
-  saveDisabled?: boolean;
 };
 
 const W = 420;
@@ -19,23 +18,19 @@ const H = 320;
 
 export default function Recap({
   saved,
+  savedLocally,
   onRenameTitle,
   onNewWalk,
   onSave,
-  saveLabel,
-  saveDisabled,
 }: Props) {
   const summary = useMemo(
-    () =>
-      summarize(
-        saved.track,
-        saved.startedAt,
-        saved.pausedMs,
-        saved.endedAt,
-      ),
+    () => summarize(saved.track, saved.startedAt, saved.pausedMs, saved.endedAt),
     [saved],
   );
-  const points = useMemo(() => projectTrack(saved.track as Fix[], W, H), [saved.track]);
+  const points = useMemo(
+    () => projectTrack(saved.track as Fix[], W, H),
+    [saved.track],
+  );
 
   const pathD = useMemo(() => {
     if (points.length === 0) return "";
@@ -132,7 +127,9 @@ export default function Recap({
                 strokeWidth={2}
               />
             )}
-            {end && <circle cx={end[0]} cy={end[1]} r={6} fill="var(--accent)" />}
+            {end && (
+              <circle cx={end[0]} cy={end[1]} r={6} fill="var(--accent)" />
+            )}
           </svg>
         ) : (
           <p className="text-sm text-[var(--muted)] py-12 text-center">
@@ -150,11 +147,7 @@ export default function Recap({
         <Tile label="Walked" value={fmtDist(summary.walked)} />
         <Tile label="Time" value={fmtDuration(summary.durationMs)} />
         <Tile label="Direct" value={fmtDist(summary.direct)} />
-        <Tile
-          label="Yondered"
-          value={`${yonderedDisplay}×`}
-          hero
-        />
+        <Tile label="Yondered" value={`${yonderedDisplay}×`} hero />
       </div>
 
       <div className="flex items-center justify-center">
@@ -170,10 +163,10 @@ export default function Recap({
         <button
           type="button"
           onClick={onSave}
-          disabled={saveDisabled}
-          className="rounded-full border border-[var(--accent)]/60 text-[var(--accent)] font-semibold py-3 hover:bg-[var(--accent)] hover:text-black disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--accent)]"
+          disabled={savedLocally}
+          className="rounded-full border border-[var(--accent)]/60 text-[var(--accent)] font-semibold py-3 hover:bg-[var(--accent)] hover:text-black disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-[var(--accent)]"
         >
-          {saveLabel}
+          {savedLocally ? "Saved ✓" : "Save locally"}
         </button>
         <button
           type="button"
