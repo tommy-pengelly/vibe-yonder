@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { fmtDist, fmtDuration } from "@/lib/geo";
 import { summarize } from "@/lib/stats";
 import type { Fix } from "@/lib/types";
@@ -19,13 +19,24 @@ export default function StatStrip({ track, startTime, pausedMs, paused }: Props)
     return () => window.clearInterval(id);
   }, [paused, startTime]);
 
-  const summary = summarize(track, startTime, pausedMs);
+  const live = summarize(track, startTime, pausedMs);
+
+  // Freeze the clock while paused. GPS fixes keep re-rendering the parent, and
+  // `summarize` reads a fresh Date.now() each call, so without this the time
+  // would keep climbing during a pause. Capture it at the pause instant.
+  const frozenRef = useRef<number | null>(null);
+  if (paused) {
+    if (frozenRef.current == null) frozenRef.current = live.durationMs;
+  } else {
+    frozenRef.current = null;
+  }
+  const durationMs = frozenRef.current ?? live.durationMs;
 
   return (
     <div className="flex items-baseline justify-center gap-8">
-      <Field label="Time" value={fmtDuration(summary.durationMs)} />
+      <Field label="Time" value={fmtDuration(durationMs)} />
       <span className="text-[var(--muted)]/40">·</span>
-      <Field label="Distance" value={fmtDist(summary.walked)} />
+      <Field label="Distance" value={fmtDist(live.walked)} />
     </div>
   );
 }

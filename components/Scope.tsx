@@ -23,7 +23,6 @@ type Props = {
   activeIndex: number | null;
   mpp: number;
   hideNumbers: boolean;
-  panOffset: { x: number; y: number };
 };
 
 const ACCENT = "#f5a623";
@@ -38,7 +37,6 @@ export default function Scope({
   activeIndex,
   mpp,
   hideNumbers,
-  panOffset,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rotSmoother = useRef(makeAngleSmoother());
@@ -61,22 +59,34 @@ export default function Scope({
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
 
-    const baseCx = w / 2;
-    const baseCy = h * 0.45;
-    const cx = baseCx + panOffset.x;
-    const cy = baseCy + panOffset.y;
+    // The dot is fixed dead-centre; the scope never pans.
+    const cx = w / 2;
+    const cy = h * 0.45;
 
     const rimR = Math.min(w, h) * RIM_FRACTION;
     const rotDeg = heading != null ? rotSmoother.current(-heading) : 0;
+    const rot = (rotDeg * Math.PI) / 180;
+    const cosR = Math.cos(rot);
+    const sinR = Math.sin(rot);
+    // Map a true-north-up projected point to its heading-up screen position,
+    // matching the rotation applied to the trail. Used so dots and their labels
+    // share one coordinate space and never drift apart.
+    const applyRot = (px: number, py: number) => {
+      const dx = px - cx;
+      const dy = py - cy;
+      return {
+        x: cx + dx * cosR - dy * sinR,
+        y: cy + dx * sinR + dy * cosR,
+      };
+    };
 
-    // --- World space (rotates with the scope when a heading is available) ---
+    // --- World space: only the trail rotates with the scope ---
     ctx.save();
     if (rotDeg !== 0) {
       ctx.translate(cx, cy);
-      ctx.rotate((rotDeg * Math.PI) / 180);
+      ctx.rotate(rot);
       ctx.translate(-cx, -cy);
     }
-
     if (position && track.length > 1) {
       const n = track.length;
       ctx.lineCap = "round";
@@ -93,18 +103,18 @@ export default function Scope({
         ctx.stroke();
       }
     }
+    ctx.restore();
 
-    // Targets — for each unvisited target, draw either a dot (true position,
-    // fades radially as it nears the rim) or a chevron at the rim.
+    // --- Screen space (drawn upright; rotation applied per-point) ---
+
     type TargetState = {
       target: Target;
-      idx: number;
       isActive: boolean;
       dist: number;
       brg: number;
       inCircle: boolean;
       dotOpacity: number; // 0..1 if in-circle
-      screen?: { x: number; y: number };
+      screen: { x: number; y: number }; // heading-up screen position
     };
 
     const states: TargetState[] = [];
@@ -113,10 +123,8 @@ export default function Scope({
         if (t.visited) return;
         const dist = haversine(position.lat, position.lon, t.lat, t.lon);
         const brg = bearing(position.lat, position.lon, t.lat, t.lon);
-        const screen = projectAt(t, position, cx, cy, mpp);
-        const dx = screen.x - cx;
-        const dy = screen.y - cy;
-        const r = Math.hypot(dx, dy);
+        const raw = projectAt(t, position, cx, cy, mpp);
+        const r = Math.hypot(raw.x - cx, raw.y - cy);
         const inCircle = r < rimR;
         let dotOpacity = 1;
         if (inCircle) {
@@ -128,49 +136,18 @@ export default function Scope({
         }
         states.push({
           target: t,
-          idx: i,
           isActive: i === activeIndex,
           dist,
           brg,
           inCircle,
           dotOpacity,
-          screen,
+          screen: applyRot(raw.x, raw.y),
         });
       });
     }
 
-    // First pass: draw in-circle targets as dots at their true positions.
-    for (const s of states) {
-      if (!s.inCircle || !s.screen) continue;
-      const opacity = s.isActive ? s.dotOpacity : s.dotOpacity * 0.45;
-      drawDestDot(ctx, s.screen.x, s.screen.y, opacity, s.isActive);
-    }
-    ctx.restore();
-
-    // --- Screen space (doesn't rotate with the scope) ---
-
-    // The dot: crisp white with soft static glow. Dimmer while acquiring.
-    const acquiring = !position;
-    const dotOpacity = acquiring ? 0.45 : 1;
-    {
-      const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 28);
-      glow.addColorStop(0, `rgba(255, 255, 255, ${0.22 * dotOpacity})`);
-      glow.addColorStop(1, "rgba(255, 255, 255, 0)");
-      ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 28, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = `rgba(237, 237, 237, ${dotOpacity})`;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 7, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Rim chevrons for out-of-circle targets, drawn in screen space so they
-    // ride on a fixed invisible radius and stay readable.
-    const chevronR = Math.min(w, h) * 0.36;
-    const labelR = chevronR + 28;
-
+    // A label (distance + name) for the active target, placed beside whichever
+    // form it took — the dot when in-circle, the chevron when at the rim.
     let activeLabel: {
       x: number;
       y: number;
@@ -178,19 +155,39 @@ export default function Scope({
       name: string;
     } | null = null;
 
+    // In-circle targets: a dot at the true (heading-up) position.
     for (const s of states) {
-      if (s.inCircle) {
-        // If it's the active in-circle dot, schedule a label.
-        if (s.isActive && s.screen) {
-          activeLabel = {
-            x: s.screen.x,
-            y: s.screen.y + 22,
-            dist: s.dist,
-            name: s.target.name,
-          };
-        }
-        continue;
+      if (!s.inCircle) continue;
+      const opacity = s.isActive ? s.dotOpacity : s.dotOpacity * 0.45;
+      drawDestDot(ctx, s.screen.x, s.screen.y, opacity, s.isActive);
+      if (s.isActive) {
+        activeLabel = {
+          x: s.screen.x,
+          y: s.screen.y + 22,
+          dist: s.dist,
+          name: s.target.name,
+        };
       }
+    }
+
+    // The dot: an upward arrowhead (you, heading-up). Dimmer while acquiring.
+    {
+      const o = position ? 1 : 0.45;
+      ctx.fillStyle = `rgba(237, 237, 237, ${o})`;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 10);
+      ctx.lineTo(cx + 8, cy + 8);
+      ctx.lineTo(cx, cy + 3);
+      ctx.lineTo(cx - 8, cy + 8);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Out-of-circle targets: a chevron on a fixed invisible radius.
+    const chevronR = Math.min(w, h) * 0.36;
+    const labelR = chevronR + 28;
+    for (const s of states) {
+      if (s.inCircle) continue;
       const relBrg = heading != null ? s.brg - heading : s.brg;
       const a = (relBrg * Math.PI) / 180;
       const tx = cx + chevronR * Math.sin(a);
@@ -212,9 +209,12 @@ export default function Scope({
       ctx.restore();
 
       if (s.isActive) {
-        const lx = cx + labelR * Math.sin(a);
-        const ly = cy - labelR * Math.cos(a);
-        activeLabel = { x: lx, y: ly, dist: s.dist, name: s.target.name };
+        activeLabel = {
+          x: cx + labelR * Math.sin(a),
+          y: cy - labelR * Math.cos(a),
+          dist: s.dist,
+          name: s.target.name,
+        };
       }
     }
 
@@ -268,7 +268,7 @@ export default function Scope({
     ctx.textAlign = "right";
     ctx.textBaseline = "alphabetic";
     ctx.fillText(formatScale(snapMetres), sxRight, syBaseline - 7);
-  }, [position, heading, track, targets, activeIndex, mpp, hideNumbers, panOffset]);
+  }, [position, heading, track, targets, activeIndex, mpp, hideNumbers]);
 
   return (
     <div className="scope-wrap">
@@ -285,16 +285,7 @@ function drawDestDot(
   isActive: boolean,
 ) {
   if (opacity <= 0) return;
-  const glowRadius = isActive ? 20 : 12;
   const dotRadius = isActive ? 6 : 4;
-  const glowAlpha = (isActive ? 0.45 : 0.25) * opacity;
-  const glow = ctx.createRadialGradient(x, y, 0, x, y, glowRadius);
-  glow.addColorStop(0, `rgba(245, 166, 35, ${glowAlpha.toFixed(2)})`);
-  glow.addColorStop(1, "rgba(245, 166, 35, 0)");
-  ctx.fillStyle = glow;
-  ctx.beginPath();
-  ctx.arc(x, y, glowRadius, 0, Math.PI * 2);
-  ctx.fill();
   ctx.fillStyle = `rgba(245, 166, 35, ${opacity.toFixed(2)})`;
   ctx.beginPath();
   ctx.arc(x, y, dotRadius, 0, Math.PI * 2);

@@ -67,7 +67,6 @@ export default function WalkScreen({
   onCalibrate,
 }: Props) {
   const [mpp, setMpp] = useState(DEFAULT_MPP);
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [arrivalQueue, setArrivalQueue] = useState<string[]>([]);
   const [dismissedArrivals, setDismissedArrivals] = useState<
     Record<string, boolean>
@@ -123,104 +122,63 @@ export default function WalkScreen({
     });
   }, [position, unvisited, dismissedArrivals]);
 
-  // Pinch + pan touch handling on the canvas wrap.
-  const gestureRef = useRef<{
-    startMpp: number;
-    startPan: { x: number; y: number };
-    startDist?: number;
-    startCenter?: { x: number; y: number };
-    lastTouch?: { x: number; y: number };
-    mode: "idle" | "pan" | "pinch";
-  }>({ startMpp: DEFAULT_MPP, startPan: { x: 0, y: 0 }, mode: "idle" });
+  // Pinch-zoom only. The scope stays locked dead-centre — no panning.
+  const gestureRef = useRef<{ startMpp: number; startDist?: number }>({
+    startMpp: DEFAULT_MPP,
+  });
 
   const onTouchStart = useCallback(
     (e: React.TouchEvent) => {
+      if (e.touches.length < 2) return;
       gestureRef.current.startMpp = mpp;
-      gestureRef.current.startPan = panOffset;
-      if (e.touches.length >= 2) {
-        const t1 = e.touches[0];
-        const t2 = e.touches[1];
-        const dx = t1.clientX - t2.clientX;
-        const dy = t1.clientY - t2.clientY;
-        gestureRef.current.startDist = Math.hypot(dx, dy);
-        gestureRef.current.startCenter = {
-          x: (t1.clientX + t2.clientX) / 2,
-          y: (t1.clientY + t2.clientY) / 2,
-        };
-        gestureRef.current.mode = "pinch";
-      } else if (e.touches.length === 1) {
-        gestureRef.current.lastTouch = {
-          x: e.touches[0].clientX,
-          y: e.touches[0].clientY,
-        };
-        gestureRef.current.mode = "pan";
-      }
-    },
-    [mpp, panOffset],
-  );
-
-  const onTouchMove = useCallback(
-    (e: React.TouchEvent) => {
-      const g = gestureRef.current;
-      if (g.mode === "pinch" && e.touches.length >= 2) {
-        const t1 = e.touches[0];
-        const t2 = e.touches[1];
-        const dx = t1.clientX - t2.clientX;
-        const dy = t1.clientY - t2.clientY;
-        const dist = Math.hypot(dx, dy);
-        if (g.startDist && g.startDist > 0) {
-          const scale = g.startDist / dist;
-          const next = Math.min(MAX_MPP, Math.max(MIN_MPP, g.startMpp * scale));
-          setMpp(next);
-        }
-      } else if (g.mode === "pan" && e.touches.length === 1) {
-        const t = e.touches[0];
-        if (g.lastTouch) {
-          const dx = t.clientX - g.lastTouch.x;
-          const dy = t.clientY - g.lastTouch.y;
-          setPanOffset((p) => ({ x: p.x + dx, y: p.y + dy }));
-        }
-        g.lastTouch = { x: t.clientX, y: t.clientY };
-      }
-    },
-    [],
-  );
-
-  const onTouchEnd = useCallback(
-    (e: React.TouchEvent) => {
-      const g = gestureRef.current;
-      if (e.touches.length === 0) {
-        // Snap mpp to a level whose centre-to-rim distance is a round metres value.
-        const rimR = Math.min(window.innerWidth, window.innerHeight) * RIM_FRACTION;
-        const impliedMetres = rimR * mpp;
-        let best = SCALE_LEVELS_M[0];
-        let bestRatio = Math.abs(Math.log(best / impliedMetres));
-        for (const lvl of SCALE_LEVELS_M) {
-          const r = Math.abs(Math.log(lvl / impliedMetres));
-          if (r < bestRatio) {
-            best = lvl;
-            bestRatio = r;
-          }
-        }
-        setMpp(best / rimR);
-        g.mode = "idle";
-      } else if (e.touches.length === 1) {
-        g.mode = "pan";
-        g.lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      }
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      gestureRef.current.startDist = Math.hypot(
+        t1.clientX - t2.clientX,
+        t1.clientY - t2.clientY,
+      );
     },
     [mpp],
   );
 
-  const recenter = useCallback(() => {
-    setPanOffset({ x: 0, y: 0 });
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    const g = gestureRef.current;
+    if (e.touches.length < 2 || !g.startDist) return;
+    const t1 = e.touches[0];
+    const t2 = e.touches[1];
+    const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+    if (dist > 0) {
+      const scale = g.startDist / dist;
+      setMpp(Math.min(MAX_MPP, Math.max(MIN_MPP, g.startMpp * scale)));
+    }
+  }, []);
+
+  const onTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (e.touches.length !== 0) return;
+      gestureRef.current.startDist = undefined;
+      // Snap mpp to a level whose centre-to-rim distance is a round metres value.
+      const rimR = Math.min(window.innerWidth, window.innerHeight) * RIM_FRACTION;
+      const impliedMetres = rimR * mpp;
+      let best = SCALE_LEVELS_M[0];
+      let bestRatio = Math.abs(Math.log(best / impliedMetres));
+      for (const lvl of SCALE_LEVELS_M) {
+        const r = Math.abs(Math.log(lvl / impliedMetres));
+        if (r < bestRatio) {
+          best = lvl;
+          bestRatio = r;
+        }
+      }
+      setMpp(best / rimR);
+    },
+    [mpp],
+  );
+
+  const resetZoom = useCallback(() => {
     setMpp(DEFAULT_MPP);
   }, []);
 
-  const panned =
-    Math.abs(panOffset.x) > 2 ||
-    Math.abs(panOffset.y) > 2 ||
-    Math.abs(mpp - DEFAULT_MPP) > 0.01;
+  const zoomed = Math.abs(mpp - DEFAULT_MPP) > 0.01;
 
   const headerLabel = useMemo(() => {
     if (yonder.mode === "ordered" && activeTarget) {
@@ -279,7 +237,6 @@ export default function WalkScreen({
           activeIndex={yonder.activeIndex}
           mpp={mpp}
           hideNumbers={hideNumbers}
-          panOffset={panOffset}
         />
       </div>
 
@@ -324,14 +281,14 @@ export default function WalkScreen({
           </div>
         )}
 
-        {panned && (
+        {zoomed && (
           <button
             type="button"
-            onClick={recenter}
+            onClick={resetZoom}
             className="self-center rounded-full bg-black/40 backdrop-blur-md border border-[var(--border)] text-xs text-[var(--muted)] hover:text-[var(--foreground)] px-3 py-1.5 pointer-events-auto flex items-center gap-1.5"
           >
             <Locate className="w-3 h-3" strokeWidth={1.75} />
-            Recentre
+            Reset zoom
           </button>
         )}
 
