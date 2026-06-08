@@ -74,9 +74,7 @@ export default function WalkScreen({
     Record<string, boolean>
   >({});
   const [addSheetOpen, setAddSheetOpen] = useState(false);
-
-  const activeTarget =
-    yonder.activeIndex != null ? yonder.targets[yonder.activeIndex] : null;
+  const [manualFocusId, setManualFocusId] = useState<string | null>(null);
 
   const unvisited = useMemo(
     () => yonder.targets.filter((t) => !t.visited),
@@ -84,6 +82,32 @@ export default function WalkScreen({
   );
   const allVisited =
     yonder.targets.length > 0 && unvisited.length === 0;
+
+  // In Single/Ordered the focus is the active target. In Collection there's no
+  // fixed order, so focus the place you tapped, else the nearest unvisited one —
+  // it gets the bold marker + name + distance; the rest stay ghosts.
+  const focusIndex = useMemo(() => {
+    if (yonder.activeIndex != null) return yonder.activeIndex;
+    const ts = yonder.targets;
+    const manual = manualFocusId
+      ? ts.findIndex((t) => t.id === manualFocusId && !t.visited)
+      : -1;
+    if (manual >= 0) return manual;
+    if (!position) return null;
+    let best = -1;
+    let bestD = Infinity;
+    ts.forEach((t, i) => {
+      if (t.visited) return;
+      const d = haversine(position.lat, position.lon, t.lat, t.lon);
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    });
+    return best >= 0 ? best : null;
+  }, [yonder.activeIndex, yonder.targets, manualFocusId, position]);
+
+  const activeTarget = focusIndex != null ? yonder.targets[focusIndex] : null;
 
   // Favourite the active destination (the only walk-screen way to create a
   // favourite). Tracks the stored record's id so it can be un-favourited.
@@ -232,8 +256,9 @@ export default function WalkScreen({
     if (yonder.mode === "collection") {
       const remaining = unvisited.length;
       return {
-        kicker: "Collection",
+        kicker: `Collection · ${remaining} left`,
         title:
+          activeTarget?.name ??
           yonder.name ??
           `${remaining} place${remaining === 1 ? "" : "s"} to find`,
       };
@@ -274,9 +299,10 @@ export default function WalkScreen({
           heading={heading}
           track={track}
           targets={yonder.targets}
-          activeIndex={yonder.activeIndex}
+          activeIndex={focusIndex}
           mpp={mpp}
           hideNumbers={hideNumbers}
+          onPickTarget={yonder.activeIndex == null ? setManualFocusId : undefined}
         />
       </div>
 
@@ -511,7 +537,12 @@ function AddPlaceSheet({
     setLoading(true);
     const handle = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/geocode?q=${encodeURIComponent(term)}`);
+        const near = position
+          ? `&lat=${position.lat}&lon=${position.lon}`
+          : "";
+        const res = await fetch(
+          `/api/geocode?q=${encodeURIComponent(term)}${near}`,
+        );
         if (myReq !== reqId.current) return;
         if (!res.ok) {
           setResults([]);

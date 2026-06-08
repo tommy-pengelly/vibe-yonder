@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import BottomNav from "@/components/BottomNav";
+import PlacePhoto from "@/components/PlacePhoto";
 import { useAuthUser } from "@/lib/auth";
 import { deleteMap, getMap, saveMap } from "@/lib/data";
 import type { StoredMap, Target } from "@/lib/types";
@@ -120,6 +121,12 @@ export default function MapDetail({ id }: { id: string }) {
                 onClick={() => markVisited(it.id, true)}
                 aria-label="Mark visited"
                 className="size-5 rounded-full border border-[var(--muted)] hover:border-[var(--accent)] shrink-0"
+              />
+              <PlacePhoto
+                lat={it.lat}
+                lon={it.lon}
+                name={it.name}
+                className="size-12 rounded-lg shrink-0"
               />
               <div className="min-w-0 flex-1">
                 <div className="font-display text-lg truncate">{it.name}</div>

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { type MouseEvent as ReactMouseEvent, useEffect, useRef } from "react";
 import {
   FADE_START,
   RIM_FRACTION,
@@ -19,10 +19,12 @@ type Props = {
   heading: number | null;
   track: Fix[];
   targets: Target[];
-  /** Index of the bold target in `targets`, or null in Collection mode. */
+  /** Index of the bold (focused) target in `targets`, or null. */
   activeIndex: number | null;
   mpp: number;
   hideNumbers: boolean;
+  /** When set, tapping a target's marker focuses it (Collection mode). */
+  onPickTarget?: (id: string) => void;
 };
 
 const ACCENT = "#f5a623";
@@ -37,9 +39,12 @@ export default function Scope({
   activeIndex,
   mpp,
   hideNumbers,
+  onPickTarget,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rotSmoother = useRef(makeAngleSmoother());
+  // Each drawn target's marker position, for tap hit-testing.
+  const hitsRef = useRef<{ id: string; x: number; y: number }[]>([]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -155,11 +160,14 @@ export default function Scope({
       name: string;
     } | null = null;
 
+    hitsRef.current = [];
+
     // In-circle targets: a dot at the true (heading-up) position.
     for (const s of states) {
       if (!s.inCircle) continue;
       const opacity = s.isActive ? s.dotOpacity : s.dotOpacity * 0.45;
       drawDestDot(ctx, s.screen.x, s.screen.y, opacity, s.isActive);
+      hitsRef.current.push({ id: s.target.id, x: s.screen.x, y: s.screen.y });
       if (s.isActive) {
         activeLabel = {
           x: s.screen.x,
@@ -167,6 +175,13 @@ export default function Scope({
           dist: s.dist,
           name: s.target.name,
         };
+      } else if (!hideNumbers && s.dotOpacity > 0.05) {
+        // Ghost gets a small distance so you can tell how far each place is.
+        ctx.fillStyle = `rgba(173, 168, 157, ${(0.5 * s.dotOpacity).toFixed(2)})`;
+        ctx.font = "500 10px var(--font-mono), ui-monospace, monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(fmtDist(s.dist), s.screen.x, s.screen.y + 15);
       }
     }
 
@@ -208,13 +223,18 @@ export default function Scope({
       ctx.fill();
       ctx.restore();
 
+      hitsRef.current.push({ id: s.target.id, x: tx, y: ty });
+      const lx = cx + labelR * Math.sin(a);
+      const ly = cy - labelR * Math.cos(a);
       if (s.isActive) {
-        activeLabel = {
-          x: cx + labelR * Math.sin(a),
-          y: cy - labelR * Math.cos(a),
-          dist: s.dist,
-          name: s.target.name,
-        };
+        activeLabel = { x: lx, y: ly, dist: s.dist, name: s.target.name };
+      } else if (!hideNumbers) {
+        // Ghost gets a small distance beside its rim chevron.
+        ctx.fillStyle = MUTED_TEXT;
+        ctx.font = "500 10px var(--font-mono), ui-monospace, monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(fmtDist(s.dist), lx, ly);
       }
     }
 
@@ -270,9 +290,26 @@ export default function Scope({
     ctx.fillText(formatScale(snapMetres), sxRight, syBaseline - 7);
   }, [position, heading, track, targets, activeIndex, mpp, hideNumbers]);
 
+  const handleClick = (e: ReactMouseEvent<HTMLCanvasElement>) => {
+    if (!onPickTarget) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    let best: string | null = null;
+    let bestD = 44; // tap slop in px
+    for (const hit of hitsRef.current) {
+      const d = Math.hypot(hit.x - x, hit.y - y);
+      if (d < bestD) {
+        bestD = d;
+        best = hit.id;
+      }
+    }
+    if (best) onPickTarget(best);
+  };
+
   return (
     <div className="scope-wrap">
-      <canvas ref={canvasRef} aria-label="Yonder scope" />
+      <canvas ref={canvasRef} aria-label="Yonder scope" onClick={handleClick} />
     </div>
   );
 }

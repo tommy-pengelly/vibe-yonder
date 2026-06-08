@@ -99,7 +99,9 @@ Nav: a **Feed · ⊕ · Me** bottom bar (Strava-shaped; the centre ⊕ launches 
 - **Next.js App Router + TypeScript.** Screens thin; logic in `lib/` (geo, stats — *never pace* —, rank, maps, wake). Framework-free and testable.
 - **Client components** for sensors/canvas; the **scope is a `<canvas>`**.
 - **Supabase** for auth + data, **Row Level Security on every table** (rows tied to `auth.uid()`). Guest data in `localStorage`, imported on sign-up.
-- **One server route** (`/api/geocode`) — proxies Nominatim with an identifying User-Agent + cache; passes `importance` through for ranking.
+- **Two server routes**, both keyless, identifying User-Agent + cache:
+  - `/api/geocode` — place search. Default provider **Photon** (proximity-biased, autocomplete-friendly); set `GEOCODER=nominatim` to fall back. Passes `importance` through for ranking. (We left Nominatim's *public* server because it bans search-as-you-type and commercial production traffic.)
+  - `/api/place-photo` — resolves a place photo from **Wikimedia** (Wikipedia lead image, then Commons geosearch). Always returns CC attribution. Coverage is intentionally uneven — a delight when present, never required. Privacy: only call it where real coordinates are owned (recap, maps, search/selection); **never on shared yonders** (their coords are stripped on purpose).
 - **Bias to free/keyless and client-side.** No new external service or paid dependency without a real reason. No map tiles in the core scope (it's an abstract trace).
 
 ---

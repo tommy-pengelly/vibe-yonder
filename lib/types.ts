@@ -1,5 +1,20 @@
 export type LatLon = { lat: number; lon: number };
 
+/** A place photo resolved from Wikimedia. Attribution is mandatory (CC). */
+export type PlacePhotoData = {
+  url: string;
+  width?: number;
+  height?: number;
+  /** What the photo is of — page or file title. */
+  title: string;
+  /** Plain-text author, when known. */
+  author?: string;
+  /** e.g. "CC BY-SA 4.0". */
+  license?: string;
+  /** Link back to the source description page (attribution requirement). */
+  source: string;
+};
+
 export type Destination = LatLon & {
   name: string;
   label?: string;

@@ -44,7 +44,12 @@ export default function YonderComposer({
     setLoading(true);
     const handle = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/geocode?q=${encodeURIComponent(term)}`);
+        const near = position
+          ? `&lat=${position.lat}&lon=${position.lon}`
+          : "";
+        const res = await fetch(
+          `/api/geocode?q=${encodeURIComponent(term)}${near}`,
+        );
         if (myReq !== reqId.current) return;
         if (!res.ok) {
           setResults([]);

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { fmtDist, fmtDuration } from "@/lib/geo";
 import { projectTrack, summarize } from "@/lib/stats";
 import type { Fix, SavedYonder } from "@/lib/types";
+import PlacePhoto from "./PlacePhoto";
 import ShareControl from "./ShareControl";
 
 type Props = {
@@ -161,6 +162,40 @@ export default function Recap({
         <Tile label="Direct" value={fmtDist(summary.direct)} />
         <Tile label="Yondered" value={`${yonderedDisplay}×`} hero />
       </div>
+
+      {saved.destinations.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
+            Places seen
+          </span>
+          <ul className="flex flex-col gap-3">
+            {saved.destinations.map((d, i) => (
+              <li
+                key={`${d.lat},${d.lon},${i}`}
+                className="flex items-center gap-3"
+              >
+                <PlacePhoto
+                  lat={d.lat}
+                  lon={d.lon}
+                  name={d.name}
+                  keepPlaceholder
+                  className="size-14 rounded-xl shrink-0"
+                />
+                <div className="min-w-0">
+                  <div className="font-display text-base truncate">
+                    {d.name}
+                  </div>
+                  {d.label && (
+                    <div className="text-xs text-[var(--muted)] truncate">
+                      {d.label}
+                    </div>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className="flex items-center justify-center">
         <Link
