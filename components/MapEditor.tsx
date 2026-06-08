@@ -5,22 +5,22 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { fmtDist } from "@/lib/geo";
-import { saveList } from "@/lib/data";
+import { saveMap } from "@/lib/data";
 import { rankResults } from "@/lib/rank";
 import type {
   GeocodeResult,
   RankedResult,
-  StoredList,
-  StoredListItem,
+  StoredMap,
+  StoredMapItem,
   YonderMode,
 } from "@/lib/types";
 
-export default function ListEditor() {
+export default function MapEditor() {
   const router = useRouter();
   const { fix } = useGeolocation(true);
   const [name, setName] = useState("");
   const [mode, setMode] = useState<YonderMode>("collection");
-  const [items, setItems] = useState<StoredListItem[]>([]);
+  const [items, setItems] = useState<StoredMapItem[]>([]);
   const [q, setQ] = useState("");
   const [results, setResults] = useState<RankedResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -89,8 +89,8 @@ export default function ListEditor() {
     const finalName =
       name.trim() ||
       items[0]?.name ||
-      "Untitled list";
-    const list: StoredList = {
+      "Untitled map";
+    const map: StoredMap = {
       id: crypto.randomUUID(),
       name: finalName,
       mode: items.length === 1 ? "single" : mode,
@@ -98,8 +98,8 @@ export default function ListEditor() {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-    await saveList(list);
-    router.push(`/lists/${list.id}`);
+    await saveMap(map);
+    router.push(`/maps/${map.id}`);
   };
 
   const showOrderControls = mode === "ordered";
@@ -108,7 +108,7 @@ export default function ListEditor() {
     <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-8 pb-10 gap-5">
       <header className="flex items-center gap-3">
         <Link
-          href="/lists"
+          href="/maps"
           aria-label="Back"
           className="size-9 -ml-2 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]"
         >
@@ -116,12 +116,12 @@ export default function ListEditor() {
         </Link>
         <div>
           <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
-            New list
+            New map
           </span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder={items[0]?.name ?? "Name this list"}
+            placeholder={items[0]?.name ?? "Name this map"}
             className="font-display text-3xl tracking-tight bg-transparent outline-none placeholder:text-[var(--muted)]/40 leading-none"
           />
         </div>
@@ -246,7 +246,7 @@ export default function ListEditor() {
         disabled={items.length === 0}
         className="mt-auto rounded-full bg-[var(--accent)] text-black font-semibold py-3 active:opacity-80 disabled:opacity-30"
       >
-        Save list
+        Save map
       </button>
     </div>
   );

@@ -13,10 +13,10 @@ import { haversine } from "@/lib/geo";
 import { useSettings } from "@/lib/settings";
 import { summarize } from "@/lib/stats";
 import {
-  getList,
+  getMap,
   pushSaved,
   pushYonder,
-  saveList,
+  saveMap,
   updateYonder,
 } from "@/lib/data";
 import type {
@@ -57,8 +57,8 @@ export default function App() {
 
   const lastFix = useRef<Fix | null>(null);
   const pausedAt = useRef<number | null>(null);
-  const sourceListIdRef = useRef<string | null>(null);
-  const targetToListItemRef = useRef<Record<string, string>>({});
+  const sourceMapIdRef = useRef<string | null>(null);
+  const targetToMapItemRef = useRef<Record<string, string>>({});
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
 
@@ -86,9 +86,9 @@ export default function App() {
     phase === "walking" ? handleFix : undefined,
   );
 
-  // Cross-route start handoff. /lists/[id] "Yonder this list", /favourites
+  // Cross-route start handoff. /maps/[id] "Yonder this map", /favourites
   // "Start a yonder", /recap "Do again" all drop a payload here and navigate
-  // home; we pick it up and kick off the yonder.
+  // to /walk; we pick it up and kick off the yonder.
   useEffect(() => {
     if (typeof window === "undefined" || startPayloadConsumed.current) return;
     const raw = window.sessionStorage.getItem("vibe-yonder.start");
@@ -99,14 +99,14 @@ export default function App() {
       const payload = JSON.parse(raw) as {
         targets: Target[];
         mode: YonderMode;
-        listId?: string;
-        listItemIdByTargetId?: Record<string, string>;
+        mapId?: string;
+        mapItemIdByTargetId?: Record<string, string>;
         name?: string;
       };
       if (payload?.targets?.length) {
         void beginYonder(payload.targets, payload.mode, {
-          listId: payload.listId,
-          listItemIdByTargetId: payload.listItemIdByTargetId,
+          mapId: payload.mapId,
+          mapItemIdByTargetId: payload.mapItemIdByTargetId,
           name: payload.name,
         });
       }
@@ -162,14 +162,14 @@ export default function App() {
       targets: Target[],
       mode: YonderMode,
       opts: {
-        listId?: string;
-        listItemIdByTargetId?: Record<string, string>;
+        mapId?: string;
+        mapItemIdByTargetId?: Record<string, string>;
         name?: string;
       } = {},
     ) => {
       await requestAccess();
-      sourceListIdRef.current = opts.listId ?? null;
-      targetToListItemRef.current = opts.listItemIdByTargetId ?? {};
+      sourceMapIdRef.current = opts.mapId ?? null;
+      targetToMapItemRef.current = opts.mapItemIdByTargetId ?? {};
       const activeIndex = computeActiveIndex(targets, mode, null);
       const newYonder: ActiveYonder = {
         id: crypto.randomUUID(),
@@ -223,18 +223,18 @@ export default function App() {
       if (!visited) return;
       const now = Date.now();
 
-      // If this yonder came from a saved list, write the visited mark back so
+      // If this yonder came from a saved map, write the visited mark back so
       // partial completion survives across sessions.
-      const listId = sourceListIdRef.current;
-      const listItemId = targetToListItemRef.current[targetId];
-      if (listId && listItemId) {
+      const mapId = sourceMapIdRef.current;
+      const mapItemId = targetToMapItemRef.current[targetId];
+      if (mapId && mapItemId) {
         void (async () => {
-          const list = await getList(listId);
-          if (list) {
-            await saveList({
-              ...list,
-              items: list.items.map((it) =>
-                it.id === listItemId
+          const map = await getMap(mapId);
+          if (map) {
+            await saveMap({
+              ...map,
+              items: map.items.map((it) =>
+                it.id === mapItemId
                   ? { ...it, visited: true, visitedAt: now }
                   : it,
               ),
@@ -332,7 +332,7 @@ export default function App() {
       yondered: summary.yondered,
       track,
       pausedMs,
-      listId: sourceListIdRef.current ?? undefined,
+      mapId: sourceMapIdRef.current ?? undefined,
     };
 
     setSavedYonder(y);
@@ -395,7 +395,7 @@ export default function App() {
       });
     } else {
       void pushSaved({
-        kind: "list",
+        kind: "map",
         refId: savedYonder.id,
         name: savedYonder.name,
       });
@@ -416,7 +416,7 @@ export default function App() {
     setSavedLocally(false);
     setSavedForLater(false);
     void beginYonder(targets, savedYonder.mode, {
-      listId: savedYonder.listId,
+      mapId: savedYonder.mapId,
       name: savedYonder.name,
     });
   }, [savedYonder, beginYonder]);

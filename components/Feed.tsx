@@ -46,7 +46,7 @@ export default function Feed() {
       JSON.stringify({
         mode: y.mode,
         targets,
-        listId: y.listId,
+        mapId: y.mapId,
         name: y.name,
       }),
     );
@@ -66,7 +66,7 @@ export default function Feed() {
         lon: d.lon,
       });
     } else {
-      void pushSaved({ kind: "list", refId: y.id, name: y.name });
+      void pushSaved({ kind: "map", refId: y.id, name: y.name });
     }
   };
 

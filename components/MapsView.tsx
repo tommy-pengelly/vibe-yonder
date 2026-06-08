@@ -4,17 +4,17 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import BottomNav from "@/components/BottomNav";
 import { useAuthUser } from "@/lib/auth";
-import { loadLists } from "@/lib/data";
-import type { StoredList } from "@/lib/types";
+import { loadMaps } from "@/lib/data";
+import type { StoredMap } from "@/lib/types";
 
-export default function ListsView() {
-  const [lists, setLists] = useState<StoredList[]>([]);
+export default function MapsView() {
+  const [maps, setMaps] = useState<StoredMap[]>([]);
   const { user } = useAuthUser();
 
   useEffect(() => {
     let cancelled = false;
-    void loadLists().then((l) => {
-      if (!cancelled) setLists(l);
+    void loadMaps().then((m) => {
+      if (!cancelled) setMaps(m);
     });
     return () => {
       cancelled = true;
@@ -35,7 +35,7 @@ export default function ListsView() {
             </Link>
             <div>
               <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
-                Lists
+                Maps
               </span>
               <h1 className="font-display text-3xl tracking-tight leading-none">
                 Reusable yonders
@@ -43,36 +43,36 @@ export default function ListsView() {
             </div>
           </div>
           <Link
-            href="/lists/new"
-            aria-label="New list"
+            href="/maps/new"
+            aria-label="New map"
             className="size-9 rounded-full bg-[var(--accent)] text-black flex items-center justify-center active:opacity-80"
           >
             <Plus className="w-4 h-4" strokeWidth={2} />
           </Link>
         </header>
 
-        {lists.length === 0 ? (
+        {maps.length === 0 ? (
           <p className="text-sm text-[var(--muted)]">
-            No lists yet. Build one to wander a chain of places — at your own
+            No maps yet. Build one to wander a chain of places — at your own
             pace, across as many days as you like.
           </p>
         ) : (
           <ul className="flex flex-col divide-y divide-[var(--border)]">
-            {lists.map((l) => {
-              const remaining = l.items.filter((i) => !i.visited).length;
-              const total = l.items.length;
+            {maps.map((m) => {
+              const remaining = m.items.filter((i) => !i.visited).length;
+              const total = m.items.length;
               return (
-                <li key={l.id}>
+                <li key={m.id}>
                   <Link
-                    href={`/lists/${l.id}`}
+                    href={`/maps/${m.id}`}
                     className="w-full text-left py-3 flex items-center justify-between hover:text-[var(--accent)]"
                   >
                     <div className="min-w-0">
                       <div className="font-display text-lg truncate">
-                        {l.name}
+                        {m.name}
                       </div>
                       <div className="text-xs text-[var(--muted)] mt-0.5">
-                        {l.mode === "ordered" ? "Step through" : "Wander between"}
+                        {m.mode === "ordered" ? "Step through" : "Wander between"}
                         {" · "}
                         {total === 0
                           ? "no places"

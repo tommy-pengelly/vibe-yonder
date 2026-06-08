@@ -11,8 +11,8 @@ import type {
   FavouritePlace,
   Fix,
   SavedYonder,
-  StoredList,
-  StoredListItem,
+  StoredMap,
+  StoredMapItem,
   StoredSaved,
   YonderMode,
 } from "./types";
@@ -43,7 +43,7 @@ type YonderRow = {
   yondered: number | null;
   track: Fix[] | null;
   paused_ms: number | null;
-  list_id: string | null;
+  map_id: string | null;
 };
 
 function rowToYonder(r: YonderRow): SavedYonder {
@@ -60,7 +60,7 @@ function rowToYonder(r: YonderRow): SavedYonder {
     yondered: r.yondered ?? 0,
     track: r.track ?? [],
     pausedMs: r.paused_ms ?? 0,
-    listId: r.list_id ?? undefined,
+    mapId: r.map_id ?? undefined,
   };
 }
 
@@ -79,7 +79,7 @@ function yonderToRow(y: SavedYonder, uid: string) {
     yondered: y.yondered,
     track: y.track,
     paused_ms: y.pausedMs,
-    list_id: y.listId ?? null,
+    map_id: y.mapId ?? null,
   };
 }
 
@@ -103,7 +103,7 @@ function rowToFavourite(r: PlaceRow): FavouritePlace {
   };
 }
 
-type ListRow = {
+type MapRow = {
   id: string;
   name: string;
   mode: YonderMode;
@@ -111,9 +111,9 @@ type ListRow = {
   updated_at: string | null;
 };
 
-type ListItemRow = {
+type MapItemRow = {
   id: string;
-  list_id: string;
+  map_id: string;
   name: string;
   label: string | null;
   lat: number;
@@ -123,7 +123,7 @@ type ListItemRow = {
   visited_at: string | null;
 };
 
-function rowToListItem(r: ListItemRow): StoredListItem {
+function rowToMapItem(r: MapItemRow): StoredMapItem {
   return {
     id: r.id,
     name: r.name,
@@ -135,20 +135,20 @@ function rowToListItem(r: ListItemRow): StoredListItem {
   };
 }
 
-function rowToList(l: ListRow, items: ListItemRow[]): StoredList {
+function rowToMap(m: MapRow, items: MapItemRow[]): StoredMap {
   return {
-    id: l.id,
-    name: l.name,
-    mode: l.mode,
-    items: items.map(rowToListItem),
-    createdAt: l.created_at ? new Date(l.created_at).getTime() : 0,
-    updatedAt: l.updated_at ? new Date(l.updated_at).getTime() : 0,
+    id: m.id,
+    name: m.name,
+    mode: m.mode,
+    items: items.map(rowToMapItem),
+    createdAt: m.created_at ? new Date(m.created_at).getTime() : 0,
+    updatedAt: m.updated_at ? new Date(m.updated_at).getTime() : 0,
   };
 }
 
 type SavedRow = {
   id: string;
-  kind: "place" | "list";
+  kind: "place" | "map";
   ref_id: string;
   name: string;
   lat: number | null;
@@ -168,21 +168,21 @@ function rowToSaved(r: SavedRow): StoredSaved {
   };
 }
 
-/** Replace a list's rows in the cloud: upsert the list, then rewrite its items. */
-async function writeListCloud(sb: SupabaseClient, uid: string, list: StoredList) {
-  await sb.from("lists").upsert({
-    id: list.id,
+/** Replace a map's rows in the cloud: upsert the map, then rewrite its items. */
+async function writeMapCloud(sb: SupabaseClient, uid: string, map: StoredMap) {
+  await sb.from("maps").upsert({
+    id: map.id,
     user_id: uid,
-    name: list.name,
-    mode: list.mode,
+    name: map.name,
+    mode: map.mode,
     updated_at: new Date().toISOString(),
   });
-  await sb.from("list_items").delete().eq("list_id", list.id);
-  if (list.items.length) {
-    await sb.from("list_items").insert(
-      list.items.map((it, i) => ({
+  await sb.from("map_items").delete().eq("map_id", map.id);
+  if (map.items.length) {
+    await sb.from("map_items").insert(
+      map.items.map((it, i) => ({
         id: it.id,
-        list_id: list.id,
+        map_id: map.id,
         name: it.name,
         label: it.label ?? null,
         lat: it.lat,
@@ -332,67 +332,67 @@ export async function getFavourite(
   return data ? rowToFavourite(data as PlaceRow) : null;
 }
 
-// ----- Lists -----
+// ----- Maps -----
 
-export async function loadLists(): Promise<StoredList[]> {
+export async function loadMaps(): Promise<StoredMap[]> {
   const c = await ctx();
-  if (!c) return local.loadLists();
-  const { data: lists, error } = await c.sb
-    .from("lists")
+  if (!c) return local.loadMaps();
+  const { data: maps, error } = await c.sb
+    .from("maps")
     .select("*")
     .order("updated_at", { ascending: false });
   if (error) {
-    console.error("loadLists:", error.message);
+    console.error("loadMaps:", error.message);
     return [];
   }
-  const rows = lists as ListRow[];
+  const rows = maps as MapRow[];
   if (rows.length === 0) return [];
   const { data: items } = await c.sb
-    .from("list_items")
+    .from("map_items")
     .select("*")
     .in(
-      "list_id",
-      rows.map((l) => l.id),
+      "map_id",
+      rows.map((m) => m.id),
     )
     .order("position", { ascending: true });
-  const byList = new Map<string, ListItemRow[]>();
-  for (const it of (items as ListItemRow[]) ?? []) {
-    const arr = byList.get(it.list_id) ?? [];
+  const byMap = new Map<string, MapItemRow[]>();
+  for (const it of (items as MapItemRow[]) ?? []) {
+    const arr = byMap.get(it.map_id) ?? [];
     arr.push(it);
-    byList.set(it.list_id, arr);
+    byMap.set(it.map_id, arr);
   }
-  return rows.map((l) => rowToList(l, byList.get(l.id) ?? []));
+  return rows.map((m) => rowToMap(m, byMap.get(m.id) ?? []));
 }
 
-export async function getList(id: string): Promise<StoredList | null> {
+export async function getMap(id: string): Promise<StoredMap | null> {
   const c = await ctx();
-  if (!c) return local.getList(id);
-  const { data: list, error } = await c.sb
-    .from("lists")
+  if (!c) return local.getMap(id);
+  const { data: map, error } = await c.sb
+    .from("maps")
     .select("*")
     .eq("id", id)
     .maybeSingle();
-  if (error || !list) return null;
+  if (error || !map) return null;
   const { data: items } = await c.sb
-    .from("list_items")
+    .from("map_items")
     .select("*")
-    .eq("list_id", id)
+    .eq("map_id", id)
     .order("position", { ascending: true });
-  return rowToList(list as ListRow, (items as ListItemRow[]) ?? []);
+  return rowToMap(map as MapRow, (items as MapItemRow[]) ?? []);
 }
 
-export async function saveList(list: StoredList): Promise<void> {
+export async function saveMap(map: StoredMap): Promise<void> {
   const c = await ctx();
-  if (!c) return local.saveList(list);
-  await writeListCloud(c.sb, c.uid, list);
+  if (!c) return local.saveMap(map);
+  await writeMapCloud(c.sb, c.uid, map);
 }
 
-export async function deleteList(id: string): Promise<void> {
+export async function deleteMap(id: string): Promise<void> {
   const c = await ctx();
-  if (!c) return local.deleteList(id);
-  // list_items cascade on the FK, so deleting the list is enough.
-  const { error } = await c.sb.from("lists").delete().eq("id", id);
-  if (error) console.error("deleteList:", error.message);
+  if (!c) return local.deleteMap(id);
+  // map_items cascade on the FK, so deleting the map is enough.
+  const { error } = await c.sb.from("maps").delete().eq("id", id);
+  if (error) console.error("deleteMap:", error.message);
 }
 
 // ----- Saved (save-for-later) -----
@@ -462,12 +462,12 @@ export async function importGuestData(): Promise<void> {
   importStarted = true;
   const yonders = local.loadYonders();
   const favourites = local.loadFavourites();
-  const lists = local.loadLists();
+  const maps = local.loadMaps();
   const saved = local.loadSaved();
   if (
     yonders.length === 0 &&
     favourites.length === 0 &&
-    lists.length === 0 &&
+    maps.length === 0 &&
     saved.length === 0
   ) {
     return;
@@ -492,8 +492,8 @@ export async function importGuestData(): Promise<void> {
       );
       if (error) throw error;
     }
-    for (const l of lists) {
-      await writeListCloud(c.sb, c.uid, l);
+    for (const m of maps) {
+      await writeMapCloud(c.sb, c.uid, m);
     }
     if (saved.length) {
       const { error } = await c.sb.from("saved").insert(

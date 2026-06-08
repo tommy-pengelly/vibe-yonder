@@ -28,7 +28,7 @@ export default function SavedView() {
     let targets: Target[];
     let mode = "single";
     let name: string | undefined;
-    let listId: string | undefined;
+    let mapId: string | undefined;
 
     if (s.kind === "place" && s.lat != null && s.lon != null) {
       targets = [
@@ -55,12 +55,12 @@ export default function SavedView() {
       }));
       mode = y.mode;
       name = y.name;
-      listId = y.listId;
+      mapId = y.mapId;
     }
 
     window.sessionStorage.setItem(
       "vibe-yonder.start",
-      JSON.stringify({ mode, targets, name, listId }),
+      JSON.stringify({ mode, targets, name, mapId }),
     );
     router.push("/walk");
   };

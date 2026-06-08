@@ -37,11 +37,14 @@ Metrics serve the story; they are not the point. The app offers a **"hide the nu
 
 | Use | Not |
 |---|---|
-| a **yonder** (a walk); "to yonder", "you yondered 32×" | a walk / a run / a workout |
+| a **yonder** (the *activity* — a walk you do/did); "to yonder", "you yondered 32×" | a walk / a run / a workout |
+| a **map** (the *plan* — a saved, reusable, shareable set of places to yonder); "make a map", "yonder this map", "your maps" | a list / a collection / a route / an itinerary |
 | **Yondered** (the wander multiplier, e.g. `32×`) | wander factor |
 | **Direct** (straight-line start→finish) | (the idiom "as the crow flies" is fine in Explain copy only) |
 | **scope** (the full-bleed view), **the dot** (you), **the marker / directional head** | minimap / radar / arrow |
 | **places seen**, **explore**, **wander** | — |
+
+**A yonder vs a map.** A **yonder** is an *outing* — you walk it; it has a trace, time, and a Yondered score. A **map** is a *plan* — a curated set of places, no trace, that you can yonder anytime, do again, keep for later, or (Doc 3) share publicly so others **Load / Duplicate** its places and wander their own way. The two are separate objects (the `yonders` table = activities; the `maps` table = plans).
 
 **Banned from UI and features:** pace, route, navigate, turn-by-turn, fastest, ETA, calories, elevation, climb, splits, PR, record, "efficiency".
 
@@ -68,19 +71,21 @@ Metrics serve the story; they are not the point. The app offers a **"hide the nu
 Guest-first. Active walk is a full-screen takeover (no nav). Membership is light: an account just unlocks saving.
 
 ```
-/                  Home / Explore   — "Where to?" search + (if signed in) Lists, Favourites,
-                                       Recent Yonders. Doubles as the guest landing.
-/walk              Active yonder     — full-bleed heading-up scope, directional head, Time + Distance
-                                       (hideable), pause / finish. No nav bar. Discard lives in pause.
+/                  Feed             — Mine · Following · Community. Your wanders + (Doc 3) people you
+                                       follow + public discovery. The guest landing.
+/walk              Active yonder     — launched by the ⊕. Full-bleed heading-up scope, directional head,
+                                       Time + Distance (hideable), pause / finish. Full takeover, no nav.
 /recap/[id]        Recap             — faded trace, "You yondered N×", tiles (Walked, Time, Direct,
-                                       Yondered). Save (→ contextual sign-in), New walk, Share.
+                                       Yondered). Save, Do again, Save for later, Share.
 /explain           How it works      — the philosophy + what each metric means.
-/you               You               — profile: saved Yonders, settings (incl. "hide numbers"), sign in/out.
-/lists, /lists/[id]                  — trip lists; places with visited / visit-again state; "Yonder this list".
+/you               Me                — profile: your yonders, maps, favourites, saved, settings, sign in/out.
+/maps, /maps/[id]                    — a map: a saved set of places with visited / visit-again state;
+                                       "Yonder this map".
 /favourites                          — saved places, each can start a yonder.
+/saved                               — save-for-later bookmarks; tap to yonder.
 ```
 
-Nav: a light **Explore · You** bottom bar; active walk hides it. Auth is a **contextual sheet**, never a page; on sign-up, import the guest's local yonders.
+Nav: a **Feed · ⊕ · Me** bottom bar (Strava-shaped; the centre ⊕ launches a yonder). The active walk is a full takeover with no nav. Auth is a **contextual sheet**, never a page; on sign-up, import the guest's local yonders.
 
 ---
 
@@ -96,7 +101,7 @@ Nav: a light **Explore · You** bottom bar; active walk hides it. Auth is a **co
 
 ## Future (keep on-brand if/when built)
 
-- **Social (phase 2) — exploration-flavoured, not competitive.** Sharing a yonder (trace + "yondered N×"), shareable/collaborative lists, following friends to see where they've *discovered*, kudos on a good ramble. **Never** pace/speed leaderboards or racing. **Privacy is paramount** — location is sensitive: obfuscate start points near home, sharing opt-in and granular. Build only after the solo loop is loved; social amplifies a good core, it can't create one.
+- **Social (phase 2) — exploration-flavoured, not competitive.** Sharing a yonder (trace + "yondered N×"), shareable/collaborative maps, following friends to see where they've *discovered*, kudos on a good ramble. **Never** pace/speed leaderboards or racing. **Privacy is paramount** — location is sensitive: obfuscate start points near home, sharing opt-in and granular. Build only after the solo loop is loved; social amplifies a good core, it can't create one.
 - Auto-discovered POIs + Wikipedia blurbs · dead-end warnings (OSM pedestrian graph) · real map tiles under the trail · shareable recap image · offline/PWA.
 
 ---

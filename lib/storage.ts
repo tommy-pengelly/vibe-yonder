@@ -2,14 +2,14 @@
 import type {
   FavouritePlace,
   SavedYonder,
-  StoredList,
+  StoredMap,
   StoredSaved,
 } from "./types";
 
 const KEYS = {
   yonders: "vibe-yonder.yonders.v1",
   favourites: "vibe-yonder.favourites.v1",
-  lists: "vibe-yonder.lists.v1",
+  maps: "vibe-yonder.maps.v1",
   saved: "vibe-yonder.saved.v1",
 } as const;
 
@@ -64,7 +64,7 @@ export function clearYonders() {
 export function clearGuestData() {
   write(KEYS.yonders, []);
   write(KEYS.favourites, []);
-  write(KEYS.lists, []);
+  write(KEYS.maps, []);
   write(KEYS.saved, []);
 }
 
@@ -116,26 +116,26 @@ export function getFavourite(
   );
 }
 
-// ----- Lists -----
-export function loadLists(): StoredList[] {
-  return read<StoredList[]>(KEYS.lists, []);
+// ----- Maps -----
+export function loadMaps(): StoredMap[] {
+  return read<StoredMap[]>(KEYS.maps, []);
 }
 
-export function getList(id: string): StoredList | null {
-  return loadLists().find((l) => l.id === id) ?? null;
+export function getMap(id: string): StoredMap | null {
+  return loadMaps().find((m) => m.id === id) ?? null;
 }
 
-export function saveList(list: StoredList) {
-  const all = loadLists();
-  const idx = all.findIndex((l) => l.id === list.id);
-  const stamped: StoredList = { ...list, updatedAt: Date.now() };
+export function saveMap(map: StoredMap) {
+  const all = loadMaps();
+  const idx = all.findIndex((m) => m.id === map.id);
+  const stamped: StoredMap = { ...map, updatedAt: Date.now() };
   const next =
-    idx >= 0 ? all.map((l, i) => (i === idx ? stamped : l)) : [stamped, ...all];
-  write(KEYS.lists, next);
+    idx >= 0 ? all.map((m, i) => (i === idx ? stamped : m)) : [stamped, ...all];
+  write(KEYS.maps, next);
 }
 
-export function deleteList(id: string) {
-  write(KEYS.lists, loadLists().filter((l) => l.id !== id));
+export function deleteMap(id: string) {
+  write(KEYS.maps, loadMaps().filter((m) => m.id !== id));
 }
 
 // ----- Saved (save-for-later) -----

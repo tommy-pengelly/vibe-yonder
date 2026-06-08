@@ -51,7 +51,7 @@ export type FavouritePlace = {
   createdAt: number;
 };
 
-export type StoredListItem = {
+export type StoredMapItem = {
   id: string;
   name: string;
   label?: string;
@@ -61,19 +61,20 @@ export type StoredListItem = {
   visitedAt?: number;
 };
 
-export type StoredList = {
+/** A map: a saved, reusable set of places to yonder. */
+export type StoredMap = {
   id: string;
   name: string;
   mode: YonderMode;
-  items: StoredListItem[];
+  items: StoredMapItem[];
   createdAt: number;
   updatedAt: number;
 };
 
-/** A bookmarked place or list, persisted via Save for later. */
+/** A bookmarked place or map, persisted via Save for later. */
 export type StoredSaved = {
   id: string;
-  kind: "place" | "list";
+  kind: "place" | "map";
   refId: string;
   /** Snapshot fields for quick display without dereferencing. */
   name: string;
@@ -97,8 +98,8 @@ export type SavedYonder = {
   yondered: number;
   track: Fix[];
   pausedMs: number;
-  /** Optional source-list link, set when the yonder began from a saved list. */
-  listId?: string;
+  /** Optional source-map link, set when the yonder began from a saved map. */
+  mapId?: string;
 };
 
 export type AuthUser = {

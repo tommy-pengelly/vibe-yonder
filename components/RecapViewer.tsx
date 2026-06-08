@@ -65,7 +65,7 @@ export default function RecapViewer({ id }: { id: string }) {
       JSON.stringify({
         mode: yonder.mode,
         targets,
-        listId: yonder.listId,
+        mapId: yonder.mapId,
         name: yonder.name,
       }),
     );
@@ -86,7 +86,7 @@ export default function RecapViewer({ id }: { id: string }) {
       });
     } else {
       void pushSaved({
-        kind: "list",
+        kind: "map",
         refId: yonder.id,
         name: yonder.name,
       });

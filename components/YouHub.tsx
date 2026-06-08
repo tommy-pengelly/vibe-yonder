@@ -1,19 +1,19 @@
 "use client";
-import { Bookmark, ChevronRight, Heart, ListTodo, Settings as SettingsIcon } from "lucide-react";
+import { Bookmark, ChevronRight, Heart, Map as MapIcon, Settings as SettingsIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
 import BottomNav from "@/components/BottomNav";
 import { useAuthUser, signOut } from "@/lib/auth";
-import { loadFavourites, loadLists, loadSaved, loadYonders } from "@/lib/data";
+import { loadFavourites, loadMaps, loadSaved, loadYonders } from "@/lib/data";
 import { fmtDist } from "@/lib/geo";
-import type { FavouritePlace, SavedYonder, StoredList, StoredSaved } from "@/lib/types";
+import type { FavouritePlace, SavedYonder, StoredMap, StoredSaved } from "@/lib/types";
 
 export default function YouHub() {
   const { user } = useAuthUser();
   const [yonders, setYonders] = useState<SavedYonder[]>([]);
   const [favourites, setFavourites] = useState<FavouritePlace[]>([]);
-  const [lists, setLists] = useState<StoredList[]>([]);
+  const [maps, setMaps] = useState<StoredMap[]>([]);
   const [saved, setSaved] = useState<StoredSaved[]>([]);
   const [authOpen, setAuthOpen] = useState(false);
 
@@ -22,13 +22,13 @@ export default function YouHub() {
     void Promise.all([
       loadYonders(),
       loadFavourites(),
-      loadLists(),
+      loadMaps(),
       loadSaved(),
-    ]).then(([y, f, l, s]) => {
+    ]).then(([y, f, m, s]) => {
       if (cancelled) return;
       setYonders(y);
       setFavourites(f);
-      setLists(l);
+      setMaps(m);
       setSaved(s);
     });
     return () => {
@@ -76,7 +76,7 @@ export default function YouHub() {
         )}
 
         <Row href="/favourites" Icon={Heart} label="Favourites" count={favourites.length} />
-        <Row href="/lists" Icon={ListTodo} label="Lists" count={lists.length} />
+        <Row href="/maps" Icon={MapIcon} label="Maps" count={maps.length} />
         <Row href="/saved" Icon={Bookmark} label="Saved for later" count={saved.length} />
 
         <section className="flex flex-col gap-3">
