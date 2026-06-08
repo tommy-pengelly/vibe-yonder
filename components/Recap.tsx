@@ -1,4 +1,5 @@
 "use client";
+import { Bookmark, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fmtDist, fmtDuration } from "@/lib/geo";
@@ -8,9 +9,14 @@ import type { Fix, SavedYonder } from "@/lib/types";
 type Props = {
   saved: SavedYonder;
   savedLocally: boolean;
-  onRenameTitle: (next: string) => void;
-  onNewWalk: () => void;
-  onSave: () => void;
+  savedForLater?: boolean;
+  onRenameTitle?: (next: string) => void;
+  onNewWalk?: () => void;
+  onSave?: () => void;
+  onDoAgain?: () => void;
+  onSaveForLater?: () => void;
+  /** Optional secondary line under Save — e.g. "Sign in to keep across devices." */
+  signedInHint?: React.ReactNode;
 };
 
 const W = 420;
@@ -19,9 +25,13 @@ const H = 320;
 export default function Recap({
   saved,
   savedLocally,
+  savedForLater,
   onRenameTitle,
   onNewWalk,
   onSave,
+  onDoAgain,
+  onSaveForLater,
+  signedInHint,
 }: Props) {
   const summary = useMemo(
     () => summarize(saved.track, saved.startedAt, saved.pausedMs, saved.endedAt),
@@ -58,7 +68,7 @@ export default function Recap({
 
   const commitTitle = () => {
     const next = draft.trim() || saved.name;
-    if (next !== saved.name) onRenameTitle(next);
+    if (next !== saved.name && onRenameTitle) onRenameTitle(next);
     setEditing(false);
   };
 
@@ -74,7 +84,7 @@ export default function Recap({
           <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
             Walk recap
           </span>
-          {editing ? (
+          {editing && onRenameTitle ? (
             <input
               ref={inputRef}
               value={draft}
@@ -92,9 +102,10 @@ export default function Recap({
           ) : (
             <button
               type="button"
-              onClick={() => setEditing(true)}
-              className="font-display text-3xl tracking-tight text-left truncate hover:text-[var(--accent)]"
-              title="Tap to rename"
+              onClick={() => onRenameTitle && setEditing(true)}
+              disabled={!onRenameTitle}
+              className="font-display text-3xl tracking-tight text-left truncate hover:text-[var(--accent)] disabled:hover:text-[var(--foreground)]"
+              title={onRenameTitle ? "Tap to rename" : undefined}
             >
               {saved.name}
             </button>
@@ -160,21 +171,55 @@ export default function Recap({
       </div>
 
       <div className="flex flex-col gap-2 mt-auto">
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={savedLocally}
-          className="rounded-full border border-[var(--accent)]/60 text-[var(--accent)] font-semibold py-3 hover:bg-[var(--accent)] hover:text-black disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-[var(--accent)]"
-        >
-          {savedLocally ? "Saved ✓" : "Save locally"}
-        </button>
-        <button
-          type="button"
-          onClick={onNewWalk}
-          className="rounded-full bg-[var(--accent)] text-black font-semibold py-3 active:opacity-80"
-        >
-          New walk
-        </button>
+        {(onDoAgain || onSaveForLater) && (
+          <div className="flex items-center gap-2">
+            {onDoAgain && (
+              <button
+                type="button"
+                onClick={onDoAgain}
+                className="flex-1 rounded-full border border-[var(--border)] text-[var(--foreground)] py-2.5 flex items-center justify-center gap-2 hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              >
+                <RotateCcw className="w-4 h-4" strokeWidth={1.75} />
+                Do again
+              </button>
+            )}
+            {onSaveForLater && (
+              <button
+                type="button"
+                onClick={onSaveForLater}
+                disabled={savedForLater}
+                className="flex-1 rounded-full border border-[var(--border)] text-[var(--foreground)] py-2.5 flex items-center justify-center gap-2 hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--foreground)]"
+              >
+                <Bookmark className="w-4 h-4" strokeWidth={1.75} />
+                {savedForLater ? "Saved" : "Save for later"}
+              </button>
+            )}
+          </div>
+        )}
+        {onSave && (
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={savedLocally}
+            className="rounded-full border border-[var(--accent)]/60 text-[var(--accent)] font-semibold py-3 hover:bg-[var(--accent)] hover:text-black disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-[var(--accent)]"
+          >
+            {savedLocally ? "Saved ✓" : "Save"}
+          </button>
+        )}
+        {signedInHint && (
+          <p className="text-[11px] text-[var(--muted)] text-center">
+            {signedInHint}
+          </p>
+        )}
+        {onNewWalk && (
+          <button
+            type="button"
+            onClick={onNewWalk}
+            className="rounded-full bg-[var(--accent)] text-black font-semibold py-3 active:opacity-80"
+          >
+            New walk
+          </button>
+        )}
       </div>
     </div>
   );

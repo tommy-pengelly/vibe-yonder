@@ -2,10 +2,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useHeading } from "@/hooks/useHeading";
+import {
+  MIN_FIX_DISTANCE_M,
+  MIN_FIX_INTERVAL_MS,
+  TRIVIAL_WALK_M,
+} from "@/lib/constants";
 import { haversine } from "@/lib/geo";
 import { useSettings } from "@/lib/settings";
 import { summarize } from "@/lib/stats";
-import { pushYonder, updateYonder } from "@/lib/storage";
+import {
+  getList,
+  pushSaved,
+  pushYonder,
+  saveList,
+  updateYonder,
+} from "@/lib/storage";
 import type {
   ActiveYonder,
   Destination,
@@ -15,16 +26,16 @@ import type {
   YonderMode,
 } from "@/lib/types";
 import { keepAwake } from "@/lib/wake";
+import AuthModal from "./AuthModal";
+import BottomNav from "./BottomNav";
 import Recap from "./Recap";
 import SearchScreen from "./SearchScreen";
 import WalkScreen from "./WalkScreen";
 import YonderComposer from "./YonderComposer";
+import { useAuthUser } from "@/lib/auth";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
 
 type Phase = "search" | "composer" | "walking" | "recap";
-
-const MIN_FIX_DISTANCE_M = 3;
-const MIN_FIX_INTERVAL_MS = 3000;
-const TRIVIAL_WALK_M = 30;
 
 export default function App() {
   const [phase, setPhase] = useState<Phase>("search");
@@ -39,14 +50,21 @@ export default function App() {
 
   const [savedYonder, setSavedYonder] = useState<SavedYonder | null>(null);
   const [savedLocally, setSavedLocally] = useState(false);
+  const [savedForLater, setSavedForLater] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
 
   const lastFix = useRef<Fix | null>(null);
   const pausedAt = useRef<number | null>(null);
+  const sourceListIdRef = useRef<string | null>(null);
+  const targetToListItemRef = useRef<Record<string, string>>({});
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
 
   const { heading, requestAccess } = useHeading();
   const { settings } = useSettings();
+  const { user } = useAuthUser();
+  const authConfigured = isSupabaseConfigured();
+  const startPayloadConsumed = useRef(false);
 
   const handleFix = useCallback((f: Fix) => {
     if (pausedRef.current) return;
@@ -65,6 +83,38 @@ export default function App() {
     phase !== "recap",
     phase === "walking" ? handleFix : undefined,
   );
+
+  // Cross-route start handoff. /lists/[id] "Yonder this list", /favourites
+  // "Start a yonder", /recap "Do again" all drop a payload here and navigate
+  // home; we pick it up and kick off the yonder.
+  useEffect(() => {
+    if (typeof window === "undefined" || startPayloadConsumed.current) return;
+    const raw = window.sessionStorage.getItem("vibe-yonder.start");
+    if (!raw) return;
+    startPayloadConsumed.current = true;
+    window.sessionStorage.removeItem("vibe-yonder.start");
+    try {
+      const payload = JSON.parse(raw) as {
+        targets: Target[];
+        mode: YonderMode;
+        listId?: string;
+        listItemIdByTargetId?: Record<string, string>;
+        name?: string;
+      };
+      if (payload?.targets?.length) {
+        void beginYonder(payload.targets, payload.mode, {
+          listId: payload.listId,
+          listItemIdByTargetId: payload.listItemIdByTargetId,
+          name: payload.name,
+        });
+      }
+    } catch {
+      // ignore malformed payload
+    }
+    // beginYonder is stable across the lifetime of this component (depends only
+    // on requestAccess which is stable from useHeading).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (phase !== "walking") return;
@@ -106,15 +156,25 @@ export default function App() {
   };
 
   const beginYonder = useCallback(
-    async (targets: Target[], mode: YonderMode) => {
+    async (
+      targets: Target[],
+      mode: YonderMode,
+      opts: {
+        listId?: string;
+        listItemIdByTargetId?: Record<string, string>;
+        name?: string;
+      } = {},
+    ) => {
       await requestAccess();
+      sourceListIdRef.current = opts.listId ?? null;
+      targetToListItemRef.current = opts.listItemIdByTargetId ?? {};
       const activeIndex = computeActiveIndex(targets, mode, null);
       const newYonder: ActiveYonder = {
         id: crypto.randomUUID(),
         mode,
         targets,
         activeIndex,
-        name: undefined,
+        name: opts.name,
       };
       setYonder(newYonder);
       setTrack([]);
@@ -159,13 +219,30 @@ export default function App() {
   const onArrivalConfirm = useCallback(
     (targetId: string, visited: boolean) => {
       if (!visited) return;
+      const now = Date.now();
+
+      // If this yonder came from a saved list, write the visited mark back so
+      // partial completion survives across sessions.
+      const listId = sourceListIdRef.current;
+      const listItemId = targetToListItemRef.current[targetId];
+      if (listId && listItemId) {
+        const list = getList(listId);
+        if (list) {
+          saveList({
+            ...list,
+            items: list.items.map((it) =>
+              it.id === listItemId
+                ? { ...it, visited: true, visitedAt: now }
+                : it,
+            ),
+          });
+        }
+      }
+
       setYonder((y) => {
         if (!y) return y;
-        const now = Date.now();
         const targets = y.targets.map((t) =>
-          t.id === targetId
-            ? { ...t, visited: true, visitedAt: now }
-            : t,
+          t.id === targetId ? { ...t, visited: true, visitedAt: now } : t,
         );
         const activeIndex = computeActiveIndex(targets, y.mode, y.activeIndex);
         return { ...y, targets, activeIndex };
@@ -222,18 +299,14 @@ export default function App() {
       yonder?.targets.find((_, i) => i === yonder.activeIndex) ??
       yonder?.targets[0] ??
       null;
-    const destForRecap: Destination = primaryTarget
-      ? {
-          name: primaryTarget.name,
-          label: primaryTarget.label,
-          lat: primaryTarget.lat,
-          lon: primaryTarget.lon,
-        }
-      : {
-          name: "Yonder",
-          lat: track.at(-1)?.lat ?? 0,
-          lon: track.at(-1)?.lon ?? 0,
-        };
+
+    const destinations: Destination[] =
+      yonder?.targets.map((t) => ({
+        name: t.name,
+        label: t.label,
+        lat: t.lat,
+        lon: t.lon,
+      })) ?? [];
 
     const seen = yonder?.targets.filter((t) => t.visited) ?? [];
     const autoName =
@@ -245,6 +318,8 @@ export default function App() {
     const y: SavedYonder = {
       id: crypto.randomUUID(),
       name: autoName || "Yonder",
+      mode: yonder?.mode ?? "single",
+      destinations,
       startedAt: startTime ?? now,
       endedAt: now,
       durationMs: summary.durationMs,
@@ -253,7 +328,7 @@ export default function App() {
       yondered: summary.yondered,
       track,
       pausedMs,
-      destination: destForRecap,
+      listId: sourceListIdRef.current ?? undefined,
     };
 
     setSavedYonder(y);
@@ -290,11 +365,57 @@ export default function App() {
     });
   }, [savedLocally]);
 
-  const saveLocally = useCallback(() => {
+  const saveYonderAction = useCallback(() => {
     if (!savedYonder) return;
     pushYonder(savedYonder);
     setSavedLocally(true);
-  }, [savedYonder]);
+    // Cloud sync is wired but optional; offer it only when actually available.
+    if (!user && authConfigured) {
+      setAuthOpen(true);
+    }
+  }, [savedYonder, user, authConfigured]);
+
+  const saveForLater = useCallback(() => {
+    if (!savedYonder || savedForLater) return;
+    // "Save for later" on a finished yonder bookmarks its destinations so the
+    // user can do them again from /you without re-searching.
+    if (savedYonder.destinations.length === 1) {
+      const d = savedYonder.destinations[0];
+      pushSaved({
+        kind: "place",
+        refId: savedYonder.id,
+        name: d.name,
+        lat: d.lat,
+        lon: d.lon,
+      });
+    } else {
+      pushSaved({
+        kind: "list",
+        refId: savedYonder.id,
+        name: savedYonder.name,
+      });
+    }
+    setSavedForLater(true);
+  }, [savedYonder, savedForLater]);
+
+  const doAgain = useCallback(() => {
+    if (!savedYonder) return;
+    const targets: Target[] = savedYonder.destinations.map((d) => ({
+      id: crypto.randomUUID(),
+      name: d.name,
+      label: d.label,
+      lat: d.lat,
+      lon: d.lon,
+      visited: false,
+    }));
+    setSavedYonder(null);
+    setSavedLocally(false);
+    setSavedForLater(false);
+    void beginYonder(targets, savedYonder.mode, {
+      listId: savedYonder.listId,
+      name: savedYonder.name,
+    });
+  }, [savedYonder, beginYonder]);
 
   const openComposer = useCallback((seed: Target | null) => {
     setComposerSeed(seed ? [seed] : []);
@@ -305,11 +426,14 @@ export default function App() {
 
   if (phase === "search") {
     return (
-      <SearchScreen
-        position={fix}
-        onPickSingle={(target) => void beginYonder([target], "single")}
-        onComposeMulti={openComposer}
-      />
+      <>
+        <SearchScreen
+          position={fix}
+          onPickSingle={(target) => void beginYonder([target], "single")}
+          onComposeMulti={openComposer}
+        />
+        <BottomNav />
+      </>
     );
   }
 
@@ -348,14 +472,39 @@ export default function App() {
   }
 
   if (phase === "recap" && savedYonder) {
+    const signedInHint =
+      !user && authConfigured && savedLocally
+        ? "Sign in to keep this across devices."
+        : null;
     return (
-      <Recap
-        saved={savedYonder}
-        savedLocally={savedLocally}
-        onRenameTitle={renameRecap}
-        onNewWalk={newWalk}
-        onSave={saveLocally}
-      />
+      <>
+        <Recap
+          saved={savedYonder}
+          savedLocally={savedLocally}
+          savedForLater={savedForLater}
+          onRenameTitle={renameRecap}
+          onNewWalk={newWalk}
+          onSave={saveYonderAction}
+          onDoAgain={doAgain}
+          onSaveForLater={saveForLater}
+          signedInHint={
+            signedInHint ? (
+              <button
+                type="button"
+                onClick={() => setAuthOpen(true)}
+                className="text-[var(--accent)] hover:opacity-80"
+              >
+                {signedInHint}
+              </button>
+            ) : null
+          }
+        />
+        <AuthModal
+          open={authOpen}
+          reason="Create a free account to keep this yonder across devices."
+          onClose={() => setAuthOpen(false)}
+        />
+      </>
     );
   }
 

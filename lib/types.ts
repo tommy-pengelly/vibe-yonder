@@ -51,9 +51,44 @@ export type FavouritePlace = {
   createdAt: number;
 };
 
+export type StoredListItem = {
+  id: string;
+  name: string;
+  label?: string;
+  lat: number;
+  lon: number;
+  visited: boolean;
+  visitedAt?: number;
+};
+
+export type StoredList = {
+  id: string;
+  name: string;
+  mode: YonderMode;
+  items: StoredListItem[];
+  createdAt: number;
+  updatedAt: number;
+};
+
+/** A bookmarked place or list, persisted via Save for later. */
+export type StoredSaved = {
+  id: string;
+  kind: "place" | "list";
+  refId: string;
+  /** Snapshot fields for quick display without dereferencing. */
+  name: string;
+  /** Only set for kind=place. */
+  lat?: number;
+  lon?: number;
+  createdAt: number;
+};
+
 export type SavedYonder = {
   id: string;
   name: string;
+  mode: YonderMode;
+  /** All targets, in their original order (Ordered) or as-added (Collection / Single). */
+  destinations: Destination[];
   startedAt: number;
   endedAt: number;
   durationMs: number;
@@ -62,8 +97,8 @@ export type SavedYonder = {
   yondered: number;
   track: Fix[];
   pausedMs: number;
-  /** Snapshot of the primary destination (for Single/Ordered) or yonder centroid. */
-  destination: Destination;
+  /** Optional source-list link, set when the yonder began from a saved list. */
+  listId?: string;
 };
 
 export type AuthUser = {

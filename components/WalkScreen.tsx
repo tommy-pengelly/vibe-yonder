@@ -7,6 +7,15 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ARRIVAL_RADIUS_M,
+  ARRIVAL_REARM_RATIO,
+  DEFAULT_MPP,
+  MAX_MPP,
+  MIN_MPP,
+  RIM_FRACTION,
+  SCALE_LEVELS_M,
+} from "@/lib/constants";
 import { rankResults } from "@/lib/rank";
 import { haversine, fmtDist } from "@/lib/geo";
 import { externalDirectionsUrl } from "@/lib/maps";
@@ -38,13 +47,6 @@ type Props = {
   onAddPlace: (target: Target) => void;
   onCalibrate: () => void;
 };
-
-const ARRIVAL_RADIUS_M = 25;
-const DEFAULT_MPP = 0.6;
-const MIN_MPP = 0.12;
-const MAX_MPP = 12;
-const SCALE_LEVELS_M = [25, 50, 100, 250, 500, 1000, 2500, 5000];
-const RIM_FRACTION = 0.42;
 
 export default function WalkScreen({
   yonder,
@@ -112,7 +114,7 @@ export default function WalkScreen({
           continue;
         }
         const dist = haversine(position.lat, position.lon, t.lat, t.lon);
-        if (dist > ARRIVAL_RADIUS_M * 1.6) {
+        if (dist > ARRIVAL_RADIUS_M * ARRIVAL_REARM_RATIO) {
           delete next[id];
           changed = true;
         }

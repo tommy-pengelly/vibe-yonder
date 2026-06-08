@@ -1,6 +1,11 @@
 "use client";
 import { useEffect, useRef } from "react";
 import {
+  FADE_START,
+  RIM_FRACTION,
+  SCALE_LEVELS_M,
+} from "@/lib/constants";
+import {
   bearing,
   fmtDist,
   haversine,
@@ -24,10 +29,6 @@ type Props = {
 const ACCENT = "#f5a623";
 const FG = "#ededed";
 const MUTED_TEXT = "rgba(173, 168, 157, 0.55)";
-const RIM_FRACTION = 0.42;
-const FADE_START = 0.7;
-
-const SCALE_LEVELS_M = [25, 50, 100, 250, 500, 1000, 2500, 5000];
 
 export default function Scope({
   position,
