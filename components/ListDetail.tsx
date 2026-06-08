@@ -75,7 +75,7 @@ export default function ListDetail({ id }: { id: string }) {
         name: list.name,
       }),
     );
-    router.push("/");
+    router.push("/walk");
   };
 
   const onDelete = async () => {

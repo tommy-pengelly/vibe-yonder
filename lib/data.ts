@@ -310,18 +310,26 @@ export async function isFavourite(
   lon: number,
   name: string,
 ): Promise<boolean> {
+  return (await getFavourite(lat, lon, name)) != null;
+}
+
+export async function getFavourite(
+  lat: number,
+  lon: number,
+  name: string,
+): Promise<FavouritePlace | null> {
   const c = await ctx();
-  if (!c) return local.isFavourite(lat, lon, name);
+  if (!c) return local.getFavourite(lat, lon, name);
   const { data } = await c.sb
     .from("places")
-    .select("id")
+    .select("*")
     .eq("name", name)
     .gte("lat", lat - 1e-6)
     .lte("lat", lat + 1e-6)
     .gte("lon", lon - 1e-6)
     .lte("lon", lon + 1e-6)
     .maybeSingle();
-  return Boolean(data);
+  return data ? rowToFavourite(data as PlaceRow) : null;
 }
 
 // ----- Lists -----

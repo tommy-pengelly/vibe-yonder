@@ -41,7 +41,7 @@ export default function FavouritesView() {
         ],
       }),
     );
-    router.push("/");
+    router.push("/walk");
   };
 
   const remove = async (id: string) => {

@@ -1,12 +1,14 @@
 "use client";
 import {
   ExternalLink,
+  Heart,
   Locate,
   Pause,
   Plus,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { getFavourite, pushFavourite, removeFavourite } from "@/lib/data";
 import {
   ARRIVAL_RADIUS_M,
   ARRIVAL_REARM_RATIO,
@@ -82,6 +84,44 @@ export default function WalkScreen({
   );
   const allVisited =
     yonder.targets.length > 0 && unvisited.length === 0;
+
+  // Favourite the active destination (the only walk-screen way to create a
+  // favourite). Tracks the stored record's id so it can be un-favourited.
+  const [favId, setFavId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!activeTarget) {
+      setFavId(null);
+      return;
+    }
+    let cancelled = false;
+    void getFavourite(
+      activeTarget.lat,
+      activeTarget.lon,
+      activeTarget.name,
+    ).then((f) => {
+      if (!cancelled) setFavId(f?.id ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTarget]);
+
+  const toggleFavourite = useCallback(async () => {
+    if (!activeTarget) return;
+    if (favId) {
+      const id = favId;
+      setFavId(null);
+      await removeFavourite(id);
+    } else {
+      const fav = await pushFavourite({
+        name: activeTarget.name,
+        label: activeTarget.label,
+        lat: activeTarget.lat,
+        lon: activeTarget.lon,
+      });
+      setFavId(fav.id);
+    }
+  }, [activeTarget, favId]);
 
   // Arrival detection: any unvisited target within 25 m → queue an arrival chip.
   useEffect(() => {
@@ -247,9 +287,30 @@ export default function WalkScreen({
               {headerLabel.kicker}
             </span>
           )}
-          <h1 className="font-display text-2xl tracking-tight leading-tight truncate">
-            {headerLabel.title}
-          </h1>
+          <div className="flex items-center gap-2 min-w-0">
+            <h1 className="font-display text-2xl tracking-tight leading-tight truncate">
+              {headerLabel.title}
+            </h1>
+            {activeTarget && (
+              <button
+                type="button"
+                onClick={() => void toggleFavourite()}
+                aria-label={favId ? "Remove favourite" : "Favourite this place"}
+                aria-pressed={favId != null}
+                className={`shrink-0 size-7 flex items-center justify-center ${
+                  favId
+                    ? "text-[var(--accent)]"
+                    : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                }`}
+              >
+                <Heart
+                  className="w-5 h-5"
+                  strokeWidth={1.75}
+                  fill={favId ? "var(--accent)" : "none"}
+                />
+              </button>
+            )}
+          </div>
         </div>
         <button
           type="button"

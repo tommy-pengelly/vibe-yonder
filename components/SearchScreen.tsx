@@ -1,4 +1,5 @@
 "use client";
+import { X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { fmtDist } from "@/lib/geo";
@@ -14,12 +15,14 @@ type Props = {
   position: Fix | null;
   onPickSingle: (target: Target) => void;
   onComposeMulti: (seed: Target | null) => void;
+  onClose?: () => void;
 };
 
 export default function SearchScreen({
   position,
   onPickSingle,
   onComposeMulti,
+  onClose,
 }: Props) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<RankedResult[]>([]);
@@ -65,9 +68,21 @@ export default function SearchScreen({
   return (
     <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-10 pb-10 gap-6">
       <header className="flex flex-col gap-3">
-        <span className="text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">
-          Vibe Yonder
-        </span>
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">
+            Vibe Yonder
+          </span>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="size-9 -mr-2 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]"
+            >
+              <X className="w-4 h-4" strokeWidth={1.75} />
+            </button>
+          )}
+        </div>
         <h1 className="font-display text-5xl tracking-tight leading-[0.95]">
           Where to?
         </h1>

@@ -1,4 +1,6 @@
 "use client";
+import { ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useHeading } from "@/hooks/useHeading";
@@ -27,7 +29,6 @@ import type {
 } from "@/lib/types";
 import { keepAwake } from "@/lib/wake";
 import AuthModal from "./AuthModal";
-import BottomNav from "./BottomNav";
 import Recap from "./Recap";
 import SearchScreen from "./SearchScreen";
 import WalkScreen from "./WalkScreen";
@@ -38,6 +39,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/client";
 type Phase = "search" | "composer" | "walking" | "recap";
 
 export default function App() {
+  const router = useRouter();
   const [phase, setPhase] = useState<Phase>("search");
   const [yonder, setYonder] = useState<ActiveYonder | null>(null);
   const [composerSeed, setComposerSeed] = useState<Target[]>([]);
@@ -428,14 +430,12 @@ export default function App() {
 
   if (phase === "search") {
     return (
-      <>
-        <SearchScreen
-          position={fix}
-          onPickSingle={(target) => void beginYonder([target], "single")}
-          onComposeMulti={openComposer}
-        />
-        <BottomNav />
-      </>
+      <SearchScreen
+        position={fix}
+        onPickSingle={(target) => void beginYonder([target], "single")}
+        onComposeMulti={openComposer}
+        onClose={() => router.push("/")}
+      />
     );
   }
 
@@ -479,7 +479,15 @@ export default function App() {
         ? "Sign in to keep this across devices."
         : null;
     return (
-      <>
+      <div className="relative flex-1 flex flex-col">
+        <button
+          type="button"
+          onClick={() => router.push("/")}
+          aria-label="Done"
+          className="absolute top-6 left-4 z-10 size-9 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]"
+        >
+          <ArrowLeft className="w-4 h-4" strokeWidth={1.75} />
+        </button>
         <Recap
           saved={savedYonder}
           savedLocally={savedLocally}
@@ -506,7 +514,7 @@ export default function App() {
           reason="Create a free account to keep this yonder across devices."
           onClose={() => setAuthOpen(false)}
         />
-      </>
+      </div>
     );
   }
 

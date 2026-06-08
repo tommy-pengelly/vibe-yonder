@@ -98,11 +98,21 @@ export function removeFavourite(id: string) {
 }
 
 export function isFavourite(lat: number, lon: number, name: string): boolean {
-  return loadFavourites().some(
-    (f) =>
-      Math.abs(f.lat - lat) < 1e-6 &&
-      Math.abs(f.lon - lon) < 1e-6 &&
-      f.name === name,
+  return getFavourite(lat, lon, name) != null;
+}
+
+export function getFavourite(
+  lat: number,
+  lon: number,
+  name: string,
+): FavouritePlace | null {
+  return (
+    loadFavourites().find(
+      (f) =>
+        Math.abs(f.lat - lat) < 1e-6 &&
+        Math.abs(f.lon - lon) < 1e-6 &&
+        f.name === name,
+    ) ?? null
   );
 }
 

@@ -77,7 +77,7 @@ export default function YouHub() {
 
         <Row href="/favourites" Icon={Heart} label="Favourites" count={favourites.length} />
         <Row href="/lists" Icon={ListTodo} label="Lists" count={lists.length} />
-        <Row href="/saved" Icon={Bookmark} label="Saved for later" count={saved.length} disabled />
+        <Row href="/saved" Icon={Bookmark} label="Saved for later" count={saved.length} />
 
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">

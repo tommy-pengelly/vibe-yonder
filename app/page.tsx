@@ -1,5 +1,5 @@
-import App from "@/components/App";
+import Feed from "@/components/Feed";
 
 export default function Home() {
-  return <App />;
+  return <Feed />;
 }

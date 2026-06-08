@@ -69,7 +69,7 @@ export default function RecapViewer({ id }: { id: string }) {
         name: yonder.name,
       }),
     );
-    router.push("/");
+    router.push("/walk");
   };
 
   const saveForLater = () => {
