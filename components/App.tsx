@@ -1,35 +1,82 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useHeading } from "@/hooks/useHeading";
+import {
+  importGuestYonders,
+  persistYonder,
+  signOut,
+  useAuthUser,
+} from "@/lib/auth";
 import { haversine } from "@/lib/geo";
-import type { Destination, Fix, Journey, Poi } from "@/lib/types";
+import { summarize } from "@/lib/stats";
+import {
+  clearDraftList,
+  clearYonders,
+  deleteList,
+  loadDraftList,
+  loadFavourites,
+  loadLists,
+  loadYonders,
+  newList,
+  pushYonder,
+  saveDraftList,
+  saveList,
+} from "@/lib/storage";
+import type {
+  Destination,
+  FavouritePlace,
+  Fix,
+  ListItemState,
+  ListJourney,
+  SavedYonder,
+  StoredList,
+} from "@/lib/types";
 import { keepAwake } from "@/lib/wake";
-import JourneyBuilder from "./JourneyBuilder";
+import AuthModal from "./AuthModal";
+import Landing from "./Landing";
+import ListBuilder from "./ListBuilder";
+import ListView from "./ListView";
 import Recap from "./Recap";
 import SearchScreen from "./SearchScreen";
 import WalkScreen from "./WalkScreen";
 
-type Phase = "search" | "journey-setup" | "walking" | "recap";
+type Phase =
+  | "landing"
+  | "search"
+  | "list-builder"
+  | "list-view"
+  | "walking"
+  | "recap";
 
 const MIN_FIX_DISTANCE_M = 3;
 const MIN_FIX_INTERVAL_MS = 3000;
 const DEFAULT_MPP = 0.6;
-const JOURNEY_STORAGE_KEY = "vibe-yonder.journey";
-const EMPTY_POIS: Poi[] = [];
+const TRIVIAL_WALK_M = 30;
 
 export default function App() {
-  const [phase, setPhase] = useState<Phase>("search");
+  const [phase, setPhase] = useState<Phase>("landing");
   const [destination, setDestination] = useState<Destination | null>(null);
-  const [journey, setJourney] = useState<Journey | null>(null);
-  const [pendingWaypoints, setPendingWaypoints] = useState<Destination[]>([]);
+  const [journey, setJourney] = useState<ListJourney | null>(null);
+  const [openList, setOpenList] = useState<StoredList | null>(null);
+
   const [track, setTrack] = useState<Fix[]>([]);
   const [paused, setPaused] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [endTime, setEndTime] = useState<number | null>(null);
   const [pausedMs, setPausedMs] = useState(0);
   const mpp = DEFAULT_MPP;
-  const pois: Poi[] = EMPTY_POIS;
+
+  const [savedYonder, setSavedYonder] = useState<SavedYonder | null>(null);
+
+  const [favourites, setFavourites] = useState<FavouritePlace[]>([]);
+  const [lists, setLists] = useState<StoredList[]>([]);
+  const [recent, setRecent] = useState<SavedYonder[]>([]);
+  const [draftItems, setDraftItems] = useState<ListItemState[]>([]);
+
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authReason, setAuthReason] = useState<string | undefined>(undefined);
+  const [savedToCloud, setSavedToCloud] = useState(false);
 
   const lastFix = useRef<Fix | null>(null);
   const pausedAt = useRef<number | null>(null);
@@ -37,29 +84,29 @@ export default function App() {
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = window.localStorage.getItem(JOURNEY_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Destination[];
-      if (Array.isArray(parsed)) setPendingWaypoints(parsed);
-    } catch {
-      // ignore corrupt persisted state
-    }
-  }, []);
+  const { user, configured: authConfigured } = useAuthUser();
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (pendingWaypoints.length === 0) {
-      window.localStorage.removeItem(JOURNEY_STORAGE_KEY);
-    } else {
-      window.localStorage.setItem(
-        JOURNEY_STORAGE_KEY,
-        JSON.stringify(pendingWaypoints),
-      );
-    }
-  }, [pendingWaypoints]);
+    setFavourites(loadFavourites());
+    setLists(loadLists());
+    setRecent(loadYonders());
+    setDraftItems(loadDraftList());
+  }, []);
+
+  // Import guest yonders the first time we see a signed-in user.
+  const importedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!user || importedFor.current === user.id) return;
+    importedFor.current = user.id;
+    const guestRecent = loadYonders();
+    if (guestRecent.length === 0) return;
+    void importGuestYonders(guestRecent, user.id)
+      .then(() => clearYonders())
+      .then(() => setRecent([]))
+      .catch(() => {
+        // leave guest state alone if upload fails
+      });
+  }, [user]);
 
   const handleFix = useCallback((f: Fix) => {
     if (pausedRef.current) return;
@@ -75,7 +122,7 @@ export default function App() {
   }, []);
 
   const { fix, error } = useGeolocation(
-    phase === "walking" || phase === "search" || phase === "journey-setup",
+    phase !== "landing",
     phase === "walking" ? handleFix : undefined,
   );
 
@@ -94,8 +141,14 @@ export default function App() {
     };
   }, [phase, paused]);
 
+  const autoName = useCallback((d: Destination | null) => {
+    if (!d) return "Wander";
+    const piece = d.name.split(",")[0].trim();
+    return piece || "Wander";
+  }, []);
+
   const beginWalk = useCallback(
-    async (d: Destination, opts: { journey: Journey | null }) => {
+    async (d: Destination, opts: { journey: ListJourney | null }) => {
       await requestAccess();
       setDestination(d);
       setJourney(opts.journey);
@@ -106,41 +159,19 @@ export default function App() {
       setPaused(false);
       setStartTime(Date.now());
       setEndTime(null);
+      setSavedYonder(null);
+      setSavedToCloud(false);
       setPhase("walking");
     },
     [requestAccess],
   );
 
-  const startSinglePick = useCallback(
-    (d: Destination) => {
-      void beginWalk(d, { journey: null });
-    },
-    [beginWalk],
-  );
-
-  const startJourney = useCallback(() => {
-    if (pendingWaypoints.length === 0) return;
-    const j: Journey = {
-      name: pendingWaypoints[0].name,
-      waypoints: pendingWaypoints,
-      activeIndex: 0,
-    };
-    void beginWalk(pendingWaypoints[0], { journey: j });
-  }, [beginWalk, pendingWaypoints]);
-
-  const advanceJourney = useCallback(() => {
-    setJourney((j) => {
-      if (!j) return j;
-      const next = j.activeIndex + 1;
-      if (next >= j.waypoints.length) {
-        setEndTime(Date.now());
-        setPhase("recap");
-        return j;
-      }
-      const nextWaypoint = j.waypoints[next];
-      setDestination(nextWaypoint);
-      return { ...j, activeIndex: next };
-    });
+  const flushPausedAt = useCallback(() => {
+    if (pausedAt.current != null) {
+      const delta = Date.now() - pausedAt.current;
+      pausedAt.current = null;
+      setPausedMs((ms) => ms + delta);
+    }
   }, []);
 
   const pause = useCallback(() => {
@@ -149,90 +180,362 @@ export default function App() {
   }, []);
 
   const resume = useCallback(() => {
-    if (pausedAt.current != null) {
-      setPausedMs((ms) => ms + (Date.now() - (pausedAt.current ?? Date.now())));
-      pausedAt.current = null;
-    }
+    flushPausedAt();
     setPaused(false);
-  }, []);
+  }, [flushPausedAt]);
 
-  const finish = useCallback(() => {
-    if (pausedAt.current != null) {
-      setPausedMs((ms) => ms + (Date.now() - (pausedAt.current ?? Date.now())));
-      pausedAt.current = null;
-    }
-    setEndTime(Date.now());
-    setPaused(false);
-    setPhase("recap");
-    if (journey) {
-      setPendingWaypoints([]);
-    }
-  }, [journey]);
-
-  const cancel = useCallback(() => {
-    pausedAt.current = null;
-    setPaused(false);
-    setPhase("search");
+  const goLanding = useCallback(() => {
+    setPhase("landing");
     setDestination(null);
     setJourney(null);
+    setOpenList(null);
     setTrack([]);
     lastFix.current = null;
+    pausedAt.current = null;
     setStartTime(null);
     setEndTime(null);
     setPausedMs(0);
+    setPaused(false);
+    setSavedYonder(null);
+    setSavedToCloud(false);
+    setRecent(loadYonders());
   }, []);
 
-  const reset = useCallback(() => {
-    cancel();
-  }, [cancel]);
+  const discard = useCallback(() => {
+    void keepAwake(false);
+    goLanding();
+  }, [goLanding]);
 
-  const addPendingWaypoint = useCallback((d: Destination) => {
-    setPendingWaypoints((ws) => [...ws, d]);
-  }, []);
+  const finish = useCallback(() => {
+    flushPausedAt();
+    const now = Date.now();
+    setEndTime(now);
+    setPaused(false);
 
-  const removePendingWaypoint = useCallback((idx: number) => {
-    setPendingWaypoints((ws) => ws.filter((_, i) => i !== idx));
-  }, []);
+    const summary = summarize(track, startTime, pausedMs, now);
 
-  const movePendingWaypoint = useCallback((idx: number, dir: -1 | 1) => {
-    setPendingWaypoints((ws) => {
-      const next = [...ws];
-      const target = idx + dir;
-      if (target < 0 || target >= next.length) return ws;
-      [next[idx], next[target]] = [next[target], next[idx]];
+    if (summary.walked < TRIVIAL_WALK_M) {
+      // trivial walk — don't save a recap, just return
+      void keepAwake(false);
+      goLanding();
+      return;
+    }
+
+    const y: SavedYonder = {
+      id: crypto.randomUUID(),
+      name: autoName(destination),
+      startedAt: startTime ?? now,
+      endedAt: now,
+      durationMs: summary.durationMs,
+      walked: summary.walked,
+      direct: summary.direct,
+      yondered: summary.yondered,
+      track,
+      pausedMs,
+      destination: destination!,
+    };
+
+    pushYonder(y);
+    setRecent(loadYonders());
+    setSavedYonder(y);
+
+    if (journey) {
+      const updated: StoredList = {
+        ...journey.list,
+        items: journey.list.items.map((it, idx) =>
+          idx === journey.activeIndex
+            ? { ...it, visited: true, visitedAt: now }
+            : it,
+        ),
+        updatedAt: now,
+      };
+      saveList(updated);
+      setLists(loadLists());
+    }
+
+    void keepAwake(false);
+    setPhase("recap");
+  }, [
+    autoName,
+    destination,
+    flushPausedAt,
+    goLanding,
+    journey,
+    pausedMs,
+    startTime,
+    track,
+  ]);
+
+  const advanceJourney = useCallback(() => {
+    if (!journey) return;
+    flushPausedAt();
+    const now = Date.now();
+    const updatedList: StoredList = {
+      ...journey.list,
+      items: journey.list.items.map((it, idx) =>
+        idx === journey.activeIndex
+          ? { ...it, visited: true, visitedAt: now }
+          : it,
+      ),
+      updatedAt: now,
+    };
+    saveList(updatedList);
+    setLists(loadLists());
+
+    const nextIndex = journey.activeIndex + 1;
+    if (nextIndex >= updatedList.items.length) {
+      finish();
+      return;
+    }
+    const nextItem = updatedList.items[nextIndex];
+    setJourney({ list: updatedList, activeIndex: nextIndex });
+    setDestination({
+      name: nextItem.name,
+      label: nextItem.label,
+      lat: nextItem.lat,
+      lon: nextItem.lon,
+    });
+  }, [finish, flushPausedAt, journey]);
+
+  const renameRecap = useCallback((name: string) => {
+    setSavedYonder((y) => {
+      if (!y) return y;
+      const next = { ...y, name };
+      const all = loadYonders();
+      const updated = all.map((x) => (x.id === y.id ? next : x));
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(
+            "vibe-yonder.yonders.v1",
+            JSON.stringify(updated),
+          );
+        }
+      } catch {}
+      setRecent(updated);
       return next;
     });
   }, []);
 
-  const clearPendingWaypoints = useCallback(() => {
-    setPendingWaypoints([]);
+  const saveRecapToCloud = useCallback(() => {
+    if (!savedYonder) return;
+    if (!user) {
+      setAuthReason("Sign in to keep your yonders on your account.");
+      setAuthOpen(true);
+      return;
+    }
+    void persistYonder(savedYonder, user.id)
+      .then(() => setSavedToCloud(true))
+      .catch(() => {
+        setAuthReason("Save failed. Sign in again?");
+        setAuthOpen(true);
+      });
+  }, [savedYonder, user]);
+
+  const draftToList = useCallback(
+    (item: Omit<ListItemState, "id" | "visited">) => {
+      setDraftItems((items) => {
+        const next: ListItemState[] = [
+          ...items,
+          { ...item, id: crypto.randomUUID(), visited: false },
+        ];
+        saveDraftList(next);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const removeDraftItem = useCallback((id: string) => {
+    setDraftItems((items) => {
+      const next = items.filter((i) => i.id !== id);
+      saveDraftList(next);
+      return next;
+    });
   }, []);
+
+  const moveDraftItem = useCallback((id: string, dir: -1 | 1) => {
+    setDraftItems((items) => {
+      const idx = items.findIndex((i) => i.id === id);
+      if (idx < 0) return items;
+      const target = idx + dir;
+      if (target < 0 || target >= items.length) return items;
+      const next = [...items];
+      [next[idx], next[target]] = [next[target], next[idx]];
+      saveDraftList(next);
+      return next;
+    });
+  }, []);
+
+  const commitNewList = useCallback(
+    (name: string) => {
+      const list = newList(name, draftItems);
+      saveList(list);
+      setLists(loadLists());
+      setDraftItems([]);
+      clearDraftList();
+      setOpenList(list);
+      setPhase("list-view");
+    },
+    [draftItems],
+  );
+
+  const startList = useCallback(
+    (list: StoredList) => {
+      const firstUnvisitedIdx = list.items.findIndex((i) => !i.visited);
+      const idx = firstUnvisitedIdx >= 0 ? firstUnvisitedIdx : 0;
+      const item = list.items[idx];
+      if (!item) return;
+      void beginWalk(
+        {
+          name: item.name,
+          label: item.label,
+          lat: item.lat,
+          lon: item.lon,
+        },
+        { journey: { list, activeIndex: idx } },
+      );
+    },
+    [beginWalk],
+  );
+
+  const markVisited = useCallback(
+    (itemId: string, visited: boolean) => {
+      if (!openList) return;
+      const updated: StoredList = {
+        ...openList,
+        items: openList.items.map((it) =>
+          it.id === itemId
+            ? { ...it, visited, visitedAt: visited ? Date.now() : undefined }
+            : it,
+        ),
+        updatedAt: Date.now(),
+      };
+      saveList(updated);
+      setLists(loadLists());
+      setOpenList(updated);
+    },
+    [openList],
+  );
+
+  const editOpenList = useCallback(() => {
+    if (!openList) return;
+    setDraftItems(openList.items);
+    saveDraftList(openList.items);
+    setPhase("list-builder");
+  }, [openList]);
+
+  const deleteOpenList = useCallback(() => {
+    if (!openList) return;
+    deleteList(openList.id);
+    setLists(loadLists());
+    setOpenList(null);
+    setPhase("search");
+  }, [openList]);
+
+  const saveStatus = useMemo(() => {
+    if (!authConfigured) return "Save locally";
+    if (savedToCloud) return "Saved ✓";
+    return user ? "Save to account" : "Save to account";
+  }, [authConfigured, savedToCloud, user]);
+
+  if (phase === "landing") {
+    return (
+      <>
+        <Landing
+          user={user}
+          recent={recent}
+          onStart={() => setPhase("search")}
+          onSignIn={() => {
+            setAuthReason(undefined);
+            setAuthOpen(true);
+          }}
+          onSignOut={() => void signOut()}
+          onOpenRecap={(y) => {
+            setSavedYonder(y);
+            setDestination(y.destination);
+            setStartTime(y.startedAt);
+            setEndTime(y.endedAt);
+            setTrack(y.track);
+            setPausedMs(y.pausedMs);
+            setSavedToCloud(false);
+            setPhase("recap");
+          }}
+        />
+        <AuthModal
+          open={authOpen}
+          reason={authReason}
+          onClose={() => setAuthOpen(false)}
+        />
+      </>
+    );
+  }
 
   if (phase === "search") {
     return (
-      <SearchScreen
+      <>
+        <SearchScreen
+          position={fix}
+          favourites={favourites}
+          lists={lists}
+          recent={recent}
+          onPick={(d) => void beginWalk(d, { journey: null })}
+          onAddToDraftList={(d) => {
+            draftToList({ name: d.name, label: d.label, lat: d.lat, lon: d.lon });
+            setPhase("list-builder");
+          }}
+          onOpenList={(l) => {
+            setOpenList(l);
+            setPhase("list-view");
+          }}
+          onOpenListBuilder={() => setPhase("list-builder")}
+          onOpenRecap={(y) => {
+            setSavedYonder(y);
+            setDestination(y.destination);
+            setStartTime(y.startedAt);
+            setEndTime(y.endedAt);
+            setTrack(y.track);
+            setPausedMs(y.pausedMs);
+            setSavedToCloud(false);
+            setPhase("recap");
+          }}
+          onBack={() => setPhase("landing")}
+        />
+        <AuthModal
+          open={authOpen}
+          reason={authReason}
+          onClose={() => setAuthOpen(false)}
+        />
+      </>
+    );
+  }
+
+  if (phase === "list-builder") {
+    return (
+      <ListBuilder
+        items={draftItems}
+        initialName={openList?.name}
         position={fix}
-        onPick={startSinglePick}
-        onAddToJourney={(d) => {
-          addPendingWaypoint(d);
-          setPhase("journey-setup");
+        onAdd={(item) => draftToList(item)}
+        onRemove={removeDraftItem}
+        onMove={moveDraftItem}
+        onSave={commitNewList}
+        onCancel={() => {
+          setDraftItems([]);
+          clearDraftList();
+          setPhase("search");
         }}
-        onOpenJourneyBuilder={() => setPhase("journey-setup")}
-        journeyCount={pendingWaypoints.length}
       />
     );
   }
 
-  if (phase === "journey-setup") {
+  if (phase === "list-view" && openList) {
     return (
-      <JourneyBuilder
-        waypoints={pendingWaypoints}
-        position={fix}
-        onAdd={addPendingWaypoint}
-        onRemove={removePendingWaypoint}
-        onMove={movePendingWaypoint}
-        onClear={clearPendingWaypoints}
-        onStart={startJourney}
+      <ListView
+        list={openList}
+        onStart={() => startList(openList)}
+        onEdit={editOpenList}
+        onDelete={deleteOpenList}
+        onMarkVisited={markVisited}
         onBack={() => setPhase("search")}
       />
     );
@@ -246,7 +549,6 @@ export default function App() {
         position={fix}
         heading={heading}
         track={track}
-        pois={pois}
         startTime={startTime}
         pausedMs={pausedMs}
         paused={paused}
@@ -255,24 +557,34 @@ export default function App() {
         onPause={pause}
         onResume={resume}
         onFinish={finish}
-        onCancel={cancel}
+        onDiscard={discard}
         onAdvanceJourney={advanceJourney}
       />
     );
   }
 
-  if (phase === "recap" && destination) {
+  if (phase === "recap" && savedYonder) {
     return (
-      <Recap
-        destination={destination}
-        track={track}
-        startTime={startTime}
-        pausedMs={pausedMs}
-        endTime={endTime}
-        onReset={reset}
-      />
+      <>
+        <Recap
+          saved={savedYonder}
+          onRenameTitle={renameRecap}
+          onNewWalk={() => setPhase("search")}
+          onSave={saveRecapToCloud}
+          saveLabel={saveStatus}
+          saveDisabled={savedToCloud}
+        />
+        <AuthModal
+          open={authOpen}
+          reason={authReason}
+          onClose={() => setAuthOpen(false)}
+        />
+      </>
     );
   }
+
+  // misc unused refs to suppress noise from end times that are read elsewhere
+  void endTime;
 
   return null;
 }

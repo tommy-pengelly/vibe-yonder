@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0a;
+  --background: #0a0b0d;
   --foreground: #ededed;
-  --muted: #8a8a8a;
-  --border: #1f1f1f;
-  --accent: #f5a524;
-  --surface: #101010;
-  --surface-2: #161616;
+  --muted: #7d7a76;
+  --border: #1a1c1f;
+  --accent: #f5a623;
+  --surface: #101114;
+  --surface-2: #161820;
+  --warm: #ada89d;
 }
 
 @theme inline {
@@ -17,7 +18,10 @@
   --color-border: var(--border);
   --color-accent: var(--accent);
   --color-surface: var(--surface);
-  --font-sans: var(--font-geist-sans);
+  --color-warm: var(--warm);
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
 }
 
 html,
@@ -33,31 +37,40 @@ button {
   font: inherit;
 }
 
-.minimap-wrap {
-  position: relative;
-  width: 100%;
-  overflow: hidden;
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
+  font-optical-sizing: auto;
+}
+
+.font-mono {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+.scope-wrap {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
   -webkit-mask-image: radial-gradient(
-    ellipse 72% 68% at 50% 50%,
-    #000 42%,
-    transparent 92%
+    120% 90% at 50% 45%,
+    #000 55%,
+    transparent 100%
   );
   mask-image: radial-gradient(
-    ellipse 72% 68% at 50% 50%,
-    #000 42%,
-    transparent 92%
+    120% 90% at 50% 45%,
+    #000 55%,
+    transparent 100%
   );
 }
 
-.recap-trace {
+.recap-mask {
   -webkit-mask-image: radial-gradient(
-    ellipse 80% 78% at 50% 50%,
-    #000 58%,
-    transparent 96%
+    110% 100% at 50% 50%,
+    #000 60%,
+    transparent 100%
   );
   mask-image: radial-gradient(
-    ellipse 80% 78% at 50% 50%,
-    #000 58%,
-    transparent 96%
+    110% 100% at 50% 50%,
+    #000 60%,
+    transparent 100%
   );
 }

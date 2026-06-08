@@ -48,7 +48,6 @@ export default function ExplainPage() {
           higher it climbs. Walks that loop back near where you began send it
           sky-high — which, for an exploring app, is a badge of honour.
         </Row>
-        <Row term="Pace">Your average minutes per kilometre.</Row>
       </dl>
 
       <p className="text-sm text-[var(--muted)] mt-10">

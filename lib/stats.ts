@@ -5,7 +5,6 @@ export type WalkSummary = {
   walked: number;
   direct: number;
   durationMs: number;
-  pace: number;
   yondered: number;
 };
 
@@ -32,19 +31,16 @@ export function summarize(
       : 0;
 
   const durationMs = startTime ? Math.max(0, now - startTime - pausedMs) : 0;
-  const minutes = durationMs / 60000;
-  const km = walked / 1000;
-  const pace = km > 0 ? minutes / km : 0;
   const yondered = direct > 5 ? walked / direct : 1;
 
-  return { walked, direct, durationMs, pace, yondered };
+  return { walked, direct, durationMs, yondered };
 }
 
 export function projectTrack(
   track: Fix[],
   W = 320,
   H = 320,
-  pad = 30,
+  pad = 24,
 ): Array<readonly [number, number]> {
   if (track.length === 0) return [];
   const lats = track.map((p) => p.lat);

@@ -1,35 +1,41 @@
 "use client";
 import Link from "next/link";
-import { useMemo } from "react";
-import { fmtDist, fmtDuration, fmtPace } from "@/lib/geo";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { fmtDist, fmtDuration } from "@/lib/geo";
 import { projectTrack, summarize } from "@/lib/stats";
-import type { Destination, Fix } from "@/lib/types";
+import type { Fix, SavedYonder } from "@/lib/types";
 
 type Props = {
-  destination: Destination;
-  track: Fix[];
-  startTime: number | null;
-  pausedMs: number;
-  endTime: number | null;
-  onReset: () => void;
+  saved: SavedYonder;
+  onRenameTitle: (next: string) => void;
+  onNewWalk: () => void;
+  onSave: () => void;
+  saveLabel: string;
+  saveDisabled?: boolean;
 };
 
-const W = 340;
-const H = 340;
+const W = 420;
+const H = 320;
 
 export default function Recap({
-  destination,
-  track,
-  startTime,
-  pausedMs,
-  endTime,
-  onReset,
+  saved,
+  onRenameTitle,
+  onNewWalk,
+  onSave,
+  saveLabel,
+  saveDisabled,
 }: Props) {
   const summary = useMemo(
-    () => summarize(track, startTime, pausedMs, endTime ?? Date.now()),
-    [track, startTime, pausedMs, endTime],
+    () =>
+      summarize(
+        saved.track,
+        saved.startedAt,
+        saved.pausedMs,
+        saved.endedAt,
+      ),
+    [saved],
   );
-  const points = useMemo(() => projectTrack(track, W, H), [track]);
+  const points = useMemo(() => projectTrack(saved.track as Fix[], W, H), [saved.track]);
 
   const pathD = useMemo(() => {
     if (points.length === 0) return "";
@@ -42,112 +48,170 @@ export default function Recap({
 
   const start = points[0];
   const end = points.at(-1);
-  const yonderedStr = `${summary.yondered.toFixed(2)}×`;
-  const yonderedHero =
-    summary.yondered >= 2
-      ? `You yondered ${summary.yondered.toFixed(summary.yondered >= 10 ? 0 : 1)}×.`
-      : summary.yondered > 1.1
-        ? `You took the scenic way.`
-        : summary.yondered > 0
-          ? `Straight as an arrow.`
-          : `Nice walk.`;
+
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(saved.name);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setDraft(saved.name);
+  }, [saved.name]);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.select();
+  }, [editing]);
+
+  const commitTitle = () => {
+    const next = draft.trim() || saved.name;
+    if (next !== saved.name) onRenameTitle(next);
+    setEditing(false);
+  };
+
+  const yonderedDisplay =
+    summary.yondered >= 10
+      ? Math.round(summary.yondered).toString()
+      : summary.yondered.toFixed(summary.yondered >= 2 ? 1 : 2);
 
   return (
-    <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-8 pb-10 gap-6">
-      <header className="flex flex-col gap-1">
-        <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
-          Walk recap
-        </span>
-        <h1 className="text-2xl font-semibold tracking-tight truncate">
-          {destination.name}
-        </h1>
+    <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-6 pb-10 gap-6">
+      <header className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1 min-w-0 flex-1">
+          <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
+            Walk recap
+          </span>
+          {editing ? (
+            <input
+              ref={inputRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={commitTitle}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitTitle();
+                if (e.key === "Escape") {
+                  setDraft(saved.name);
+                  setEditing(false);
+                }
+              }}
+              className="font-display text-3xl tracking-tight bg-transparent outline-none border-b border-[var(--accent)] pb-1"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="font-display text-3xl tracking-tight text-left truncate hover:text-[var(--accent)]"
+              title="Tap to rename"
+            >
+              {saved.name}
+            </button>
+          )}
+        </div>
       </header>
 
-      <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-3 flex items-center justify-center">
+      <div className="recap-mask">
         {points.length > 1 ? (
-          <div className="recap-trace w-full flex items-center justify-center">
-            <svg
-              viewBox={`0 0 ${W} ${H}`}
-              className="w-full h-auto max-w-[340px]"
-              aria-label="Walk path"
-            >
-              <path
-                d={pathD}
+          <svg
+            viewBox={`0 0 ${W} ${H}`}
+            className="w-full h-auto"
+            aria-label="Walk path"
+          >
+            <path
+              d={pathD}
+              fill="none"
+              stroke="var(--accent)"
+              strokeWidth={3}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {start && (
+              <circle
+                cx={start[0]}
+                cy={start[1]}
+                r={6}
                 fill="none"
-                stroke="var(--accent)"
-                strokeWidth={3}
-                strokeLinecap="round"
-                strokeLinejoin="round"
+                stroke="var(--foreground)"
+                strokeWidth={2}
               />
-              {start && (
-                <circle
-                  cx={start[0]}
-                  cy={start[1]}
-                  r={6}
-                  fill="none"
-                  stroke="var(--foreground)"
-                  strokeWidth={2}
-                />
-              )}
-              {end && (
-                <circle cx={end[0]} cy={end[1]} r={6} fill="var(--accent)" />
-              )}
-            </svg>
-          </div>
+            )}
+            {end && <circle cx={end[0]} cy={end[1]} r={6} fill="var(--accent)" />}
+          </svg>
         ) : (
-          <p className="text-sm text-[var(--muted)] py-12">
+          <p className="text-sm text-[var(--muted)] py-12 text-center">
             Not enough movement to draw a path.
           </p>
         )}
       </div>
 
-      <p className="text-2xl font-semibold tracking-tight text-center">
-        {yonderedHero}
+      <p className="font-display text-3xl tracking-tight text-center leading-tight">
+        You yondered{" "}
+        <span className="text-[var(--accent)]">{yonderedDisplay}×</span>.
       </p>
 
-      <div className="rounded-2xl bg-[var(--accent)] text-black px-4 py-4 flex flex-col items-center">
-        <div className="text-[10px] uppercase tracking-widest opacity-75">
-          Yondered
-        </div>
-        <div className="text-4xl font-bold tabular-nums mt-1">
-          {yonderedStr}
-        </div>
-      </div>
-
       <div className="grid grid-cols-2 gap-3">
-        <Stat label="Walked" value={fmtDist(summary.walked)} />
-        <Stat label="Time" value={fmtDuration(summary.durationMs)} />
-        <Stat label="Direct" value={fmtDist(summary.direct)} />
-        <Stat label="Pace" value={fmtPace(summary.pace)} />
+        <Tile label="Walked" value={fmtDist(summary.walked)} />
+        <Tile label="Time" value={fmtDuration(summary.durationMs)} />
+        <Tile label="Direct" value={fmtDist(summary.direct)} />
+        <Tile
+          label="Yondered"
+          value={`${yonderedDisplay}×`}
+          hero
+        />
       </div>
 
       <div className="flex items-center justify-center">
         <Link
           href="/explain"
-          className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] underline-offset-2 hover:underline"
+          className="text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
         >
           What do these stats mean?
         </Link>
       </div>
 
-      <button
-        type="button"
-        onClick={onReset}
-        className="w-full rounded-xl bg-[var(--accent)] text-black font-semibold py-3 active:opacity-80 transition-opacity"
-      >
-        New walk
-      </button>
+      <div className="flex flex-col gap-2 mt-auto">
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={saveDisabled}
+          className="rounded-full border border-[var(--accent)]/60 text-[var(--accent)] font-semibold py-3 hover:bg-[var(--accent)] hover:text-black disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--accent)]"
+        >
+          {saveLabel}
+        </button>
+        <button
+          type="button"
+          onClick={onNewWalk}
+          className="rounded-full bg-[var(--accent)] text-black font-semibold py-3 active:opacity-80"
+        >
+          New walk
+        </button>
+      </div>
     </div>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Tile({
+  label,
+  value,
+  hero,
+}: {
+  label: string;
+  value: string;
+  hero?: boolean;
+}) {
   return (
-    <div className="rounded-xl bg-[var(--surface)] border border-[var(--border)] px-4 py-3">
+    <div
+      className={`rounded-2xl border border-[var(--border)] px-4 py-4 flex flex-col ${
+        hero ? "bg-[var(--surface)]" : "bg-transparent"
+      }`}
+    >
       <div className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
         {label}
       </div>
-      <div className="text-lg font-semibold tabular-nums mt-1">{value}</div>
+      <div
+        className={`font-display tabular-nums mt-1 ${
+          hero ? "text-3xl text-[var(--accent)]" : "text-2xl"
+        }`}
+      >
+        {value}
+      </div>
     </div>
   );
 }

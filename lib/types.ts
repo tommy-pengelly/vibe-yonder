@@ -21,10 +21,50 @@ export type RankedResult = GeocodeResult & {
   score?: number;
 };
 
-export type Journey = {
+export type ListItemState = {
+  id: string;
   name: string;
-  waypoints: Destination[];
+  label?: string;
+  lat: number;
+  lon: number;
+  visited: boolean;
+  visitedAt?: number;
+};
+
+export type StoredList = {
+  id: string;
+  name: string;
+  items: ListItemState[];
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type ListJourney = {
+  list: StoredList;
   activeIndex: number;
+};
+
+export type FavouritePlace = {
+  id: string;
+  name: string;
+  label?: string;
+  lat: number;
+  lon: number;
+  createdAt: number;
+};
+
+export type SavedYonder = {
+  id: string;
+  name: string;
+  startedAt: number;
+  endedAt: number;
+  durationMs: number;
+  walked: number;
+  direct: number;
+  yondered: number;
+  track: Fix[];
+  pausedMs: number;
+  destination: Destination;
 };
 
 export type Poi = {
@@ -33,4 +73,10 @@ export type Poi = {
   lat: number;
   lon: number;
   seen: boolean;
+};
+
+export type AuthUser = {
+  id: string;
+  email?: string;
+  displayName?: string;
 };

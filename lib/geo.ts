@@ -50,13 +50,6 @@ export const fmtDuration = (ms: number) => {
   return `${m}:${s.toString().padStart(2, "0")}`;
 };
 
-export const fmtPace = (minPerKm: number) =>
-  minPerKm > 0 && Number.isFinite(minPerKm)
-    ? `${Math.floor(minPerKm)}'${Math.round((minPerKm % 1) * 60)
-        .toString()
-        .padStart(2, "0")}"`
-    : "—";
-
 /** World → screen, user fixed at centre, north-up. */
 export function toScreen(
   p: LatLon,

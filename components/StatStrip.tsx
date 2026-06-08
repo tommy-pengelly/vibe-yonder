@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { fmtDist, fmtDuration, fmtPace } from "@/lib/geo";
+import { fmtDist, fmtDuration } from "@/lib/geo";
 import { summarize } from "@/lib/stats";
 import type { Fix } from "@/lib/types";
 
@@ -12,7 +12,7 @@ type Props = {
 };
 
 export default function StatStrip({ track, startTime, pausedMs, paused }: Props) {
-  const [tick, setTick] = useState(0);
+  const [, setTick] = useState(0);
   useEffect(() => {
     if (paused || !startTime) return;
     const id = window.setInterval(() => setTick((t) => t + 1), 1000);
@@ -20,25 +20,23 @@ export default function StatStrip({ track, startTime, pausedMs, paused }: Props)
   }, [paused, startTime]);
 
   const summary = summarize(track, startTime, pausedMs);
-  // tick is used so the duration display refreshes
-  void tick;
 
   return (
-    <div className="grid grid-cols-3 gap-px bg-[var(--border)] rounded-xl overflow-hidden">
-      <Tile label="Time" value={fmtDuration(summary.durationMs)} />
-      <Tile label="Distance" value={fmtDist(summary.walked)} />
-      <Tile label="Pace" value={fmtPace(summary.pace)} />
+    <div className="flex items-baseline justify-center gap-8">
+      <Field label="Time" value={fmtDuration(summary.durationMs)} />
+      <span className="text-[var(--muted)]/40">·</span>
+      <Field label="Distance" value={fmtDist(summary.walked)} />
     </div>
   );
 }
 
-function Tile({ label, value }: { label: string; value: string }) {
+function Field({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-[var(--surface)] px-3 py-3 flex flex-col items-center">
+    <div className="flex flex-col items-center">
       <div className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
         {label}
       </div>
-      <div className="text-xl font-semibold tabular-nums mt-1">{value}</div>
+      <div className="font-mono text-xl tabular-nums mt-0.5">{value}</div>
     </div>
   );
 }
