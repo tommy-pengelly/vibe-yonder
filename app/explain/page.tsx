@@ -20,7 +20,7 @@ export default function ExplainPage() {
 
       <p className="mt-4 text-[var(--foreground)] leading-relaxed">
         Vibe Yonder doesn&apos;t give you a route. It shows an arrow pointing
-        straight at your destination — as the crow flies — and lets you choose
+        straight at your destination, as the crow flies, and lets you choose
         your own streets. Wander, detour, double back. Getting there the long
         way is the whole idea.
       </p>
@@ -46,7 +46,7 @@ export default function ExplainPage() {
           </span>
           . A beeline is <strong>1×</strong>; the more you loop and detour, the
           higher it climbs. Walks that loop back near where you began send it
-          sky-high — which, for an exploring app, is a badge of honour.
+          sky-high, which, for an exploring app, is a badge of honour.
         </Row>
       </dl>
 
@@ -60,7 +60,7 @@ export default function ExplainPage() {
         >
           Nominatim
         </a>{" "}
-        / OpenStreetMap. We don&apos;t store your walks anywhere — everything
+        / OpenStreetMap. We don&apos;t store your walks anywhere, everything
         lives in your browser tab.
       </p>
     </div>

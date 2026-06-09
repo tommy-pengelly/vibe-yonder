@@ -84,7 +84,7 @@ export default function WalkScreen({
     yonder.targets.length > 0 && unvisited.length === 0;
 
   // In Single/Ordered the focus is the active target. In Collection there's no
-  // fixed order, so focus the place you tapped, else the nearest unvisited one —
+  // fixed order, so focus the place you tapped, else the nearest unvisited one, 
   // it gets the bold marker + name + distance; the rest stay ghosts.
   const focusIndex = useMemo(() => {
     if (yonder.activeIndex != null) return yonder.activeIndex;
@@ -186,7 +186,7 @@ export default function WalkScreen({
     });
   }, [position, unvisited, dismissedArrivals]);
 
-  // Pinch-zoom only. The scope stays locked dead-centre — no panning.
+  // Pinch-zoom only. The scope stays locked dead-centre, no panning.
   const gestureRef = useRef<{ startMpp: number; startDist?: number }>({
     startMpp: DEFAULT_MPP,
   });
@@ -381,7 +381,7 @@ export default function WalkScreen({
 
         {allVisited && !addSheetOpen && (
           <p className="self-center text-center text-xs text-[var(--accent)]/90 max-w-xs">
-            All places visited — keep wandering, or finish whenever.
+            All places visited, keep wandering, or finish whenever.
           </p>
         )}
 

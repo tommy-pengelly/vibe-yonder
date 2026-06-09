@@ -285,7 +285,7 @@ export default function App() {
     const summary = summarize(track, startTime, pausedMs, now);
 
     if (summary.walked < TRIVIAL_WALK_M) {
-      // Trivial yonder — quietly return to search.
+      // Trivial yonder, quietly return to search.
       void keepAwake(false);
       setYonder(null);
       setTrack([]);

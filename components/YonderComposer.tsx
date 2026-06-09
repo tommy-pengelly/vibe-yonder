@@ -200,13 +200,13 @@ export default function YonderComposer({
         >
           <ModeChip
             label="Wander between"
-            sub="Collection — no order"
+            sub="Collection, no order"
             active={mode === "collection"}
             onClick={() => setMode("collection")}
           />
           <ModeChip
             label="Step through"
-            sub="Ordered — one by one"
+            sub="Ordered, one by one"
             active={mode === "ordered"}
             onClick={() => setMode("ordered")}
           />

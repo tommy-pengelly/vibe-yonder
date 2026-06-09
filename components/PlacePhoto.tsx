@@ -13,7 +13,7 @@ type Props = {
 };
 
 // A photo of a place, resolved lazily from Wikimedia. Coverage is uneven by
-// design — when there's nothing, it renders empty (or a faint placeholder).
+// design, when there's nothing, it renders empty (or a faint placeholder).
 // Attribution is shown small over the image, as the CC licences require.
 export default function PlacePhoto({
   lat,

@@ -75,7 +75,7 @@ export default function ShareControl({ saved }: { saved: SavedYonder }) {
             <div>
               <h2 className="font-display text-xl">Share this yonder</h2>
               <p className="text-xs text-[var(--muted)] mt-1 leading-relaxed">
-                You share the places + an obfuscated trace memento — never your route. Your start and
+                You share the places + an obfuscated trace memento, never your route. Your start and
                 finish near home stay hidden.
               </p>
             </div>
@@ -89,7 +89,7 @@ export default function ShareControl({ saved }: { saved: SavedYonder }) {
             <div className="flex flex-col gap-2">
               <Choice icon={Globe} label="Public" sub="Anyone can discover it" active={status === "public"} onClick={() => choose("public")} busy={busy} />
               <Choice icon={Users} label="Followers" sub="Only people who follow you" active={status === "followers"} onClick={() => choose("followers")} busy={busy} />
-              <Choice icon={Lock} label="Private" sub="Just you — unshare" active={status === null} onClick={() => choose(null)} busy={busy} />
+              <Choice icon={Lock} label="Private" sub="Just you, unshare" active={status === null} onClick={() => choose(null)} busy={busy} />
             </div>
           </div>
         </div>

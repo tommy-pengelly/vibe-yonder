@@ -17,7 +17,7 @@ type Props = {
   onSave?: () => void;
   onDoAgain?: () => void;
   onSaveForLater?: () => void;
-  /** Optional secondary line under Save — e.g. "Sign in to keep across devices." */
+  /** Optional secondary line under Save, e.g. "Sign in to keep across devices." */
   signedInHint?: React.ReactNode;
 };
 

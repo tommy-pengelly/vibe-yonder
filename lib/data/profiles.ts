@@ -45,6 +45,20 @@ export async function getProfilesByIds(ids: string[]): Promise<Profile[]> {
   return ((data as ProfileRow[]) ?? []).map(rowToProfile);
 }
 
+/** Search explorers by username or display name (profiles are public-read). */
+export async function searchProfiles(q: string): Promise<Profile[]> {
+  const term = q.trim().replace(/[%,()]/g, "");
+  if (term.length < 2) return [];
+  const sb = getSupabase();
+  if (!sb) return [];
+  const { data } = await sb
+    .from("profiles")
+    .select("*")
+    .or(`username.ilike.%${term}%,display_name.ilike.%${term}%`)
+    .limit(20);
+  return ((data as ProfileRow[]) ?? []).map(rowToProfile);
+}
+
 export async function getMyProfile(): Promise<Profile | null> {
   const c = await ctx();
   if (!c) return null;

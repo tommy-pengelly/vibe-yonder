@@ -152,7 +152,7 @@ export default function Scope({
     }
 
     // A label (distance + name) for the active target, placed beside whichever
-    // form it took — the dot when in-circle, the chevron when at the rim.
+    // form it took, the dot when in-circle, the chevron when at the rim.
     let activeLabel: {
       x: number;
       y: number;

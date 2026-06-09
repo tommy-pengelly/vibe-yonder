@@ -1,5 +1,5 @@
 "use client";
-import { Home, Plus, User } from "lucide-react";
+import { Compass, Home, Map as MapIcon, Telescope, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -11,20 +11,22 @@ export default function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="relative z-20 shrink-0 grid grid-cols-3 items-center px-6 py-2.5 bg-[var(--background)]/85 backdrop-blur-md border-t border-[var(--border)]"
+      className="relative z-20 shrink-0 grid grid-cols-5 items-center px-2 py-2.5 bg-[var(--background)]/85 backdrop-blur-md border-t border-[var(--border)]"
     >
       <Tab href="/" label="Feed" Icon={Home} active={active("/")} />
+      <Tab href="/maps" label="Maps" Icon={MapIcon} active={active("/maps")} />
 
       <div className="flex justify-center">
         <Link
           href="/walk"
-          aria-label="Start a yonder"
+          aria-label="Begin a yonder"
           className="size-14 -mt-6 rounded-full bg-[var(--accent)] text-black flex items-center justify-center shadow-lg shadow-black/40 active:opacity-80"
         >
-          <Plus className="w-6 h-6" strokeWidth={2.25} />
+          <Telescope className="w-6 h-6" strokeWidth={2} />
         </Link>
       </div>
 
+      <Tab href="/explore" label="Explore" Icon={Compass} active={active("/explore")} />
       <Tab href="/you" label="Me" Icon={User} active={active("/you")} />
     </nav>
   );
@@ -44,7 +46,7 @@ function Tab({
   return (
     <Link
       href={href}
-      className={`flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] ${
+      className={`flex flex-col items-center gap-0.5 px-1 py-1 text-[11px] ${
         active ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
       }`}
     >

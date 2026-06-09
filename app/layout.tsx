@@ -22,7 +22,7 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Vibe Yonder",
   description:
-    "Pick a place. Wander there — no route, just an arrow and your own two feet.",
+    "Pick a place. Wander there, no route, just an arrow and your own two feet.",
 };
 
 export const viewport: Viewport = {

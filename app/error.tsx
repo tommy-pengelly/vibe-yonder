@@ -3,7 +3,7 @@ import { useEffect } from "react";
 
 /**
  * Error boundary for the content area. It renders inside the root layout, so
- * the bottom nav stays visible while the page shows a recoverable message —
+ * the bottom nav stays visible while the page shows a recoverable message, 
  * instead of a hard "this page couldn't load". The "Reload" does a full
  * navigation, which also recovers from a stale-deployment chunk mismatch.
  */

@@ -1,45 +1,31 @@
 "use client";
-import { Bell, Bookmark, ChevronRight, Heart, Map as MapIcon, Settings as SettingsIcon } from "lucide-react";
+import { Bell, ChevronRight, Heart, Settings as SettingsIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
 import FollowRequests from "@/components/FollowRequests";
 import { useAuthUser, signOut } from "@/lib/auth";
-import {
-  loadFavourites,
-  loadMaps,
-  loadSaved,
-  loadYonders,
-  unreadNotificationCount,
-} from "@/lib/data";
+import { loadFavourites, loadYonders, unreadNotificationCount } from "@/lib/data";
 import { fmtDist } from "@/lib/geo";
-import type { FavouritePlace, SavedYonder, StoredMap, StoredSaved } from "@/lib/types";
+import type { FavouritePlace, SavedYonder } from "@/lib/types";
 
 export default function YouHub() {
   const { user } = useAuthUser();
   const [yonders, setYonders] = useState<SavedYonder[]>([]);
   const [favourites, setFavourites] = useState<FavouritePlace[]>([]);
-  const [maps, setMaps] = useState<StoredMap[]>([]);
-  const [saved, setSaved] = useState<StoredSaved[]>([]);
   const [unread, setUnread] = useState(0);
   const [authOpen, setAuthOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    void Promise.all([
-      loadYonders(),
-      loadFavourites(),
-      loadMaps(),
-      loadSaved(),
-      unreadNotificationCount(),
-    ]).then(([y, f, m, s, n]) => {
-      if (cancelled) return;
-      setYonders(y);
-      setFavourites(f);
-      setMaps(m);
-      setSaved(s);
-      setUnread(n);
-    });
+    void Promise.all([loadYonders(), loadFavourites(), unreadNotificationCount()]).then(
+      ([y, f, n]) => {
+        if (cancelled) return;
+        setYonders(y);
+        setFavourites(f);
+        setUnread(n);
+      },
+    );
     return () => {
       cancelled = true;
     };
@@ -48,27 +34,16 @@ export default function YouHub() {
   return (
     <>
       <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-12 pb-8 gap-7">
-        <header className="flex items-start justify-between gap-3">
-          <div>
-            <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
-              You
-            </span>
-            <h1 className="font-display text-4xl tracking-tight leading-none mt-1">
-              {user?.email ?? "Guest"}
-            </h1>
-            {user?.username && (
-              <Link
-                href={`/u/${user.username}`}
-                className="text-xs text-[var(--accent)] hover:opacity-80 mt-1.5 inline-block"
-              >
-                @{user.username} · View profile
-              </Link>
-            )}
-          </div>
+        <header className="flex items-center justify-between gap-3">
+          <ProfileHeader
+            username={user?.username}
+            displayName={user?.displayName}
+            email={user?.email}
+          />
           <Link
             href="/you/settings"
             aria-label="Settings"
-            className="size-9 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]"
+            className="size-9 shrink-0 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]"
           >
             <SettingsIcon className="w-4 h-4" strokeWidth={1.75} />
           </Link>
@@ -93,8 +68,6 @@ export default function YouHub() {
         )}
 
         <Row href="/favourites" Icon={Heart} label="Favourites" count={favourites.length} />
-        <Row href="/maps" Icon={MapIcon} label="Maps" count={maps.length} />
-        <Row href="/saved" Icon={Bookmark} label="Saved for later" count={saved.length} />
         {user && <Row href="/you/notifications" Icon={Bell} label="Notifications" count={unread} />}
 
         {user && <FollowRequests />}
@@ -113,7 +86,7 @@ export default function YouHub() {
 
           {yonders.length === 0 ? (
             <p className="text-sm text-[var(--muted)]">
-              No yonders yet — go wander.
+              No yonders yet, go wander.
             </p>
           ) : (
             <ul className="flex flex-col divide-y divide-[var(--border)]">
@@ -159,6 +132,38 @@ export default function YouHub() {
       </div>
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </>
+  );
+}
+
+function ProfileHeader({
+  username,
+  displayName,
+  email,
+}: {
+  username?: string;
+  displayName?: string;
+  email?: string;
+}) {
+  const name = displayName ?? email ?? "Guest";
+  const initials = (displayName ?? username ?? email ?? "G").replace(/[@.]/g, "").slice(0, 2).toUpperCase();
+  const inner = (
+    <>
+      <div className="size-14 shrink-0 rounded-full bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center font-display text-xl text-[var(--warm)]">
+        {initials}
+      </div>
+      <div className="min-w-0">
+        <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">You</span>
+        <div className="font-display text-2xl tracking-tight leading-tight truncate">{name}</div>
+        {username && <div className="text-xs text-[var(--accent)]">@{username} · View profile</div>}
+      </div>
+    </>
+  );
+  return username ? (
+    <Link href={`/u/${username}`} className="flex items-center gap-3 min-w-0 flex-1">
+      {inner}
+    </Link>
+  ) : (
+    <div className="flex items-center gap-3 min-w-0 flex-1">{inner}</div>
   );
 }
 

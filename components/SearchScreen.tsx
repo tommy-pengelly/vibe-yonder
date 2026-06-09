@@ -120,7 +120,7 @@ export default function SearchScreen({
           )}
           {!loading && !error && results.length === 0 && (
             <p className="text-sm text-[var(--muted)] px-1">
-              No matches — try adding the town.
+              No matches, try adding the town.
             </p>
           )}
           <ul className="flex flex-col divide-y divide-[var(--border)]">

@@ -3,12 +3,12 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import BottomNav from "./BottomNav";
 
-// Routes that are full-screen immersive takeovers — no persistent nav.
+// Routes that are full-screen immersive takeovers, no persistent nav.
 const IMMERSIVE = new Set(["/walk"]);
 
 /**
  * App shell. The bottom nav lives here (in the layout), so it stays mounted and
- * always visible across navigations — native-app style — instead of being
+ * always visible across navigations, native-app style, instead of being
  * re-rendered by every page. The scrollable content sits in <main> so an error
  * or 404 boundary can replace just the content while the nav stays put.
  */

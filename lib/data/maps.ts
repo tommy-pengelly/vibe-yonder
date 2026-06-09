@@ -1,8 +1,9 @@
 "use client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import * as local from "../storage";
-import type { StoredMap, StoredMapItem, YonderMode } from "../types";
+import type { Destination, StoredMap, StoredMapItem, YonderMode } from "../types";
 import { ctx } from "./ctx";
+import { pushFavourite } from "./favourites";
 
 export type MapRow = {
   id: string;
@@ -130,4 +131,36 @@ export async function deleteMap(id: string): Promise<void> {
   // map_items cascade on the FK, so deleting the map is enough.
   const { error } = await c.sb.from("maps").delete().eq("id", id);
   if (error) console.error("deleteMap:", error.message);
+}
+
+/**
+ * "Save for later": one place becomes a Favourite, several become a Map. This
+ * replaces the old separate save-for-later bookmark (Saved folds into Maps).
+ */
+export async function saveYonderPlaces(
+  name: string,
+  destinations: Destination[],
+): Promise<void> {
+  if (destinations.length === 0) return;
+  if (destinations.length === 1) {
+    const d = destinations[0];
+    await pushFavourite({ name: d.name, label: d.label, lat: d.lat, lon: d.lon });
+    return;
+  }
+  const now = Date.now();
+  await saveMap({
+    id: crypto.randomUUID(),
+    name,
+    mode: "collection",
+    items: destinations.map((d) => ({
+      id: crypto.randomUUID(),
+      name: d.name,
+      label: d.label,
+      lat: d.lat,
+      lon: d.lon,
+      visited: false,
+    })),
+    createdAt: now,
+    updatedAt: now,
+  });
 }

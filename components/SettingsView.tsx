@@ -89,7 +89,7 @@ export default function SettingsView() {
         <div>
           <div className="text-sm font-medium">Home privacy zone</div>
           <p className="text-xs text-[var(--muted)] mt-1 leading-relaxed">
-            Shared traces hide a 200&nbsp;m radius around here and trim your start and finish — so
+            Shared traces hide a 200&nbsp;m radius around here and trim your start and finish, so
             sharing never reveals where you live.
           </p>
           {settings.privacyZone ? (

@@ -53,7 +53,7 @@ export default function NotificationsView() {
           <p className="text-sm text-[var(--muted)] py-10 text-center">Loading…</p>
         ) : items.length === 0 ? (
           <p className="text-sm text-[var(--muted)]">
-            {user ? "Nothing yet — grubs and follows will show up here." : "Sign in to see your notifications."}
+            {user ? "Nothing yet, grubs and follows will show up here." : "Sign in to see your notifications."}
           </p>
         ) : (
           <ul className="flex flex-col divide-y divide-[var(--border)]">

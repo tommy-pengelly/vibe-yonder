@@ -139,7 +139,7 @@ export default function MapDetail({ id }: { id: string }) {
           ))}
           {remaining.length === 0 && (
             <li className="text-sm text-[var(--muted)] py-3">
-              All seen — visit one again?
+              All seen, visit one again?
             </li>
           )}
         </ul>

@@ -52,7 +52,7 @@ export default function MapsView() {
 
         {maps.length === 0 ? (
           <p className="text-sm text-[var(--muted)]">
-            No maps yet. Build one to wander a chain of places — at your own
+            No maps yet. Build one to wander a chain of places, at your own
             pace, across as many days as you like.
           </p>
         ) : (
