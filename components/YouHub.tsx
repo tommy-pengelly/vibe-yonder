@@ -1,11 +1,11 @@
 "use client";
-import { Bell, ChevronRight, Heart, Settings as SettingsIcon } from "lucide-react";
+import { Bell, ChevronRight, Heart, Map as MapIcon, Settings as SettingsIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
 import FollowRequests from "@/components/FollowRequests";
 import { useAuthUser, signOut } from "@/lib/auth";
-import { loadFavourites, loadYonders, unreadNotificationCount } from "@/lib/data";
+import { loadFavourites, loadMaps, loadYonders, unreadNotificationCount } from "@/lib/data";
 import { fmtDist } from "@/lib/geo";
 import type { FavouritePlace, SavedYonder } from "@/lib/types";
 
@@ -13,19 +13,24 @@ export default function YouHub() {
   const { user } = useAuthUser();
   const [yonders, setYonders] = useState<SavedYonder[]>([]);
   const [favourites, setFavourites] = useState<FavouritePlace[]>([]);
+  const [mapsCount, setMapsCount] = useState(0);
   const [unread, setUnread] = useState(0);
   const [authOpen, setAuthOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    void Promise.all([loadYonders(), loadFavourites(), unreadNotificationCount()]).then(
-      ([y, f, n]) => {
-        if (cancelled) return;
-        setYonders(y);
-        setFavourites(f);
-        setUnread(n);
-      },
-    );
+    void Promise.all([
+      loadYonders(),
+      loadFavourites(),
+      loadMaps(),
+      unreadNotificationCount(),
+    ]).then(([y, f, m, n]) => {
+      if (cancelled) return;
+      setYonders(y);
+      setFavourites(f);
+      setMapsCount(m.length);
+      setUnread(n);
+    });
     return () => {
       cancelled = true;
     };
@@ -67,6 +72,7 @@ export default function YouHub() {
           </div>
         )}
 
+        <Row href="/maps" Icon={MapIcon} label="Maps" count={mapsCount} />
         <Row href="/favourites" Icon={Heart} label="Favourites" count={favourites.length} />
         {user && <Row href="/you/notifications" Icon={Bell} label="Notifications" count={unread} />}
 

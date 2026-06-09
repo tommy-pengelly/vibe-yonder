@@ -1,5 +1,5 @@
-import Feed from "@/components/Feed";
+import CommunityView from "@/components/CommunityView";
 
 export default function Home() {
-  return <Feed />;
+  return <CommunityView />;
 }

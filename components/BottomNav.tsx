@@ -1,5 +1,5 @@
 "use client";
-import { Compass, Home, Map as MapIcon, User } from "lucide-react";
+import { Globe, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -11,10 +11,9 @@ export default function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="relative z-20 shrink-0 grid grid-cols-5 items-center px-2 py-2.5 bg-[var(--background)]/85 backdrop-blur-md border-t border-[var(--border)]"
+      className="relative z-20 shrink-0 grid grid-cols-3 items-center px-6 py-2.5 bg-[var(--background)]/85 backdrop-blur-md border-t border-[var(--border)]"
     >
-      <Tab href="/" label="Feed" Icon={Home} active={active("/")} />
-      <Tab href="/maps" label="Maps" Icon={MapIcon} active={active("/maps")} />
+      <Tab href="/" label="Community" Icon={Globe} active={active("/")} />
 
       <div className="flex justify-center">
         <Link
@@ -31,7 +30,6 @@ export default function BottomNav() {
         </Link>
       </div>
 
-      <Tab href="/explore" label="Find" Icon={Compass} active={active("/explore")} />
       <Tab href="/you" label="Me" Icon={User} active={active("/you")} />
     </nav>
   );
@@ -45,7 +43,7 @@ function Tab({
 }: {
   href: string;
   label: string;
-  Icon: typeof Home;
+  Icon: typeof Globe;
   active: boolean;
 }) {
   return (
