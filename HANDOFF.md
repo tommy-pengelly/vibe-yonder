@@ -4,6 +4,28 @@ You are picking up Vibe Yonder mid-build. Read this first, then CLAUDE.md, then 
 
 ---
 
+## Latest session (2026-06-09) — rework Docs 4–6 kicked off
+
+Specs `docs/spec/04-foundations-ia.md`, `05-yonder-engine.md`, `06-discovery-completion.md` written. Shipped to `main` and pushed:
+
+- **Brand assets / splash / metadata** — favicon, app icon, apple icon, OG + Twitter images, `app/manifest.ts` (installable PWA), richer `layout.tsx` metadata, and `BootSplash` (calm mark+wordmark fade on cold load). Asset pack source: `vibe-yonder-assets.zip` (logos/icons in `public/`).
+- **Doc 4 Foundations** — `components/ui/` primitives (`PageScaffold`, `PageHeader`, `EmptyState`, `SegmentedTabs`, `BottomSheet`, `ListRow`). Rebuilt **Maps** (inviting empty state) and **Explore** (one search + Places/Explorers scope toggle, was two bare inputs). CLAUDE.md synced to the 5-slot nav.
+- **Doc 5 selection (Part A)** — clear-all-to-wander + a "Just wander" entry: zero targets is now a first-class pure-void wander. "Go next" (go-here-now) already existed from Phase D.
+- **Doc 6 completion loop (no-new-service half)** — description written in the recap (`SavedYonder.caption`), pre-fills share; places-seen is editable (add via place-search bottom sheet / remove), persisted to `destinations`.
+
+### ⚠️ Action item — apply migration 0011
+`supabase/migrations/0011_yonder_caption.sql` (adds `yonders.caption`) is **written but NOT applied** — the live-DB apply was declined by the safety classifier. Apply it (e.g. `supabase db push`, or the supabase MCP `apply_migration`) so signed-in users' recap descriptions persist to cloud. Until then: guest/localStorage works fully; `updateYonder` writes caption best-effort and self-heals once the column exists.
+
+### Still spec'd, NOT yet built (pick up next, in order)
+- **Doc 5 Part B — PlayMode framework**: `crossTrack()` in `lib/geo.ts` (+ tests) first, then Clue Hunt → Tour → Straight-Line (GeoWizard). Scored by deviation, never time.
+- **Doc 6 Part A/B — discovery**: `/api/nearby` (Overpass→Geoapify, env-swappable), category search in `CreateHub`, sidequests (reuse `onAddPlace`; non-naggy, never sponsored). Then wire **suggest-from-route** into the recap places-seen editor (depends on `/api/nearby`).
+- Collapse the legacy `YonderMode` (single/collection/ordered) into the fluid set + `currentId` model end-to-end (Part A finished the wander/clear side; the mode enum still lingers for back-compat).
+
+### Verified this session
+`tsc --noEmit`, `eslint app components lib`, and `next build` all green after each commit. Not runtime-tested with a live signed-in session (magic-link is hard to automate) — and the new caption cloud-write needs migration 0011 before it does anything for signed-in users.
+
+---
+
 ## Where we are (as of commit `df9c57e` + uncommitted cloud-sync work)
 
 - **Doc 1 (Solo MVP) — shipped and polished.** Three yonder types (Single / Collection / Ordered), full-bleed scope with ghosts + dot-by-position + chevron-by-position rules, pinch-zoom + drag-pan with snapping scale key, inline arrival chip ("You're at {name}? · Visited ✓ · Not yet"), "+ Add place" bottom sheet, recap with editable title + Do again + Save for later, brand voice on the home, tightened composer.
