@@ -527,7 +527,10 @@ export default function WalkScreen({
             setPanelOpen(false);
           }}
           onSetVisited={onSetVisited}
-          onAdd={() => setAddSheetOpen(true)}
+          onAdd={() => {
+            setPanelOpen(false);
+            setAddSheetOpen(true);
+          }}
           onClose={() => setPanelOpen(false)}
         />
       )}
@@ -712,7 +715,7 @@ function AddPlaceSheet({
 
   return (
     <div
-      className="fixed inset-0 z-30 flex items-end bg-black/40"
+      className="fixed inset-0 z-40 flex items-end bg-black/40"
       onClick={onClose}
     >
       <div

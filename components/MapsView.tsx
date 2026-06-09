@@ -2,9 +2,11 @@
 import { Map as MapIcon, Plus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { EmptyState, ListRow, PageHeader, PageScaffold } from "@/components/ui";
+import { EmptyState, PageHeader, PageScaffold } from "@/components/ui";
+import { DotMap } from "@/components/ui/viz";
 import { useAuthUser } from "@/lib/auth";
 import { loadMaps } from "@/lib/data";
+import { toUnitBox } from "@/lib/geo";
 import type { StoredMap } from "@/lib/types";
 
 function mapSubtitle(m: StoredMap): string {
@@ -40,7 +42,7 @@ export default function MapsView() {
     <PageScaffold>
       <PageHeader
         kicker="Maps"
-        title="Reusable yonders"
+        title="Your maps"
         action={
           <Link
             href="/maps/new"
@@ -67,14 +69,25 @@ export default function MapsView() {
           }
         />
       ) : (
-        <ul className="flex flex-col divide-y divide-[var(--border)]">
+        <ul className="flex flex-col gap-3">
           {maps.map((m) => (
             <li key={m.id}>
-              <ListRow
+              <Link
                 href={`/maps/${m.id}`}
-                title={m.name}
-                subtitle={mapSubtitle(m)}
-              />
+                className="block rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden hover:border-[var(--accent)]/50 transition-colors"
+              >
+                <div className="px-4 pt-4 pb-1">
+                  <div className="font-display text-xl tracking-tight truncate">
+                    {m.name}
+                  </div>
+                  <div className="text-xs text-[var(--warm)] mt-0.5">
+                    {mapSubtitle(m)}
+                  </div>
+                </div>
+                {m.items.length > 0 && (
+                  <DotMap points={toUnitBox(m.items)} height={120} />
+                )}
+              </Link>
             </li>
           ))}
         </ul>

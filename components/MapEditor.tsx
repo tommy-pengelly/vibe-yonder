@@ -122,7 +122,7 @@ export default function MapEditor() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={items[0]?.name ?? "Name this map"}
-            className="font-display text-3xl tracking-tight bg-transparent outline-none placeholder:text-[var(--muted)]/40 leading-none"
+            className="font-display text-3xl tracking-tight bg-transparent outline-none placeholder:text-[var(--muted)]/70 leading-none"
           />
         </div>
       </header>

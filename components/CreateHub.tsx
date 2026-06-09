@@ -168,7 +168,7 @@ export default function CreateHub({
             <MapIcon className="w-5 h-5 text-[var(--muted)]" strokeWidth={1.75} />
             <div>
               <div className="font-display text-base">New map</div>
-              <div className="text-xs text-[var(--muted)]">Build a reusable set of places to wander between.</div>
+              <div className="text-xs text-[var(--muted)]">A set of places to wander between — saved for any time.</div>
             </div>
           </button>
 

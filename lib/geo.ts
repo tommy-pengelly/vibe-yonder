@@ -41,6 +41,33 @@ export function haversine(
 export const fmtDist = (m: number) =>
   m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(2)} km`;
 
+/**
+ * Normalise lat/lon points into a padded 0–100 box (north-up) for tiny SVG
+ * cards — trace shapes and POI scatters. Longitude is scaled by cos(lat) so the
+ * shape isn't stretched. A single point (or degenerate span) sits centred.
+ */
+export function toUnitBox(
+  pts: { lat: number; lon: number }[],
+  pad = 12,
+): number[][] {
+  if (pts.length === 0) return [];
+  const lats = pts.map((p) => p.lat);
+  const lons = pts.map((p) => p.lon);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLon = Math.min(...lons);
+  const maxLon = Math.max(...lons);
+  const kx = Math.cos((((minLat + maxLat) / 2) * Math.PI) / 180);
+  const span = Math.max((maxLon - minLon) * kx, maxLat - minLat, 1e-7);
+  const range = 100 - 2 * pad;
+  return pts.map((p) => {
+    if (pts.length === 1) return [50, 50];
+    const x = pad + (((p.lon - minLon) * kx) / span) * range;
+    const y = 100 - pad - ((p.lat - minLat) / span) * range; // north up
+    return [x, y];
+  });
+}
+
 export const fmtDuration = (ms: number) => {
   const totalSec = Math.max(0, Math.round(ms / 1000));
   const h = Math.floor(totalSec / 3600);
