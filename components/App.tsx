@@ -29,20 +29,18 @@ import type {
 } from "@/lib/types";
 import { keepAwake } from "@/lib/wake";
 import AuthModal from "./AuthModal";
+import CreateHub from "./CreateHub";
 import Recap from "./Recap";
-import SearchScreen from "./SearchScreen";
 import WalkScreen from "./WalkScreen";
-import YonderComposer from "./YonderComposer";
 import { useAuthUser } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 
-type Phase = "search" | "composer" | "walking" | "recap";
+type Phase = "search" | "walking" | "recap";
 
 export default function App() {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("search");
   const [yonder, setYonder] = useState<ActiveYonder | null>(null);
-  const [composerSeed, setComposerSeed] = useState<Target[]>([]);
 
   const [track, setTrack] = useState<Fix[]>([]);
   const [paused, setPaused] = useState(false);
@@ -421,31 +419,14 @@ export default function App() {
     });
   }, [savedYonder, beginYonder]);
 
-  const openComposer = useCallback((seed: Target | null) => {
-    setComposerSeed(seed ? [seed] : []);
-    setPhase("composer");
-  }, []);
-
   void endTime;
 
   if (phase === "search") {
     return (
-      <SearchScreen
+      <CreateHub
         position={fix}
-        onPickSingle={(target) => void beginYonder([target], "single")}
-        onComposeMulti={openComposer}
+        onStart={(targets, mode, opts) => void beginYonder(targets, mode, opts)}
         onClose={() => router.push("/")}
-      />
-    );
-  }
-
-  if (phase === "composer") {
-    return (
-      <YonderComposer
-        initial={composerSeed}
-        position={fix}
-        onStart={(targets, mode) => void beginYonder(targets, mode)}
-        onCancel={() => setPhase("search")}
       />
     );
   }
