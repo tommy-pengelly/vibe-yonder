@@ -1,5 +1,5 @@
 "use client";
-import { Compass, Map as MapIcon, Plus, X } from "lucide-react";
+import { Compass, Map as MapIcon, Plus, Ruler, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
@@ -164,20 +164,25 @@ export default function CreateHub({
         </ul>
       )}
 
-      {/* Idle: just wander / load a map / new map / favourites */}
+      {/* Idle: pick a mode / find a place / load a map */}
       {idle && !building && (
         <div className="flex flex-col gap-6">
-          <button
-            type="button"
-            onClick={() => onStart([], "single")}
-            className="flex items-center gap-3 rounded-2xl border border-[var(--accent)]/50 px-4 py-3 text-left hover:border-[var(--accent)]"
-          >
-            <Compass className="w-5 h-5 text-[var(--accent)]" strokeWidth={1.75} />
-            <div>
-              <div className="font-display text-base">Just wander</div>
-              <div className="text-xs text-[var(--muted)]">No destination — set off and see where you end up.</div>
-            </div>
-          </button>
+          {/* Modes — a place is the search above; these are the rest. */}
+          <div className="grid grid-cols-2 gap-2">
+            <ModeCard
+              icon={Compass}
+              title="Just wander"
+              sub="No destination"
+              accent
+              onClick={() => onStart([], "single")}
+            />
+            <ModeCard
+              icon={Ruler}
+              title="Straight line"
+              sub="Coming soon"
+              disabled
+            />
+          </div>
 
           {/* Category discovery — wander toward something nearby. */}
           {position && (
@@ -296,6 +301,46 @@ export default function CreateHub({
         </button>
       )}
     </div>
+  );
+}
+
+function ModeCard({
+  icon: Icon,
+  title,
+  sub,
+  accent,
+  disabled,
+  onClick,
+}: {
+  icon: typeof Compass;
+  title: string;
+  sub: string;
+  accent?: boolean;
+  disabled?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex flex-col gap-2 rounded-2xl border px-4 py-3.5 text-left transition-colors ${
+        disabled
+          ? "border-[var(--border)] opacity-50 cursor-default"
+          : accent
+            ? "border-[var(--accent)]/50 hover:border-[var(--accent)]"
+            : "border-[var(--border)] hover:border-[var(--muted)]"
+      }`}
+    >
+      <Icon
+        className={`w-5 h-5 ${accent && !disabled ? "text-[var(--accent)]" : "text-[var(--muted)]"}`}
+        strokeWidth={1.75}
+      />
+      <div>
+        <div className="font-display text-base leading-tight">{title}</div>
+        <div className="text-xs text-[var(--muted)]">{sub}</div>
+      </div>
+    </button>
   );
 }
 
