@@ -346,7 +346,7 @@ function RecapAddPlace({
 }) {
   const { q, setQ, results, loading } = usePlaceSearch(null);
   return (
-    <BottomSheet open={open} onClose={onClose} title="Add a place seen">
+    <BottomSheet open={open} onClose={onClose} title="Add a place seen" minHeightVh={60}>
       <input
         autoFocus
         value={q}

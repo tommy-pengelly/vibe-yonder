@@ -705,7 +705,7 @@ function AddPlaceSheet({
   }, [q, position]);
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Add a place">
+    <BottomSheet open={open} onClose={onClose} title="Add a place" minHeightVh={60}>
         <input
           autoFocus
           value={q}

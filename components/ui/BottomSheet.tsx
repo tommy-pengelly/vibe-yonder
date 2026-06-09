@@ -12,11 +12,14 @@ export default function BottomSheet({
   onClose,
   title,
   children,
+  minHeightVh,
 }: {
   open: boolean;
   onClose: () => void;
   title?: string;
   children: ReactNode;
+  /** Open at least this tall (% of viewport) — e.g. search sheets want room. */
+  minHeightVh?: number;
 }) {
   return (
     <Drawer.Root open={open} onOpenChange={(o) => !o && onClose()}>
@@ -26,7 +29,10 @@ export default function BottomSheet({
           aria-describedby={undefined}
           className="fixed inset-x-0 bottom-0 z-50 mt-24 flex flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--surface)] outline-none"
         >
-          <div className="w-full max-w-md mx-auto px-5 pt-3 pb-8 flex flex-col gap-4 max-h-[85dvh] overflow-y-auto">
+          <div
+            style={minHeightVh ? { minHeight: `${minHeightVh}dvh` } : undefined}
+            className="w-full max-w-md mx-auto px-5 pt-3 pb-8 flex flex-col gap-4 max-h-[85dvh] overflow-y-auto"
+          >
             <div className="mx-auto h-1 w-9 rounded-full bg-[var(--border)]" />
             <div className="flex items-center justify-between">
               <Drawer.Title
