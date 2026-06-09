@@ -72,12 +72,14 @@ Metrics serve the story; they are not the point. The app offers a **"hide the nu
 Guest-first. Active walk is a full-screen takeover (no nav). Membership is light: an account just unlocks saving.
 
 ```
-/                  Feed             — Mine · Following · Community. Your wanders + (Doc 3) people you
-                                       follow + public discovery. The guest landing.
-/walk              Active yonder     — launched by the ⊕. Full-bleed heading-up scope, directional head,
-                                       Time + Distance (hideable), pause / finish. Full takeover, no nav.
+/                  Feed             — Mine · Following. Your wanders + (Doc 3) people you follow.
+                                       The guest landing. (Community discovery now lives in /explore.)
+/walk              Active yonder     — launched by the centre ⊕ (telescope). Full-bleed heading-up scope,
+                                       directional head, Time + Distance (hideable), pause / finish. No nav.
 /recap/[id]        Recap             — faded trace, "You yondered N×", tiles (Walked, Time, Direct,
                                        Yondered). Save, Do again, Save for later, Share.
+/explore           Explore           — community discovery: one search with a Places/Explorers scope toggle,
+                                       Recent/Popular, public maps + yonders to Load / Duplicate.
 /explain           How it works      — the philosophy + what each metric means.
 /you               Me                — profile: your yonders, maps, favourites, saved, settings, sign in/out.
 /maps, /maps/[id]                    — a map: a saved set of places with visited / visit-again state;
@@ -90,7 +92,7 @@ Guest-first. Active walk is a full-screen takeover (no nav). Membership is light
 
 **Privacy invariant (Doc 3).** The precise `yonders.track` is owner-only — there is no public/followers read path on `yonders`. Sharing publishes an *obfuscated copy* into `shared_yonders` (home zone removed, start/finish trimmed, coordinates stripped to a 0–100 memento). You share **places + a memento, never a route**. Grubs are kudos; there are no comments and no leaderboards.
 
-Nav: a **Feed · ⊕ · Me** bottom bar (Strava-shaped; the centre ⊕ launches a yonder). The active walk is a full takeover with no nav. Auth is a **contextual sheet**, never a page; on sign-up, import the guest's local yonders.
+Nav: a **Feed · Maps · ⊕ · Explore · Me** bottom bar (Strava-shaped; the centre ⊕ — a telescope — launches a yonder via the "Where to?" sheet and is an action, not a destination). The active walk is a full takeover with no nav (the shell lives in `AppChrome`; `/walk` is the one immersive route). Member screens are built from `components/ui/` primitives (`PageScaffold`, `PageHeader`, `EmptyState`, `SegmentedTabs`, `BottomSheet`, `ListRow`) — the scope is never one of these. Auth is a **contextual sheet**, never a page; on sign-up, import the guest's local yonders.
 
 ---
 
