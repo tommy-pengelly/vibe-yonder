@@ -74,7 +74,7 @@ export default function MapEditor() {
       } finally {
         if (myReq === reqId.current) setLoading(false);
       }
-    }, 550);
+    }, 300);
     return () => clearTimeout(handle);
   }, [q, fix]);
 
