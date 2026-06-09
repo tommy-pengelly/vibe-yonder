@@ -250,13 +250,16 @@ export default function App() {
     setYonder((y) => (y ? { ...y, activeIndex: y.targets.findIndex((t) => t.id === targetId) } : y));
   }, []);
 
-  // Remove a destination (keeps at least one). Demotes to single when one left.
+  // Remove a destination. Removing the last one drops you into a pure wander
+  // (no target, just the void) — a first-class state, not an error.
   const onRemoveTarget = useCallback((targetId: string) => {
     setYonder((y) => {
       if (!y) return y;
       const prevActiveId = y.activeIndex != null ? y.targets[y.activeIndex]?.id : null;
       const targets = y.targets.filter((t) => t.id !== targetId);
-      if (targets.length === 0) return y;
+      if (targets.length === 0) {
+        return { ...y, targets, mode: "single", activeIndex: null };
+      }
       const mode = targets.length === 1 ? "single" : y.mode;
       let activeIndex: number | null;
       if (prevActiveId && prevActiveId !== targetId) {
@@ -267,6 +270,13 @@ export default function App() {
       }
       return { ...y, targets, mode, activeIndex };
     });
+  }, []);
+
+  // Clear every destination → wander free (the purest "getting lost").
+  const onClearTargets = useCallback(() => {
+    setYonder((y) =>
+      y ? { ...y, targets: [], mode: "single", activeIndex: null } : y,
+    );
   }, []);
 
   const onAddPlace = useCallback((target: Target) => {
@@ -451,6 +461,7 @@ export default function App() {
         onSetVisited={onSetVisited}
         onSetActive={onSetActive}
         onRemoveTarget={onRemoveTarget}
+        onClearTargets={onClearTargets}
         onAddPlace={onAddPlace}
         onCalibrate={() => void requestAccess()}
       />

@@ -1,5 +1,5 @@
 "use client";
-import { Map as MapIcon, Plus, X } from "lucide-react";
+import { Compass, Map as MapIcon, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
@@ -145,9 +145,21 @@ export default function CreateHub({
         </ul>
       )}
 
-      {/* Idle: load a map / new map / favourites */}
+      {/* Idle: just wander / load a map / new map / favourites */}
       {idle && !building && (
         <div className="flex flex-col gap-6">
+          <button
+            type="button"
+            onClick={() => onStart([], "single")}
+            className="flex items-center gap-3 rounded-2xl border border-[var(--accent)]/50 px-4 py-3 text-left hover:border-[var(--accent)]"
+          >
+            <Compass className="w-5 h-5 text-[var(--accent)]" strokeWidth={1.75} />
+            <div>
+              <div className="font-display text-base">Just wander</div>
+              <div className="text-xs text-[var(--muted)]">No destination — set off and see where you end up.</div>
+            </div>
+          </button>
+
           <button
             type="button"
             onClick={() => router.push("/maps/new")}

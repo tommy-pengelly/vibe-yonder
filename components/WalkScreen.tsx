@@ -49,6 +49,7 @@ type Props = {
   onSetVisited: (targetId: string, visited: boolean) => void;
   onSetActive: (targetId: string) => void;
   onRemoveTarget: (targetId: string) => void;
+  onClearTargets: () => void;
   onAddPlace: (target: Target) => void;
   onCalibrate: () => void;
 };
@@ -67,6 +68,7 @@ export default function WalkScreen({
   onResume,
   onFinish,
   onDiscard,
+  onClearTargets,
   onSetVisited,
   onSetActive,
   onRemoveTarget,
@@ -245,6 +247,9 @@ export default function WalkScreen({
   const zoomed = Math.abs(mpp - DEFAULT_MPP) > 0.01;
 
   const headerLabel = useMemo(() => {
+    if (yonder.targets.length === 0) {
+      return { kicker: "No destination", title: "Wandering free" };
+    }
     if (yonder.mode === "ordered" && activeTarget) {
       const total = yonder.targets.length;
       const idx = yonder.activeIndex ?? 0;
@@ -517,6 +522,10 @@ export default function WalkScreen({
           position={position}
           onGoNext={onSetActive}
           onRemove={onRemoveTarget}
+          onClearAll={() => {
+            onClearTargets();
+            setPanelOpen(false);
+          }}
           onSetVisited={onSetVisited}
           onAdd={() => setAddSheetOpen(true)}
           onClose={() => setPanelOpen(false)}
@@ -532,6 +541,7 @@ function DestinationsSheet({
   position,
   onGoNext,
   onRemove,
+  onClearAll,
   onSetVisited,
   onAdd,
   onClose,
@@ -541,6 +551,7 @@ function DestinationsSheet({
   position: Fix | null;
   onGoNext: (id: string) => void;
   onRemove: (id: string) => void;
+  onClearAll: () => void;
   onSetVisited: (id: string, visited: boolean) => void;
   onAdd: () => void;
   onClose: () => void;
@@ -587,16 +598,20 @@ function DestinationsSheet({
                     Go next
                   </button>
                 )}
-                {targets.length > 1 && (
-                  <button type="button" onClick={() => onRemove(t.id)} aria-label="Remove" className="size-7 flex items-center justify-center text-[var(--muted)] hover:text-red-400 shrink-0">
-                    <X className="w-4 h-4" strokeWidth={1.75} />
-                  </button>
-                )}
+                <button type="button" onClick={() => onRemove(t.id)} aria-label="Remove" className="size-7 flex items-center justify-center text-[var(--muted)] hover:text-red-400 shrink-0">
+                  <X className="w-4 h-4" strokeWidth={1.75} />
+                </button>
               </li>
             );
           })}
-          {unvisited.length === 0 && (
-            <li className="text-sm text-[var(--muted)] py-2.5">All seen. Add another, or finish.</li>
+          {targets.length === 0 ? (
+            <li className="text-sm text-[var(--muted)] py-2.5">
+              Wandering free — no destination. Add a place any time, or just keep going.
+            </li>
+          ) : (
+            unvisited.length === 0 && (
+              <li className="text-sm text-[var(--muted)] py-2.5">All seen. Add another, or finish.</li>
+            )
           )}
         </ul>
 
@@ -624,14 +639,25 @@ function DestinationsSheet({
           </section>
         )}
 
-        <button
-          type="button"
-          onClick={onAdd}
-          className="mt-1 self-start inline-flex items-center gap-1.5 text-sm text-[var(--accent)] hover:opacity-80"
-        >
-          <Plus className="w-4 h-4" strokeWidth={1.75} />
-          Add a place
-        </button>
+        <div className="mt-1 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={onAdd}
+            className="inline-flex items-center gap-1.5 text-sm text-[var(--accent)] hover:opacity-80"
+          >
+            <Plus className="w-4 h-4" strokeWidth={1.75} />
+            Add a place
+          </button>
+          {targets.length > 0 && (
+            <button
+              type="button"
+              onClick={onClearAll}
+              className="text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
+            >
+              Clear all → just wander
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
