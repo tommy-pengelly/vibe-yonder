@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
 import { loadFavourites, loadMaps } from "@/lib/data";
 import { fmtDist } from "@/lib/geo";
+import { CATEGORIES, type NearbyPlace } from "@/lib/nearby";
 import type {
   FavouritePlace,
   Fix,
@@ -39,9 +40,27 @@ export default function CreateHub({
   const [mode, setMode] = useState<YonderMode>("collection");
   const [maps, setMaps] = useState<StoredMap[]>([]);
   const [favourites, setFavourites] = useState<FavouritePlace[]>([]);
+  const [cat, setCat] = useState<string | null>(null);
+  const [nearby, setNearby] = useState<NearbyPlace[] | null>(null);
 
   const building = picks.length > 0;
   const idle = q.trim().length < 3;
+
+  // Category discovery: "find me a café/park/viewpoint" near the dot.
+  useEffect(() => {
+    if (!cat || !position) return;
+    let c = false;
+    setNearby(null);
+    void fetch(
+      `/api/nearby?category=${cat}&lat=${position.lat}&lon=${position.lon}`,
+    )
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d: NearbyPlace[]) => !c && setNearby(d))
+      .catch(() => !c && setNearby([]));
+    return () => {
+      c = true;
+    };
+  }, [cat, position]);
 
   useEffect(() => {
     let c = false;
@@ -159,6 +178,59 @@ export default function CreateHub({
               <div className="text-xs text-[var(--muted)]">No destination — set off and see where you end up.</div>
             </div>
           </button>
+
+          {/* Category discovery — wander toward something nearby. */}
+          {position && (
+            <section className="flex flex-col gap-3">
+              <h2 className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
+                Find me a…
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {CATEGORIES.map((c) => (
+                  <button
+                    key={c.key}
+                    type="button"
+                    onClick={() => setCat(cat === c.key ? null : c.key)}
+                    className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                      cat === c.key
+                        ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--surface)]"
+                        : "border-[var(--border)] text-[var(--foreground)] hover:border-[var(--muted)]"
+                    }`}
+                  >
+                    <span aria-hidden>{c.emoji}</span> {c.label}
+                  </button>
+                ))}
+              </div>
+              {cat && (
+                <ul className="flex flex-col divide-y divide-[var(--border)] min-h-12">
+                  {nearby === null && (
+                    <li className="text-sm text-[var(--muted)] py-2">Looking nearby…</li>
+                  )}
+                  {nearby?.length === 0 && (
+                    <li className="text-sm text-[var(--muted)] py-2">
+                      Nothing tagged nearby — try another, or just wander.
+                    </li>
+                  )}
+                  {nearby?.map((p, i) => (
+                    <li key={`${p.lat},${p.lon},${i}`}>
+                      <button
+                        type="button"
+                        onClick={() => onResultTap({ name: p.name, label: "", lat: p.lat, lon: p.lon, importance: 0 } as RankedResult)}
+                        className="w-full text-left py-3 hover:text-[var(--accent)]"
+                      >
+                        {p.dist != null && (
+                          <div className="text-[11px] font-mono text-[var(--accent)] tabular-nums">
+                            {fmtDist(p.dist)} away
+                          </div>
+                        )}
+                        <div className="font-display text-base truncate">{p.name}</div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
 
           <button
             type="button"
