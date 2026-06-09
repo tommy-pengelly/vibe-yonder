@@ -2,6 +2,7 @@
 import {
   ExternalLink,
   Heart,
+  ListChecks,
   Locate,
   Pause,
   Plus,
@@ -45,7 +46,9 @@ type Props = {
   onResume: () => void;
   onFinish: () => void;
   onDiscard: () => void;
-  onArrivalConfirm: (targetId: string, visited: boolean) => void;
+  onSetVisited: (targetId: string, visited: boolean) => void;
+  onSetActive: (targetId: string) => void;
+  onRemoveTarget: (targetId: string) => void;
   onAddPlace: (target: Target) => void;
   onCalibrate: () => void;
 };
@@ -64,7 +67,9 @@ export default function WalkScreen({
   onResume,
   onFinish,
   onDiscard,
-  onArrivalConfirm,
+  onSetVisited,
+  onSetActive,
+  onRemoveTarget,
   onAddPlace,
   onCalibrate,
 }: Props) {
@@ -74,7 +79,7 @@ export default function WalkScreen({
     Record<string, boolean>
   >({});
   const [addSheetOpen, setAddSheetOpen] = useState(false);
-  const [manualFocusId, setManualFocusId] = useState<string | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const unvisited = useMemo(
     () => yonder.targets.filter((t) => !t.visited),
@@ -83,20 +88,15 @@ export default function WalkScreen({
   const allVisited =
     yonder.targets.length > 0 && unvisited.length === 0;
 
-  // In Single/Ordered the focus is the active target. In Collection there's no
-  // fixed order, so focus the place you tapped, else the nearest unvisited one, 
-  // it gets the bold marker + name + distance; the rest stay ghosts.
+  // The focus is the active target (set by tap / "go next" / mode). In
+  // Collection with nothing chosen yet, focus the nearest unvisited place so it
+  // gets the bold marker + name + distance; the rest stay ghosts.
   const focusIndex = useMemo(() => {
     if (yonder.activeIndex != null) return yonder.activeIndex;
-    const ts = yonder.targets;
-    const manual = manualFocusId
-      ? ts.findIndex((t) => t.id === manualFocusId && !t.visited)
-      : -1;
-    if (manual >= 0) return manual;
     if (!position) return null;
     let best = -1;
     let bestD = Infinity;
-    ts.forEach((t, i) => {
+    yonder.targets.forEach((t, i) => {
       if (t.visited) return;
       const d = haversine(position.lat, position.lon, t.lat, t.lon);
       if (d < bestD) {
@@ -105,7 +105,7 @@ export default function WalkScreen({
       }
     });
     return best >= 0 ? best : null;
-  }, [yonder.activeIndex, yonder.targets, manualFocusId, position]);
+  }, [yonder.activeIndex, yonder.targets, position]);
 
   const activeTarget = focusIndex != null ? yonder.targets[focusIndex] : null;
 
@@ -279,7 +279,7 @@ export default function WalkScreen({
     if (!currentArrivalTarget) return;
     const id = currentArrivalTarget.id;
     if (visited) {
-      onArrivalConfirm(id, true);
+      onSetVisited(id, true);
     } else {
       setDismissedArrivals((p) => ({ ...p, [id]: true }));
     }
@@ -302,7 +302,7 @@ export default function WalkScreen({
           activeIndex={focusIndex}
           mpp={mpp}
           hideNumbers={hideNumbers}
-          onPickTarget={yonder.activeIndex == null ? setManualFocusId : undefined}
+          onPickTarget={onSetActive}
         />
       </div>
 
@@ -340,11 +340,12 @@ export default function WalkScreen({
         </div>
         <button
           type="button"
-          onClick={() => setAddSheetOpen(true)}
-          aria-label="Add a place"
-          className="size-9 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--accent)] pointer-events-auto bg-black/30 backdrop-blur-sm"
+          onClick={() => setPanelOpen(true)}
+          aria-label="Destinations"
+          className="shrink-0 inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-[var(--border)] text-[var(--muted)] hover:text-[var(--accent)] pointer-events-auto bg-black/30 backdrop-blur-sm"
         >
-          <Plus className="w-4 h-4" strokeWidth={1.75} />
+          <ListChecks className="w-4 h-4" strokeWidth={1.75} />
+          <span className="text-sm tabular-nums">{yonder.targets.length}</span>
         </button>
       </header>
 
@@ -508,6 +509,130 @@ export default function WalkScreen({
           onClose={() => setAddSheetOpen(false)}
         />
       )}
+
+      {panelOpen && (
+        <DestinationsSheet
+          targets={yonder.targets}
+          focusIndex={focusIndex}
+          position={position}
+          onGoNext={onSetActive}
+          onRemove={onRemoveTarget}
+          onSetVisited={onSetVisited}
+          onAdd={() => setAddSheetOpen(true)}
+          onClose={() => setPanelOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function DestinationsSheet({
+  targets,
+  focusIndex,
+  position,
+  onGoNext,
+  onRemove,
+  onSetVisited,
+  onAdd,
+  onClose,
+}: {
+  targets: Target[];
+  focusIndex: number | null;
+  position: Fix | null;
+  onGoNext: (id: string) => void;
+  onRemove: (id: string) => void;
+  onSetVisited: (id: string, visited: boolean) => void;
+  onAdd: () => void;
+  onClose: () => void;
+}) {
+  const [seenOpen, setSeenOpen] = useState(false);
+  const focusId = focusIndex != null ? targets[focusIndex]?.id : null;
+  const unvisited = targets.filter((t) => !t.visited);
+  const seen = targets.filter((t) => t.visited);
+  const dist = (t: Target) =>
+    position ? fmtDist(haversine(position.lat, position.lon, t.lat, t.lon)) : "";
+
+  return (
+    <div className="fixed inset-0 z-30 flex items-end bg-black/50" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-h-[70vh] overflow-y-auto bg-[var(--surface)] border-t border-[var(--border)] rounded-t-2xl px-5 pt-5 pb-6 flex flex-col gap-3"
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-xl">Destinations</h2>
+          <button type="button" onClick={onClose} aria-label="Close" className="size-8 flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]">
+            <X className="w-4 h-4" strokeWidth={1.75} />
+          </button>
+        </div>
+
+        <ul className="flex flex-col">
+          {unvisited.map((t) => {
+            const isFocus = t.id === focusId;
+            return (
+              <li key={t.id} className="flex items-center gap-2 py-2.5 border-b border-[var(--border)]">
+                <button
+                  type="button"
+                  onClick={() => onSetVisited(t.id, true)}
+                  aria-label="Mark visited"
+                  className="size-5 rounded-full border border-[var(--muted)] hover:border-[var(--accent)] shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className={`font-display text-base truncate ${isFocus ? "text-[var(--accent)]" : ""}`}>{t.name}</div>
+                  {dist(t) && <div className="text-[11px] font-mono text-[var(--muted)] tabular-nums">{dist(t)}</div>}
+                </div>
+                {isFocus ? (
+                  <span className="text-[10px] uppercase tracking-widest text-[var(--accent)] shrink-0">Next</span>
+                ) : (
+                  <button type="button" onClick={() => onGoNext(t.id)} className="text-xs text-[var(--muted)] hover:text-[var(--accent)] shrink-0 px-1">
+                    Go next
+                  </button>
+                )}
+                {targets.length > 1 && (
+                  <button type="button" onClick={() => onRemove(t.id)} aria-label="Remove" className="size-7 flex items-center justify-center text-[var(--muted)] hover:text-red-400 shrink-0">
+                    <X className="w-4 h-4" strokeWidth={1.75} />
+                  </button>
+                )}
+              </li>
+            );
+          })}
+          {unvisited.length === 0 && (
+            <li className="text-sm text-[var(--muted)] py-2.5">All seen. Add another, or finish.</li>
+          )}
+        </ul>
+
+        {seen.length > 0 && (
+          <section className="flex flex-col">
+            <button type="button" onClick={() => setSeenOpen((v) => !v)} className="flex items-center justify-between py-2 text-[10px] uppercase tracking-widest text-[var(--muted)] hover:text-[var(--foreground)]">
+              <span>Seen ({seen.length})</span>
+              <span>{seenOpen ? "−" : "+"}</span>
+            </button>
+            {seenOpen &&
+              seen.map((t) => (
+                <div key={t.id} className="flex items-center gap-2 py-2 border-b border-[var(--border)] opacity-80">
+                  <button
+                    type="button"
+                    onClick={() => onSetVisited(t.id, false)}
+                    aria-label="Mark not visited"
+                    title="Visit again"
+                    className="size-5 rounded-full bg-[var(--accent)] text-black flex items-center justify-center text-[10px] shrink-0"
+                  >
+                    ✓
+                  </button>
+                  <div className="font-display text-base truncate flex-1 min-w-0">{t.name}</div>
+                </div>
+              ))}
+          </section>
+        )}
+
+        <button
+          type="button"
+          onClick={onAdd}
+          className="mt-1 self-start inline-flex items-center gap-1.5 text-sm text-[var(--accent)] hover:opacity-80"
+        >
+          <Plus className="w-4 h-4" strokeWidth={1.75} />
+          Add a place
+        </button>
+      </div>
     </div>
   );
 }

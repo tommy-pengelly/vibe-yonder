@@ -216,42 +216,58 @@ export default function App() {
     setPhase("search");
   }, []);
 
-  const onArrivalConfirm = useCallback(
-    (targetId: string, visited: boolean) => {
-      if (!visited) return;
-      const now = Date.now();
+  // Toggle a target's visited state (both directions: arrival chip + the
+  // destinations panel). Mirrors the mark back to the source map.
+  const onSetVisited = useCallback((targetId: string, visited: boolean) => {
+    const stamp = visited ? Date.now() : undefined;
+    const mapId = sourceMapIdRef.current;
+    const mapItemId = targetToMapItemRef.current[targetId];
+    if (mapId && mapItemId) {
+      void (async () => {
+        const map = await getMap(mapId);
+        if (map) {
+          await saveMap({
+            ...map,
+            items: map.items.map((it) =>
+              it.id === mapItemId ? { ...it, visited, visitedAt: stamp } : it,
+            ),
+          });
+        }
+      })();
+    }
+    setYonder((y) => {
+      if (!y) return y;
+      const targets = y.targets.map((t) =>
+        t.id === targetId ? { ...t, visited, visitedAt: stamp } : t,
+      );
+      const activeIndex = computeActiveIndex(targets, y.mode, y.activeIndex);
+      return { ...y, targets, activeIndex };
+    });
+  }, []);
 
-      // If this yonder came from a saved map, write the visited mark back so
-      // partial completion survives across sessions.
-      const mapId = sourceMapIdRef.current;
-      const mapItemId = targetToMapItemRef.current[targetId];
-      if (mapId && mapItemId) {
-        void (async () => {
-          const map = await getMap(mapId);
-          if (map) {
-            await saveMap({
-              ...map,
-              items: map.items.map((it) =>
-                it.id === mapItemId
-                  ? { ...it, visited: true, visitedAt: now }
-                  : it,
-              ),
-            });
-          }
-        })();
+  // "Go next": focus a specific destination, any mode.
+  const onSetActive = useCallback((targetId: string) => {
+    setYonder((y) => (y ? { ...y, activeIndex: y.targets.findIndex((t) => t.id === targetId) } : y));
+  }, []);
+
+  // Remove a destination (keeps at least one). Demotes to single when one left.
+  const onRemoveTarget = useCallback((targetId: string) => {
+    setYonder((y) => {
+      if (!y) return y;
+      const prevActiveId = y.activeIndex != null ? y.targets[y.activeIndex]?.id : null;
+      const targets = y.targets.filter((t) => t.id !== targetId);
+      if (targets.length === 0) return y;
+      const mode = targets.length === 1 ? "single" : y.mode;
+      let activeIndex: number | null;
+      if (prevActiveId && prevActiveId !== targetId) {
+        const idx = targets.findIndex((t) => t.id === prevActiveId);
+        activeIndex = idx >= 0 ? idx : computeActiveIndex(targets, mode, null);
+      } else {
+        activeIndex = computeActiveIndex(targets, mode, null);
       }
-
-      setYonder((y) => {
-        if (!y) return y;
-        const targets = y.targets.map((t) =>
-          t.id === targetId ? { ...t, visited: true, visitedAt: now } : t,
-        );
-        const activeIndex = computeActiveIndex(targets, y.mode, y.activeIndex);
-        return { ...y, targets, activeIndex };
-      });
-    },
-    [],
-  );
+      return { ...y, targets, mode, activeIndex };
+    });
+  }, []);
 
   const onAddPlace = useCallback((target: Target) => {
     setYonder((y) => {
@@ -432,7 +448,9 @@ export default function App() {
         onResume={resume}
         onFinish={finish}
         onDiscard={discard}
-        onArrivalConfirm={onArrivalConfirm}
+        onSetVisited={onSetVisited}
+        onSetActive={onSetActive}
+        onRemoveTarget={onRemoveTarget}
         onAddPlace={onAddPlace}
         onCalibrate={() => void requestAccess()}
       />
