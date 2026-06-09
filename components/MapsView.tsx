@@ -1,13 +1,21 @@
 "use client";
-import { Map as MapIcon, Plus } from "lucide-react";
+import {
+  Map as MapIcon,
+  MoreVertical,
+  Navigation,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { EmptyState, PageHeader, PageScaffold } from "@/components/ui";
+import { BottomSheet, EmptyState, PageHeader, PageScaffold } from "@/components/ui";
 import { DotMap } from "@/components/ui/viz";
 import { useAuthUser } from "@/lib/auth";
-import { loadMaps } from "@/lib/data";
+import { deleteMap, loadMaps } from "@/lib/data";
 import { toUnitBox } from "@/lib/geo";
-import type { StoredMap } from "@/lib/types";
+import type { StoredMap, Target } from "@/lib/types";
 
 function mapSubtitle(m: StoredMap): string {
   const remaining = m.items.filter((i) => !i.visited).length;
@@ -26,6 +34,8 @@ function mapSubtitle(m: StoredMap): string {
 
 export default function MapsView() {
   const [maps, setMaps] = useState<StoredMap[] | null>(null);
+  const [actionMap, setActionMap] = useState<StoredMap | null>(null);
+  const router = useRouter();
   const { user } = useAuthUser();
 
   useEffect(() => {
@@ -37,6 +47,44 @@ export default function MapsView() {
       cancelled = true;
     };
   }, [user]);
+
+  const startYonder = (m: StoredMap) => {
+    if (typeof window === "undefined") return;
+    const active = m.items.filter((i) => !i.visited);
+    if (active.length === 0) return;
+    const targets: Target[] = active.map((i) => ({
+      id: crypto.randomUUID(),
+      name: i.name,
+      label: i.label,
+      lat: i.lat,
+      lon: i.lon,
+      visited: false,
+    }));
+    const mapItemIdByTargetId: Record<string, string> = {};
+    targets.forEach((t, k) => (mapItemIdByTargetId[t.id] = active[k].id));
+    window.sessionStorage.setItem(
+      "vibe-yonder.start",
+      JSON.stringify({
+        mode: targets.length === 1 ? "single" : m.mode,
+        targets,
+        mapId: m.id,
+        mapItemIdByTargetId,
+        name: m.name,
+      }),
+    );
+    router.push("/walk");
+  };
+
+  const onDelete = async (m: StoredMap) => {
+    setActionMap(null);
+    setMaps((prev) => (prev ?? []).filter((x) => x.id !== m.id));
+    await deleteMap(m.id);
+  };
+
+  const allSeen = actionMap
+    ? actionMap.items.length > 0 &&
+      actionMap.items.every((i) => i.visited)
+    : false;
 
   return (
     <PageScaffold>
@@ -71,12 +119,12 @@ export default function MapsView() {
       ) : (
         <ul className="flex flex-col gap-3">
           {maps.map((m) => (
-            <li key={m.id}>
+            <li key={m.id} className="relative">
               <Link
                 href={`/maps/${m.id}`}
                 className="block rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden hover:border-[var(--accent)]/50 transition-colors"
               >
-                <div className="px-4 pt-4 pb-1">
+                <div className="px-4 pt-4 pb-1 pr-12">
                   <div className="flex items-center gap-2">
                     <div className="font-display text-xl tracking-tight truncate">
                       {m.name}
@@ -95,10 +143,82 @@ export default function MapsView() {
                   <DotMap points={toUnitBox(m.items)} height={120} />
                 )}
               </Link>
+              <button
+                type="button"
+                onClick={() => setActionMap(m)}
+                aria-label={`Actions for ${m.name}`}
+                className="absolute top-3 right-3 size-8 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)] bg-[var(--background)]/40"
+              >
+                <MoreVertical className="w-4 h-4" strokeWidth={1.75} />
+              </button>
             </li>
           ))}
         </ul>
       )}
+
+      <BottomSheet
+        open={!!actionMap}
+        onClose={() => setActionMap(null)}
+        title={actionMap?.name}
+      >
+        {actionMap && (
+          <div className="flex flex-col">
+            <ActionRow
+              icon={Navigation}
+              label={allSeen ? "All seen" : "Yonder this map"}
+              disabled={allSeen}
+              onClick={() => {
+                const m = actionMap;
+                setActionMap(null);
+                startYonder(m);
+              }}
+            />
+            <ActionRow
+              icon={Pencil}
+              label="Edit"
+              onClick={() => {
+                const id = actionMap.id;
+                setActionMap(null);
+                router.push(`/maps/${id}/edit`);
+              }}
+            />
+            <ActionRow
+              icon={Trash2}
+              label="Delete"
+              danger
+              onClick={() => void onDelete(actionMap)}
+            />
+          </div>
+        )}
+      </BottomSheet>
     </PageScaffold>
+  );
+}
+
+function ActionRow({
+  icon: Icon,
+  label,
+  onClick,
+  disabled,
+  danger,
+}: {
+  icon: typeof Pencil;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex items-center gap-3 py-3.5 text-left border-b border-[var(--border)] last:border-0 disabled:opacity-40 ${
+        danger ? "text-red-400" : "text-[var(--foreground)] hover:text-[var(--accent)]"
+      }`}
+    >
+      <Icon className="w-5 h-5 shrink-0" strokeWidth={1.75} />
+      <span className="font-display text-lg">{label}</span>
+    </button>
   );
 }

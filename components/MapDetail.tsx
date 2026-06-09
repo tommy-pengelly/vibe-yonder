@@ -1,5 +1,5 @@
 "use client";
-import { ArrowLeft, RotateCcw, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -200,10 +200,21 @@ export default function MapDetail({ id }: { id: string }) {
           >
             {allDone ? "All seen" : "Yonder this map"}
           </button>
-          <MapShareControl
-            map={map}
-            onChange={(v) => setMap({ ...map, visibility: v })}
-          />
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/maps/${map.id}/edit`}
+              className="flex-1 rounded-full border border-[var(--border)] text-[var(--foreground)] py-2.5 flex items-center justify-center gap-2 hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            >
+              <Pencil className="w-4 h-4" strokeWidth={1.75} />
+              Edit
+            </Link>
+            <div className="flex-1">
+              <MapShareControl
+                map={map}
+                onChange={(v) => setMap({ ...map, visibility: v })}
+              />
+            </div>
+          </div>
           <button
             type="button"
             onClick={() => void onDelete()}

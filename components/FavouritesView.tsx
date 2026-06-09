@@ -1,17 +1,23 @@
 "use client";
-import { Pencil, X } from "lucide-react";
+import { Heart, Pencil, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { EmptyState, PageHeader, PageScaffold } from "@/components/ui";
+import { usePlaceSearch } from "@/hooks/usePlaceSearch";
+import { BottomSheet, EmptyState, PageHeader, PageScaffold } from "@/components/ui";
 import { useAuthUser } from "@/lib/auth";
-import { loadFavourites, removeFavourite, setFavouriteAlias } from "@/lib/data";
-import type { FavouritePlace } from "@/lib/types";
-import { Heart } from "lucide-react";
+import {
+  loadFavourites,
+  pushFavourite,
+  removeFavourite,
+  setFavouriteAlias,
+} from "@/lib/data";
+import type { FavouritePlace, RankedResult } from "@/lib/types";
 
 export default function FavouritesView() {
   const [favourites, setFavourites] = useState<FavouritePlace[] | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
   const router = useRouter();
   const { user } = useAuthUser();
 
@@ -69,12 +75,36 @@ export default function FavouritesView() {
     await setFavouriteAlias(f.id, next);
   };
 
+  const addFavourite = async (r: RankedResult) => {
+    setAddOpen(false);
+    const created = await pushFavourite({
+      name: r.name,
+      label: r.label,
+      lat: r.lat,
+      lon: r.lon,
+    });
+    setFavourites((prev) => {
+      const list = prev ?? [];
+      return list.some((f) => f.id === created.id) ? list : [created, ...list];
+    });
+  };
+
   return (
     <PageScaffold>
       <PageHeader
         kicker="Favourites"
         title="Places you love"
         backHref="/you"
+        action={
+          <button
+            type="button"
+            onClick={() => setAddOpen(true)}
+            aria-label="Add a favourite"
+            className="size-9 rounded-full bg-[var(--accent)] text-black flex items-center justify-center active:opacity-80"
+          >
+            <Plus className="w-4 h-4" strokeWidth={2} />
+          </button>
+        }
       />
 
       {favourites === null ? null : favourites.length === 0 ? (
@@ -136,6 +166,60 @@ export default function FavouritesView() {
           ))}
         </ul>
       )}
+
+      <AddFavouriteSheet
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onAdd={addFavourite}
+      />
     </PageScaffold>
+  );
+}
+
+function AddFavouriteSheet({
+  open,
+  onClose,
+  onAdd,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onAdd: (r: RankedResult) => void;
+}) {
+  const { q, setQ, results, loading } = usePlaceSearch(null);
+  return (
+    <BottomSheet open={open} onClose={onClose} title="Add a favourite" minHeightVh={60}>
+      <input
+        autoFocus
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Search a place you love…"
+        className="w-full bg-transparent border-b border-[var(--border)] px-1 py-3 text-base outline-none focus:border-[var(--accent)] placeholder:text-[var(--muted)]/60"
+        inputMode="search"
+      />
+      <ul className="flex flex-col divide-y divide-[var(--border)] min-h-12">
+        {loading && (
+          <li className="text-sm text-[var(--muted)] py-2 px-1">Searching…</li>
+        )}
+        {!loading && q.trim().length >= 3 && results.length === 0 && (
+          <li className="text-sm text-[var(--muted)] py-2 px-1">
+            No matches. Try adding the town.
+          </li>
+        )}
+        {results.map((r, i) => (
+          <li key={`${r.lat},${r.lon},${i}`}>
+            <button
+              type="button"
+              onClick={() => onAdd(r)}
+              className="w-full text-left py-3 hover:text-[var(--accent)]"
+            >
+              <div className="font-display text-base truncate">{r.name}</div>
+              <div className="text-xs text-[var(--muted)] line-clamp-1">
+                {r.label}
+              </div>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </BottomSheet>
   );
 }

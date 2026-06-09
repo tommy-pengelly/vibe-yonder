@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { fmtDist } from "@/lib/geo";
-import { saveMap } from "@/lib/data";
+import { getMap, saveMap } from "@/lib/data";
 import {
   clearMapDraft,
   loadMapDraft,
@@ -20,35 +20,53 @@ import type {
   YonderMode,
 } from "@/lib/types";
 
-export default function MapEditor() {
+export default function MapEditor({ editId }: { editId?: string } = {}) {
   const router = useRouter();
+  const editing = !!editId;
   const { fix } = useGeolocation(true);
   const [name, setName] = useState("");
   const [mode, setMode] = useState<YonderMode>("collection");
   const [items, setItems] = useState<StoredMapItem[]>([]);
+  const [createdAt, setCreatedAt] = useState<number | null>(null);
+  const [visibility, setVisibility] = useState<StoredMap["visibility"]>();
   const [q, setQ] = useState("");
   const [results, setResults] = useState<RankedResult[]>([]);
   const [loading, setLoading] = useState(false);
   const reqId = useRef(0);
 
-  // Autosave: restore a draft once on mount, then persist as you edit, so
-  // navigating away (or a reload) never loses a map you were setting up.
+  // Editing an existing map: load it. Otherwise (new) restore any draft so
+  // navigating away never loses a map you were setting up.
   useEffect(() => {
+    if (editing) {
+      let c = false;
+      void getMap(editId).then((m) => {
+        if (c || !m) return;
+        setName(m.name);
+        setMode(m.mode);
+        setItems(m.items);
+        setCreatedAt(m.createdAt);
+        setVisibility(m.visibility);
+      });
+      return () => {
+        c = true;
+      };
+    }
     const d = loadMapDraft();
     if (d) {
       setName(d.name);
       setMode(d.mode);
       setItems(d.items);
     }
-  }, []);
+  }, [editing, editId]);
 
   useEffect(() => {
+    if (editing) return; // drafts are for new maps only
     if (items.length === 0 && !name.trim()) {
       clearMapDraft();
       return;
     }
     saveMapDraft({ name, mode, items });
-  }, [name, mode, items]);
+  }, [editing, name, mode, items]);
 
   useEffect(() => {
     const term = q.trim();
@@ -110,20 +128,19 @@ export default function MapEditor() {
   };
 
   const save = async () => {
-    const finalName =
-      name.trim() ||
-      items[0]?.name ||
-      "Untitled map";
+    const finalName = name.trim() || items[0]?.name || "Untitled map";
+    const now = Date.now();
     const map: StoredMap = {
-      id: crypto.randomUUID(),
+      id: editId ?? crypto.randomUUID(),
       name: finalName,
       mode: items.length === 1 ? "single" : mode,
       items,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      createdAt: editing ? (createdAt ?? now) : now,
+      updatedAt: now,
+      visibility,
     };
     await saveMap(map);
-    clearMapDraft();
+    if (!editing) clearMapDraft();
     router.push(`/maps/${map.id}`);
   };
 
@@ -141,7 +158,7 @@ export default function MapEditor() {
         </Link>
         <div>
           <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
-            New map
+            {editing ? "Edit map" : "New map"}
           </span>
           <input
             value={name}

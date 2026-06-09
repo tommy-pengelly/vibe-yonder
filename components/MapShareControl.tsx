@@ -50,7 +50,7 @@ export default function MapShareControl({
       <button
         type="button"
         onClick={onOpen}
-        className="rounded-full border border-[var(--border)] text-[var(--foreground)] py-2.5 flex items-center justify-center gap-2 hover:border-[var(--accent)] hover:text-[var(--accent)]"
+        className="w-full rounded-full border border-[var(--border)] text-[var(--foreground)] py-2.5 flex items-center justify-center gap-2 hover:border-[var(--accent)] hover:text-[var(--accent)]"
       >
         <Share2 className="w-4 h-4" strokeWidth={1.75} />
         {vis === "public" ? "Shared · Public" : "Share map"}
