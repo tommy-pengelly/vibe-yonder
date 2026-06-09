@@ -21,6 +21,18 @@ Specs `docs/spec/04-foundations-ia.md`, `05-yonder-engine.md`, `06-discovery-com
 - **Map sharing**: `setMapVisibility` + `MapShareControl` bottom sheet on MapDetail; "Shared" badge in MapsView. (`maps.visibility` already existed — no migration.)
 - Remaining shadcn sweep: other bespoke buttons/inputs could move to kit components incrementally; not urgent.
 
+### Session 2 (2026-06-09 cont.) — nav restructure + discovery engine
+- **3-tab nav** (Community · ⊕ · Me): `CommunityView` at `/` (Discover = old Explore + search; Following). Centre ⊕ shows the brand spyglass mark. Me (`YouHub`) gained a Maps row. `Feed.tsx`/`ExploreView.tsx` removed; `/explore`→`/`. CLAUDE.md nav updated.
+- **Discovery engine** (the big one): `/api/nearby` (Overpass, keyless, env-swappable `NEARBY_PROVIDER`/`OVERPASS_URL`, 2 endpoints, 6h cache) + `lib/nearby` category catalogue. **Category search** ("Find me a…" chips) in CreateHub. **Sidequests** via `hooks/useSidequest` — gentle, throttled, dismissible mid-walk nudges to see-worthy POIs; "Not now" disables for the walk. Live-tested `/api/nearby` (9 cafés near Dolores Park).
+- **Favourite aliases** (Home/Work/café) — `FavouritePlace.alias`, inline rename in FavouritesView; cloud best-effort pending migration 0012.
+- **Autosave** (map drafts + resume in-progress yonder), **map sharing** (`MapShareControl` + visibility), **vaul/Radix** sheets+dialog+tabs, **bigger search sheets** (60dvh), contrast lift, POI cards — all shipped earlier this session.
+
+### ⚠️ Still NOT built (next): game modes
+Straight-line mission (GeoWizard, scored by deviation/straightness — never time), clue hunt, tour — under the ⊕. Then community-map **scoreboards** scored by exploration (Yondered / straightness), never speed. `crossTrack()` in `lib/geo.ts` is the first brick. Also: map-area derivation+search (column `maps.area` ready via 0012), the silent finish-bounce UX, first-run onboarding, collapse legacy `YonderMode`.
+
+### ⚠️ Action items — apply migrations 0011 + 0012
+`0012_place_alias_map_area.sql` (places.alias, maps.area) joins `0011_yonder_caption.sql` as written-but-unapplied (live-DB apply blocked for the agent). Apply both to enable cloud caption + alias persistence.
+
 ### ⚠️ Action item — apply migration 0011
 `supabase/migrations/0011_yonder_caption.sql` (adds `yonders.caption`) is **written but NOT applied** — the live-DB apply was declined by the safety classifier. Apply it (e.g. `supabase db push`, or the supabase MCP `apply_migration`) so signed-in users' recap descriptions persist to cloud. Until then: guest/localStorage works fully; `updateYonder` writes caption best-effort and self-heals once the column exists.
 
