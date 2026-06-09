@@ -3,6 +3,7 @@ import { ArrowLeft, RotateCcw, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import MapShareControl from "@/components/MapShareControl";
 import PlacePhoto from "@/components/PlacePhoto";
 import { DotMap } from "@/components/ui/viz";
 import { useAuthUser } from "@/lib/auth";
@@ -199,6 +200,10 @@ export default function MapDetail({ id }: { id: string }) {
           >
             {allDone ? "All seen" : "Yonder this map"}
           </button>
+          <MapShareControl
+            map={map}
+            onChange={(v) => setMap({ ...map, visibility: v })}
+          />
           <button
             type="button"
             onClick={() => void onDelete()}

@@ -9,6 +9,7 @@ export type MapRow = {
   id: string;
   name: string;
   mode: YonderMode;
+  visibility: "private" | "public" | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -45,6 +46,7 @@ export function rowToMap(m: MapRow, items: MapItemRow[]): StoredMap {
     items: items.map(rowToMapItem),
     createdAt: m.created_at ? new Date(m.created_at).getTime() : 0,
     updatedAt: m.updated_at ? new Date(m.updated_at).getTime() : 0,
+    visibility: m.visibility ?? "private",
   };
 }
 
@@ -131,6 +133,25 @@ export async function deleteMap(id: string): Promise<void> {
   // map_items cascade on the FK, so deleting the map is enough.
   const { error } = await c.sb.from("maps").delete().eq("id", id);
   if (error) console.error("deleteMap:", error.message);
+}
+
+/**
+ * Publish/unpublish a map to the community. Cloud-only — a public map needs an
+ * account (guests' maps live only in localStorage and stay private). Setting
+ * `public` makes the map + its items readable via the RLS policies in 0006.
+ */
+export async function setMapVisibility(
+  id: string,
+  visibility: "private" | "public",
+): Promise<boolean> {
+  const c = await ctx();
+  if (!c) return false; // needs an account
+  const { error } = await c.sb.from("maps").update({ visibility }).eq("id", id);
+  if (error) {
+    console.error("setMapVisibility:", error.message);
+    return false;
+  }
+  return true;
 }
 
 /**

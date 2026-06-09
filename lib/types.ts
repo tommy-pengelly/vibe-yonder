@@ -84,6 +84,8 @@ export type StoredMap = {
   items: StoredMapItem[];
   createdAt: number;
   updatedAt: number;
+  /** Community sharing. Cloud-only; guests' maps are always private. */
+  visibility?: "private" | "public";
 };
 
 /**

@@ -77,8 +77,15 @@ export default function MapsView() {
                 className="block rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden hover:border-[var(--accent)]/50 transition-colors"
               >
                 <div className="px-4 pt-4 pb-1">
-                  <div className="font-display text-xl tracking-tight truncate">
-                    {m.name}
+                  <div className="flex items-center gap-2">
+                    <div className="font-display text-xl tracking-tight truncate">
+                      {m.name}
+                    </div>
+                    {m.visibility === "public" && (
+                      <span className="shrink-0 text-[9px] uppercase tracking-widest text-[var(--accent)] border border-[var(--accent)]/40 rounded-full px-1.5 py-0.5">
+                        Shared
+                      </span>
+                    )}
                   </div>
                   <div className="text-xs text-[var(--warm)] mt-0.5">
                     {mapSubtitle(m)}
