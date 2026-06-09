@@ -1,39 +1,70 @@
 "use client";
+import { Search, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
 import { Empty, Loading, MapCard, YonderCard } from "@/components/feed/Cards";
 import { useFeedActions } from "@/components/feed/useFeedActions";
-import { PageHeader, PageScaffold, SegmentedTabs } from "@/components/ui";
-import { loadCommunity, loadFollowingFeed, searchProfiles } from "@/lib/data";
+import {
+  BottomSheet,
+  PageHeader,
+  PageScaffold,
+  SegmentedTabs,
+} from "@/components/ui";
+import {
+  loadCommunity,
+  loadFollowingFeed,
+  searchProfiles,
+} from "@/lib/data";
 import type { FeedMap, FeedYonder, Profile } from "@/lib/types";
 
-type Outer = "discover" | "following";
-type Scope = "places" | "explorers";
+type Tab = "feed" | "discover";
+type FeedScope = "everyone" | "following";
 
-// The outward tab: discover public maps + yonders (and search people/places),
-// or catch up on people you follow. Everything community-facing lives here.
+// The outward tab. A search button in the header opens a search sheet; below,
+// two tabs: Feed (completed yonders) and Discover (maps to wander).
 export default function CommunityView() {
   const a = useFeedActions();
-  const [outer, setOuter] = useState<Outer>("discover");
+  const [tab, setTab] = useState<Tab>("feed");
+  const [searchOpen, setSearchOpen] = useState(false);
 
   return (
     <>
       <PageScaffold>
-        <PageHeader kicker="Community" title="Find your next wander" />
+        <PageHeader
+          kicker="Community"
+          title="Find your next wander"
+          action={
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              aria-label="Search the community"
+              className="size-9 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]"
+            >
+              <Search className="w-4 h-4" strokeWidth={1.75} />
+            </button>
+          }
+        />
 
-        <SegmentedTabs<Outer>
+        <SegmentedTabs<Tab>
           variant="underline"
-          value={outer}
-          onChange={setOuter}
+          value={tab}
+          onChange={setTab}
           tabs={[
+            { value: "feed", label: "Feed" },
             { value: "discover", label: "Discover" },
-            { value: "following", label: "Following" },
           ]}
         />
 
-        {outer === "discover" ? <Discover a={a} /> : <Following a={a} />}
+        {tab === "feed" ? <FeedTab a={a} /> : <DiscoverTab a={a} />}
       </PageScaffold>
+
+      <SearchSheet
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        a={a}
+      />
+
       <AuthModal
         open={a.authOpen}
         reason={a.authReason}
@@ -43,219 +74,280 @@ export default function CommunityView() {
   );
 }
 
-function Discover({ a }: { a: ReturnType<typeof useFeedActions> }) {
-  const [scope, setScope] = useState<Scope>("places");
-  const [q, setQ] = useState("");
-  const [sort, setSort] = useState<"recent" | "popular">("recent");
-  const [people, setPeople] = useState<Profile[]>([]);
-  const [community, setCommunity] = useState<{
-    yonders: FeedYonder[];
-    maps: FeedMap[];
-  } | null>(null);
-
-  useEffect(() => {
-    if (scope !== "explorers") return;
-    let c = false;
-    const term = q.trim();
-    if (term.length < 2) {
-      setPeople([]);
-      return;
-    }
-    const h = setTimeout(() => {
-      void searchProfiles(term).then((p) => !c && setPeople(p));
-    }, 300);
-    return () => {
-      c = true;
-      clearTimeout(h);
-    };
-  }, [q, scope]);
-
-  useEffect(() => {
-    if (scope !== "places") return;
-    let c = false;
-    setCommunity(null);
-    const h = setTimeout(
-      () => {
-        void loadCommunity(q, sort).then((r) => {
-          if (c) return;
-          setCommunity(r);
-          a.seedGrubs(r.yonders);
-          a.seedGrubs(r.maps);
-        });
-      },
-      q ? 350 : 0,
-    );
-    return () => {
-      c = true;
-      clearTimeout(h);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, sort, scope]);
-
-  return (
-    <div className="flex flex-col gap-4">
-      <SegmentedTabs<Scope>
-        variant="pill"
-        value={scope}
-        onChange={setScope}
-        tabs={[
-          { value: "places", label: "Places & maps" },
-          { value: "explorers", label: "Explorers" },
-        ]}
-      />
-
-      <input
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder={
-          scope === "explorers"
-            ? "Find explorers by name or @handle…"
-            : "Search the community — a place or area…"
-        }
-        className="w-full bg-transparent border-b border-[var(--border)] px-1 py-2.5 text-base outline-none focus:border-[var(--accent)] placeholder:text-[var(--muted)]/60"
-        inputMode="search"
-      />
-
-      {scope === "explorers" ? (
-        <section className="flex flex-col gap-2">
-          {people.length > 0 && (
-            <ul className="flex flex-col divide-y divide-[var(--border)]">
-              {people.map((p) => (
-                <li key={p.id}>
-                  <Link
-                    href={`/u/${p.username}`}
-                    className="flex items-center gap-3 py-2.5 hover:text-[var(--accent)]"
-                  >
-                    <div className="size-9 shrink-0 rounded-full bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center font-display text-xs text-[var(--warm)]">
-                      {(p.displayName ?? p.username)
-                        .replace(/[@.]/g, "")
-                        .slice(0, 2)
-                        .toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-display text-sm truncate">
-                        {p.displayName ?? `@${p.username}`}
-                      </div>
-                      <div className="text-[11px] text-[var(--muted)]">
-                        @{p.username}
-                      </div>
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-          {q.trim().length >= 2 && people.length === 0 && (
-            <p className="text-sm text-[var(--muted)] px-1">
-              No explorers found.
-            </p>
-          )}
-          {q.trim().length < 2 && (
-            <p className="text-sm text-[var(--muted)] px-1">
-              Search by name or @handle to follow other wanderers.
-            </p>
-          )}
-        </section>
-      ) : (
-        <section className="flex flex-col gap-3.5">
-          <SegmentedTabs
-            variant="pill"
-            value={sort}
-            onChange={setSort}
-            tabs={[
-              { value: "recent", label: "Recent" },
-              { value: "popular", label: "Popular" },
-            ]}
-          />
-
-          {community === null ? (
-            <Loading />
-          ) : community.maps.length === 0 && community.yonders.length === 0 ? (
-            <Empty
-              title="Nothing public yet"
-              body="Be the first. Finish a yonder and share it public, or publish a map for others to wander."
-            />
-          ) : (
-            <>
-              {community.maps.length > 0 && (
-                <span className="text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">
-                  Maps to yonder near you
-                </span>
-              )}
-              {community.maps.map((m) => (
-                <MapCard
-                  key={m.id}
-                  m={m}
-                  grub={a.gstate(m.id, m)}
-                  duped={!!a.duped[m.id]}
-                  onGrub={() => a.grub("map", m.id)}
-                  onLoad={() => a.startWalk(m.destinations, m.name)}
-                  onDuplicate={() => a.duplicate(m)}
-                />
-              ))}
-              {community.yonders.length > 0 && (
-                <span className="text-[10px] uppercase tracking-[0.22em] text-[var(--muted)] mt-2">
-                  Gloriously lost lately
-                </span>
-              )}
-              {community.yonders.map((y) => (
-                <YonderCard
-                  key={y.id}
-                  y={y}
-                  grub={a.gstate(y.id, y)}
-                  saved={!!a.saved[y.id]}
-                  onGrub={() => a.grub("yonder", y.id)}
-                  onSave={() => a.save(y)}
-                  onLoad={() => a.startWalk(y.destinations, y.caption ?? y.area)}
-                />
-              ))}
-            </>
-          )}
-        </section>
-      )}
-    </div>
-  );
-}
-
-function Following({ a }: { a: ReturnType<typeof useFeedActions> }) {
-  const [feed, setFeed] = useState<FeedYonder[] | null>(null);
+// ----- Feed: completed yonders (everyone / people you follow) -----
+function FeedTab({ a }: { a: ReturnType<typeof useFeedActions> }) {
+  const [scope, setScope] = useState<FeedScope>("everyone");
+  const [yonders, setYonders] = useState<FeedYonder[] | null>(null);
 
   useEffect(() => {
     let c = false;
-    setFeed(null);
-    void loadFollowingFeed().then((f) => {
+    setYonders(null);
+    const load =
+      scope === "following"
+        ? loadFollowingFeed()
+        : loadCommunity("", "recent").then((r) => r.yonders);
+    void load.then((y) => {
       if (c) return;
-      setFeed(f);
-      a.seedGrubs(f);
+      setYonders(y);
+      a.seedGrubs(y);
     });
     return () => {
       c = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [scope]);
 
-  if (feed === null) return <Loading />;
-  if (feed.length === 0) {
-    return (
-      <Empty
-        title="Quiet so far"
-        body="Follow some explorers in Discover, and their wanders show up here."
-      />
-    );
-  }
   return (
     <div className="flex flex-col gap-3.5">
-      {feed.map((y) => (
-        <YonderCard
-          key={y.id}
-          y={y}
-          grub={a.gstate(y.id, y)}
-          saved={!!a.saved[y.id]}
-          onGrub={() => a.grub("yonder", y.id)}
-          onSave={() => a.save(y)}
-          onLoad={() => a.startWalk(y.destinations, y.caption ?? y.area)}
+      <SegmentedTabs<FeedScope>
+        variant="pill"
+        value={scope}
+        onChange={setScope}
+        tabs={[
+          { value: "everyone", label: "Everyone" },
+          { value: "following", label: "Following" },
+        ]}
+      />
+      {yonders === null ? (
+        <Loading />
+      ) : yonders.length === 0 ? (
+        <Empty
+          title={scope === "following" ? "Quiet so far" : "Nothing public yet"}
+          body={
+            scope === "following"
+              ? "Follow some explorers from search, and their wanders show up here."
+              : "Be the first — finish a yonder and share it public."
+          }
         />
-      ))}
+      ) : (
+        yonders.map((y) => (
+          <YonderCard
+            key={y.id}
+            y={y}
+            grub={a.gstate(y.id, y)}
+            saved={!!a.saved[y.id]}
+            onGrub={() => a.grub("yonder", y.id)}
+            onSave={() => a.save(y)}
+            onLoad={() => a.startWalk(y.destinations, y.caption ?? y.area)}
+          />
+        ))
+      )}
     </div>
+  );
+}
+
+// ----- Discover: maps to wander -----
+function DiscoverTab({ a }: { a: ReturnType<typeof useFeedActions> }) {
+  const [sort, setSort] = useState<"recent" | "popular">("recent");
+  const [maps, setMaps] = useState<FeedMap[] | null>(null);
+
+  useEffect(() => {
+    let c = false;
+    setMaps(null);
+    void loadCommunity("", sort).then((r) => {
+      if (c) return;
+      setMaps(r.maps);
+      a.seedGrubs(r.maps);
+    });
+    return () => {
+      c = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sort]);
+
+  return (
+    <div className="flex flex-col gap-3.5">
+      <SegmentedTabs
+        variant="pill"
+        value={sort}
+        onChange={setSort}
+        tabs={[
+          { value: "recent", label: "Recent" },
+          { value: "popular", label: "Popular" },
+        ]}
+      />
+      {maps === null ? (
+        <Loading />
+      ) : maps.length === 0 ? (
+        <Empty
+          title="No maps yet"
+          body="Publish a map of places, and it shows up here for others to wander."
+        />
+      ) : (
+        maps.map((m) => (
+          <MapCard
+            key={m.id}
+            m={m}
+            grub={a.gstate(m.id, m)}
+            duped={!!a.duped[m.id]}
+            onGrub={() => a.grub("map", m.id)}
+            onLoad={() => a.startWalk(m.destinations, m.name)}
+            onDuplicate={() => a.duplicate(m)}
+          />
+        ))
+      )}
+    </div>
+  );
+}
+
+// ----- Search sheet: places & maps, or explorers -----
+function SearchSheet({
+  open,
+  onClose,
+  a,
+}: {
+  open: boolean;
+  onClose: () => void;
+  a: ReturnType<typeof useFeedActions>;
+}) {
+  const [scope, setScope] = useState<"places" | "explorers">("places");
+  const [q, setQ] = useState("");
+  const [people, setPeople] = useState<Profile[]>([]);
+  const [results, setResults] = useState<{
+    yonders: FeedYonder[];
+    maps: FeedMap[];
+  } | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const term = q.trim();
+    let c = false;
+    if (scope === "explorers") {
+      if (term.length < 2) {
+        setPeople([]);
+        return;
+      }
+      const h = setTimeout(() => {
+        void searchProfiles(term).then((p) => !c && setPeople(p));
+      }, 300);
+      return () => {
+        c = true;
+        clearTimeout(h);
+      };
+    }
+    if (term.length < 2) {
+      setResults(null);
+      return;
+    }
+    const h = setTimeout(() => {
+      void loadCommunity(term, "recent").then((r) => {
+        if (c) return;
+        setResults(r);
+        a.seedGrubs(r.yonders);
+        a.seedGrubs(r.maps);
+      });
+    }, 350);
+    return () => {
+      c = true;
+      clearTimeout(h);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, scope, open]);
+
+  return (
+    <BottomSheet open={open} onClose={onClose} title="Search the community" minHeightVh={70}>
+      <SegmentedTabs
+        variant="pill"
+        value={scope}
+        onChange={(s) => {
+          setScope(s);
+          setQ("");
+        }}
+        tabs={[
+          { value: "places", label: "Places & maps" },
+          { value: "explorers", label: "Explorers" },
+        ]}
+      />
+      <div className="flex items-center gap-2 border-b border-[var(--border)] focus-within:border-[var(--accent)]">
+        <input
+          autoFocus
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={
+            scope === "explorers"
+              ? "Name or @handle…"
+              : "A place or area…"
+          }
+          className="flex-1 bg-transparent px-1 py-2.5 text-base outline-none placeholder:text-[var(--muted)]/60"
+          inputMode="search"
+        />
+        {q && (
+          <button
+            type="button"
+            onClick={() => setQ("")}
+            aria-label="Clear"
+            className="text-[var(--muted)] hover:text-[var(--foreground)]"
+          >
+            <X className="w-4 h-4" strokeWidth={1.75} />
+          </button>
+        )}
+      </div>
+
+      {scope === "explorers" ? (
+        <ul className="flex flex-col divide-y divide-[var(--border)]">
+          {people.map((p) => (
+            <li key={p.id}>
+              <Link
+                href={`/u/${p.username}`}
+                onClick={onClose}
+                className="flex items-center gap-3 py-2.5 hover:text-[var(--accent)]"
+              >
+                <div className="size-9 shrink-0 rounded-full bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center font-display text-xs text-[var(--warm)]">
+                  {(p.displayName ?? p.username)
+                    .replace(/[@.]/g, "")
+                    .slice(0, 2)
+                    .toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-display text-sm truncate">
+                    {p.displayName ?? `@${p.username}`}
+                  </div>
+                  <div className="text-[11px] text-[var(--muted)]">
+                    @{p.username}
+                  </div>
+                </div>
+              </Link>
+            </li>
+          ))}
+          {q.trim().length >= 2 && people.length === 0 && (
+            <li className="text-sm text-[var(--muted)] py-2">
+              No explorers found.
+            </li>
+          )}
+        </ul>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {results?.maps.map((m) => (
+            <MapCard
+              key={m.id}
+              m={m}
+              grub={a.gstate(m.id, m)}
+              duped={!!a.duped[m.id]}
+              onGrub={() => a.grub("map", m.id)}
+              onLoad={() => a.startWalk(m.destinations, m.name)}
+              onDuplicate={() => a.duplicate(m)}
+            />
+          ))}
+          {results?.yonders.map((y) => (
+            <YonderCard
+              key={y.id}
+              y={y}
+              grub={a.gstate(y.id, y)}
+              saved={!!a.saved[y.id]}
+              onGrub={() => a.grub("yonder", y.id)}
+              onSave={() => a.save(y)}
+              onLoad={() => a.startWalk(y.destinations, y.caption ?? y.area)}
+            />
+          ))}
+          {results &&
+            results.maps.length === 0 &&
+            results.yonders.length === 0 && (
+              <p className="text-sm text-[var(--muted)] py-2">
+                Nothing matches yet.
+              </p>
+            )}
+        </div>
+      )}
+    </BottomSheet>
   );
 }
