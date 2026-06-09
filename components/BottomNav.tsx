@@ -1,5 +1,5 @@
 "use client";
-import { Compass, Home, Map as MapIcon, Telescope, User } from "lucide-react";
+import { Compass, Home, Map as MapIcon, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -20,9 +20,14 @@ export default function BottomNav() {
         <Link
           href="/walk"
           aria-label="Begin a yonder"
-          className="size-14 -mt-6 rounded-full bg-[var(--accent)] text-black flex items-center justify-center shadow-lg shadow-black/40 active:opacity-80"
+          className="size-14 -mt-6 rounded-full flex items-center justify-center shadow-lg shadow-black/40 active:opacity-80 ring-1 ring-[var(--accent)]/60"
+          style={{
+            background:
+              "radial-gradient(120% 100% at 62% 33%, #1b2433, #0e1118 60%, #08090c)",
+          }}
         >
-          <Telescope className="w-6 h-6" strokeWidth={2} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/mark.png" alt="" className="w-9 h-auto" />
         </Link>
       </div>
 
