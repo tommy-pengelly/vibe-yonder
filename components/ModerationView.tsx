@@ -2,7 +2,6 @@
 import { ArrowLeft, Check } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import BottomNav from "@/components/BottomNav";
 import { useAuthUser } from "@/lib/auth";
 import { amAdmin, loadReports, resolveReport } from "@/lib/data";
 import type { ReportItem } from "@/lib/types";
@@ -102,7 +101,6 @@ export default function ModerationView() {
           </ul>
         )}
       </div>
-      <BottomNav />
     </>
   );
 }

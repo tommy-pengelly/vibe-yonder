@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import AuthModal from "@/components/AuthModal";
-import BottomNav from "@/components/BottomNav";
 import { useAuthUser } from "@/lib/auth";
 import {
   duplicateMap,
@@ -321,7 +320,6 @@ export default function Feed() {
             ))}
         </div>
       </div>
-      <BottomNav />
       <AuthModal open={authOpen} reason={authReason} onClose={() => setAuthOpen(false)} />
     </>
   );

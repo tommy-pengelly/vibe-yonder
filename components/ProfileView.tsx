@@ -3,7 +3,6 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
-import BottomNav from "@/components/BottomNav";
 import { useAuthUser } from "@/lib/auth";
 import {
   follow,
@@ -172,7 +171,6 @@ export default function ProfileView({ username }: { username: string }) {
           )}
         </section>
       </div>
-      <BottomNav />
       <AuthModal open={authOpen} reason="Sign in to follow explorers." onClose={() => setAuthOpen(false)} />
       {editing && (
         <EditProfile

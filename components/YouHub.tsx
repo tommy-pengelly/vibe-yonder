@@ -3,7 +3,6 @@ import { Bell, Bookmark, ChevronRight, Heart, Map as MapIcon, Settings as Settin
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
-import BottomNav from "@/components/BottomNav";
 import FollowRequests from "@/components/FollowRequests";
 import { useAuthUser, signOut } from "@/lib/auth";
 import {
@@ -158,7 +157,6 @@ export default function YouHub() {
           </div>
         )}
       </div>
-      <BottomNav />
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </>
   );

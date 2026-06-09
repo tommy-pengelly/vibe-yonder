@@ -3,7 +3,6 @@ import { ArrowLeft, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import BottomNav from "@/components/BottomNav";
 import { useAuthUser } from "@/lib/auth";
 import { loadFavourites, removeFavourite } from "@/lib/data";
 import type { FavouritePlace } from "@/lib/types";
@@ -106,7 +105,6 @@ export default function FavouritesView() {
           </ul>
         )}
       </div>
-      <BottomNav />
     </>
   );
 }

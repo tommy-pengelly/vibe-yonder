@@ -3,7 +3,6 @@ import { ArrowLeft, RotateCcw, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import BottomNav from "@/components/BottomNav";
 import PlacePhoto from "@/components/PlacePhoto";
 import { useAuthUser } from "@/lib/auth";
 import { deleteMap, getMap, saveMap } from "@/lib/data";
@@ -202,7 +201,6 @@ export default function MapDetail({ id }: { id: string }) {
           </button>
         </div>
       </div>
-      <BottomNav />
     </>
   );
 }

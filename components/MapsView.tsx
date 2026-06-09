@@ -2,7 +2,6 @@
 import { ArrowLeft, Plus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import BottomNav from "@/components/BottomNav";
 import { useAuthUser } from "@/lib/auth";
 import { loadMaps } from "@/lib/data";
 import type { StoredMap } from "@/lib/types";
@@ -90,7 +89,6 @@ export default function MapsView() {
           </ul>
         )}
       </div>
-      <BottomNav />
     </>
   );
 }

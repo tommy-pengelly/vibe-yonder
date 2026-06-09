@@ -3,7 +3,6 @@ import { ArrowLeft, Bookmark, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import BottomNav from "@/components/BottomNav";
 import { useAuthUser } from "@/lib/auth";
 import { getYonder, loadSaved, removeSaved } from "@/lib/data";
 import type { StoredSaved, Target } from "@/lib/types";
@@ -129,7 +128,6 @@ export default function SavedView() {
           </ul>
         )}
       </div>
-      <BottomNav />
     </>
   );
 }

@@ -2,7 +2,6 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import BottomNav from "@/components/BottomNav";
 import { getProfileByUsername, listFollowers, listFollowing } from "@/lib/data";
 import type { Profile } from "@/lib/types";
 
@@ -71,7 +70,6 @@ export default function FollowList({
           </ul>
         )}
       </div>
-      <BottomNav />
     </>
   );
 }

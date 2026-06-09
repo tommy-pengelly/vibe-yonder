@@ -2,7 +2,6 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import BottomNav from "@/components/BottomNav";
 import { useAuthUser } from "@/lib/auth";
 import { loadNotifications, markNotificationsRead } from "@/lib/data";
 import type { NotificationItem } from "@/lib/types";
@@ -84,7 +83,6 @@ export default function NotificationsView() {
           </ul>
         )}
       </div>
-      <BottomNav />
     </>
   );
 }

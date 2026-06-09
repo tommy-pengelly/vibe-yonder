@@ -11,7 +11,7 @@ export default function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="sticky bottom-0 z-20 grid grid-cols-3 items-center px-6 py-2.5 bg-[var(--background)]/85 backdrop-blur-md border-t border-[var(--border)]"
+      className="relative z-20 shrink-0 grid grid-cols-3 items-center px-6 py-2.5 bg-[var(--background)]/85 backdrop-blur-md border-t border-[var(--border)]"
     >
       <Tab href="/" label="Feed" Icon={Home} active={active("/")} />
 
