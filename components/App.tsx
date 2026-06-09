@@ -14,9 +14,9 @@ import { useSettings } from "@/lib/settings";
 import { summarize } from "@/lib/stats";
 import {
   getMap,
-  pushSaved,
   pushYonder,
   saveMap,
+  saveYonderPlaces,
   updateYonder,
 } from "@/lib/data";
 import type {
@@ -380,24 +380,9 @@ export default function App() {
   const saveForLater = useCallback(() => {
     if (!savedYonder || savedForLater) return;
     setSavedForLater(true);
-    // "Save for later" on a finished yonder bookmarks its destinations so the
-    // user can do them again from /you without re-searching.
-    if (savedYonder.destinations.length === 1) {
-      const d = savedYonder.destinations[0];
-      void pushSaved({
-        kind: "place",
-        refId: savedYonder.id,
-        name: d.name,
-        lat: d.lat,
-        lon: d.lon,
-      });
-    } else {
-      void pushSaved({
-        kind: "map",
-        refId: savedYonder.id,
-        name: savedYonder.name,
-      });
-    }
+    // Fold "save for later" into Maps: one place becomes a Favourite, several
+    // become a Map, so the user can do them again from /maps.
+    void saveYonderPlaces(savedYonder.name, savedYonder.destinations);
   }, [savedYonder, savedForLater]);
 
   const doAgain = useCallback(() => {

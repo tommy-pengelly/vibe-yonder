@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
 import { useAuthUser } from "@/lib/auth";
-import { getSharedYonder, pushSaved, reportContent, setGrub } from "@/lib/data";
+import { getSharedYonder, reportContent, saveYonderPlaces, setGrub } from "@/lib/data";
 import { fmtDist } from "@/lib/geo";
 import type { FeedYonder, Target } from "@/lib/types";
 
@@ -65,12 +65,7 @@ export default function SharedYonderView({ id }: { id: string }) {
     if (!requireAuth("Sign in to keep this for later.")) return;
     if (saved) return;
     setSaved(true);
-    if (y.destinations.length === 1) {
-      const d = y.destinations[0];
-      void pushSaved({ kind: "place", refId: y.id, name: d.name, lat: d.lat, lon: d.lon });
-    } else {
-      void pushSaved({ kind: "map", refId: y.id, name: y.caption ?? y.area });
-    }
+    void saveYonderPlaces(y.caption ?? y.area, y.destinations);
   };
   const onLoad = () => {
     if (typeof window === "undefined" || y.destinations.length === 0) return;

@@ -86,7 +86,11 @@ export type StoredMap = {
   updatedAt: number;
 };
 
-/** A bookmarked place or map, persisted via Save for later. */
+/**
+ * @deprecated Save-for-later folded into Maps (one place → Favourite, several →
+ * a Map) via `saveYonderPlaces`. The `saved` table + this type are retained but
+ * no longer written from the UI.
+ */
 export type StoredSaved = {
   id: string;
   kind: "place" | "map";

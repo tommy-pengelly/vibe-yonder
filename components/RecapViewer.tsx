@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Recap from "@/components/Recap";
 import { useAuthUser } from "@/lib/auth";
-import { getYonder, pushSaved, updateYonder } from "@/lib/data";
+import { getYonder, saveYonderPlaces, updateYonder } from "@/lib/data";
 import type { SavedYonder, Target } from "@/lib/types";
 
 export default function RecapViewer({ id }: { id: string }) {
@@ -75,22 +75,7 @@ export default function RecapViewer({ id }: { id: string }) {
   const saveForLater = () => {
     if (savedForLater) return;
     setSavedForLater(true);
-    if (yonder.destinations.length === 1) {
-      const d = yonder.destinations[0];
-      void pushSaved({
-        kind: "place",
-        refId: yonder.id,
-        name: d.name,
-        lat: d.lat,
-        lon: d.lon,
-      });
-    } else {
-      void pushSaved({
-        kind: "map",
-        refId: yonder.id,
-        name: yonder.name,
-      });
-    }
+    void saveYonderPlaces(yonder.name, yonder.destinations);
   };
 
   return (
