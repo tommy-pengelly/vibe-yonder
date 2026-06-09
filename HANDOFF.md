@@ -30,6 +30,13 @@ Specs `docs/spec/04-foundations-ia.md`, `05-yonder-engine.md`, `06-discovery-com
 ### ⚠️ Still NOT built (next): game modes
 Straight-line mission (GeoWizard, scored by deviation/straightness — never time), clue hunt, tour — under the ⊕. Then community-map **scoreboards** scored by exploration (Yondered / straightness), never speed. `crossTrack()` in `lib/geo.ts` is the first brick. Also: map-area derivation+search (column `maps.area` ready via 0012), the silent finish-bounce UX, first-run onboarding, collapse legacy `YonderMode`.
 
+### Session 3 (2026-06-10) — community/maps/favourites polish
+- **Community**: search moved into a header button (sheet), **Feed / Discover** tabs; title "Find your next **yonder**".
+- **CreateHub**: stacked **mode list** (Just wander · Select a map [picker sheet] · Find a map · New map · Straight line "coming soon"); dropped category chips + inline maps list.
+- **Favourites**: + button → search sheet to **add a favourite directly**.
+- **Maps**: **edit existing map** (`/maps/[id]/edit`, `MapEditor editId`), Edit action on MapDetail, per-map **kebab → Yonder/Edit/Delete** in MapsView.
+- **Map completion = personal**: verified `duplicateMap` resets `visited:false` and community reads select only name/label/lat/lon (no visited). ⚠️ *Follow-up:* the public-map RLS still exposes `map_items.visited(_at)` columns to a direct API caller (UI never reads them) — seal with a column-restricted policy or a `public_map_items` view (needs a migration).
+
 ### ⚠️ Action items — apply migrations 0011 + 0012
 `0012_place_alias_map_area.sql` (places.alias, maps.area) joins `0011_yonder_caption.sql` as written-but-unapplied (live-DB apply blocked for the agent). Apply both to enable cloud caption + alias persistence.
 
