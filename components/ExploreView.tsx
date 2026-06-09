@@ -65,7 +65,7 @@ export default function ExploreView() {
   return (
     <>
       <PageScaffold>
-        <PageHeader kicker="Explore" title="Find your next wander" />
+        <PageHeader kicker="Find" title="Find your next wander" />
 
         <SegmentedTabs<Scope>
           variant="pill"

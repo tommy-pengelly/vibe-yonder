@@ -26,7 +26,7 @@ export default function BottomNav() {
         </Link>
       </div>
 
-      <Tab href="/explore" label="Explore" Icon={Compass} active={active("/explore")} />
+      <Tab href="/explore" label="Find" Icon={Compass} active={active("/explore")} />
       <Tab href="/you" label="Me" Icon={User} active={active("/you")} />
     </nav>
   );

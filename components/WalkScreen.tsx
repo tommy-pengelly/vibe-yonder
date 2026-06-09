@@ -31,6 +31,7 @@ import type {
 } from "@/lib/types";
 import Scope from "./Scope";
 import StatStrip from "./StatStrip";
+import BottomSheet from "./ui/BottomSheet";
 
 type Props = {
   yonder: ActiveYonder;
@@ -504,41 +505,40 @@ export default function WalkScreen({
         </div>
       </div>
 
-      {addSheetOpen && (
-        <AddPlaceSheet
-          position={position}
-          onAdd={(t) => {
-            onAddPlace(t);
-            setAddSheetOpen(false);
-          }}
-          onClose={() => setAddSheetOpen(false)}
-        />
-      )}
+      <AddPlaceSheet
+        open={addSheetOpen}
+        position={position}
+        onAdd={(t) => {
+          onAddPlace(t);
+          setAddSheetOpen(false);
+        }}
+        onClose={() => setAddSheetOpen(false)}
+      />
 
-      {panelOpen && (
-        <DestinationsSheet
-          targets={yonder.targets}
-          focusIndex={focusIndex}
-          position={position}
-          onGoNext={onSetActive}
-          onRemove={onRemoveTarget}
-          onClearAll={() => {
-            onClearTargets();
-            setPanelOpen(false);
-          }}
-          onSetVisited={onSetVisited}
-          onAdd={() => {
-            setPanelOpen(false);
-            setAddSheetOpen(true);
-          }}
-          onClose={() => setPanelOpen(false)}
-        />
-      )}
+      <DestinationsSheet
+        open={panelOpen}
+        targets={yonder.targets}
+        focusIndex={focusIndex}
+        position={position}
+        onGoNext={onSetActive}
+        onRemove={onRemoveTarget}
+        onClearAll={() => {
+          onClearTargets();
+          setPanelOpen(false);
+        }}
+        onSetVisited={onSetVisited}
+        onAdd={() => {
+          setPanelOpen(false);
+          setAddSheetOpen(true);
+        }}
+        onClose={() => setPanelOpen(false)}
+      />
     </div>
   );
 }
 
 function DestinationsSheet({
+  open,
   targets,
   focusIndex,
   position,
@@ -549,6 +549,7 @@ function DestinationsSheet({
   onAdd,
   onClose,
 }: {
+  open: boolean;
   targets: Target[];
   focusIndex: number | null;
   position: Fix | null;
@@ -567,18 +568,7 @@ function DestinationsSheet({
     position ? fmtDist(haversine(position.lat, position.lon, t.lat, t.lon)) : "";
 
   return (
-    <div className="fixed inset-0 z-30 flex items-end bg-black/50" onClick={onClose}>
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-h-[70vh] overflow-y-auto bg-[var(--surface)] border-t border-[var(--border)] rounded-t-2xl px-5 pt-5 pb-6 flex flex-col gap-3"
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-xl">Destinations</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="size-8 flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]">
-            <X className="w-4 h-4" strokeWidth={1.75} />
-          </button>
-        </div>
-
+    <BottomSheet open={open} onClose={onClose} title="Destinations">
         <ul className="flex flex-col">
           {unvisited.map((t) => {
             const isFocus = t.id === focusId;
@@ -661,16 +651,17 @@ function DestinationsSheet({
             </button>
           )}
         </div>
-      </div>
-    </div>
+    </BottomSheet>
   );
 }
 
 function AddPlaceSheet({
+  open,
   position,
   onAdd,
   onClose,
 }: {
+  open: boolean;
   position: Fix | null;
   onAdd: (t: Target) => void;
   onClose: () => void;
@@ -714,25 +705,7 @@ function AddPlaceSheet({
   }, [q, position]);
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-end bg-black/40"
-      onClick={onClose}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-h-[60vh] bg-[var(--surface)] border-t border-[var(--border)] rounded-t-2xl px-5 pt-5 pb-6 flex flex-col gap-3"
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-xl">Add a place</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="size-8 flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]"
-          >
-            <X className="w-4 h-4" strokeWidth={1.75} />
-          </button>
-        </div>
+    <BottomSheet open={open} onClose={onClose} title="Add a place">
         <input
           autoFocus
           value={q}
@@ -775,8 +748,7 @@ function AddPlaceSheet({
             </li>
           ))}
         </ul>
-      </div>
-    </div>
+    </BottomSheet>
   );
 }
 

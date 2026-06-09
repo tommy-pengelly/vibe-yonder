@@ -6,6 +6,7 @@ import { publishYonder, shareStatus, unpublishYonder } from "@/lib/data";
 import { useSettings } from "@/lib/settings";
 import type { SavedYonder } from "@/lib/types";
 import AuthModal from "./AuthModal";
+import BottomSheet from "./ui/BottomSheet";
 
 type Vis = "public" | "followers" | null;
 
@@ -66,34 +67,28 @@ export default function ShareControl({ saved }: { saved: SavedYonder }) {
         {label}
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-40 flex items-end bg-black/50" onClick={() => setOpen(false)}>
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full bg-[var(--surface)] border-t border-[var(--border)] rounded-t-2xl px-5 pt-5 pb-8 flex flex-col gap-4"
-          >
-            <div>
-              <h2 className="font-display text-xl">Share this yonder</h2>
-              <p className="text-xs text-[var(--muted)] mt-1 leading-relaxed">
-                You share the places + an obfuscated trace memento, never your route. Your start and
-                finish near home stay hidden.
-              </p>
-            </div>
-            <textarea
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              placeholder="Say a word about the wander… (optional)"
-              rows={2}
-              className="w-full resize-none rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)] placeholder:text-[var(--muted)]/60"
-            />
-            <div className="flex flex-col gap-2">
-              <Choice icon={Globe} label="Public" sub="Anyone can discover it" active={status === "public"} onClick={() => choose("public")} busy={busy} />
-              <Choice icon={Users} label="Followers" sub="Only people who follow you" active={status === "followers"} onClick={() => choose("followers")} busy={busy} />
-              <Choice icon={Lock} label="Private" sub="Just you, unshare" active={status === null} onClick={() => choose(null)} busy={busy} />
-            </div>
-          </div>
+      <BottomSheet
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Share this yonder"
+      >
+        <p className="text-xs text-[var(--muted)] -mt-1 leading-relaxed">
+          You share the places + an obfuscated trace memento, never your route.
+          Your start and finish near home stay hidden.
+        </p>
+        <textarea
+          value={caption}
+          onChange={(e) => setCaption(e.target.value)}
+          placeholder="Say a word about the wander… (optional)"
+          rows={2}
+          className="w-full resize-none rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)] placeholder:text-[var(--muted)]/60"
+        />
+        <div className="flex flex-col gap-2">
+          <Choice icon={Globe} label="Public" sub="Anyone can discover it" active={status === "public"} onClick={() => choose("public")} busy={busy} />
+          <Choice icon={Users} label="Followers" sub="Only people who follow you" active={status === "followers"} onClick={() => choose("followers")} busy={busy} />
+          <Choice icon={Lock} label="Private" sub="Just you, unshare" active={status === null} onClick={() => choose(null)} busy={busy} />
         </div>
-      )}
+      </BottomSheet>
 
       <AuthModal open={authOpen} reason="Sign in to share your yonder." onClose={() => setAuthOpen(false)} />
     </>
