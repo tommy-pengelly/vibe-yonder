@@ -27,6 +27,11 @@ import type {
   Target,
   YonderMode,
 } from "@/lib/types";
+import {
+  clearActiveSession,
+  loadActiveSession,
+  saveActiveSession,
+} from "@/lib/storage";
 import { keepAwake } from "@/lib/wake";
 import AuthModal from "./AuthModal";
 import CreateHub from "./CreateHub";
@@ -116,6 +121,36 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Resume an in-progress yonder after a reload or accidental exit — so a
+  // dump never loses the walk (and the map) you'd set up. A fresh start
+  // payload always wins over a stale session.
+  useEffect(() => {
+    if (typeof window === "undefined" || startPayloadConsumed.current) return;
+    if (window.sessionStorage.getItem("vibe-yonder.start")) return;
+    const s = loadActiveSession();
+    if (!s || !s.yonder) return;
+    startPayloadConsumed.current = true;
+    void requestAccess();
+    setYonder(s.yonder);
+    setTrack(s.track ?? []);
+    lastFix.current = s.track?.at(-1) ?? null;
+    setStartTime(s.startTime ?? Date.now());
+    setPausedMs(s.pausedMs ?? 0);
+    setPaused(false);
+    setEndTime(null);
+    setSavedYonder(null);
+    setSavedLocally(false);
+    setPhase("walking");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist the live session while walking, so resume above has something to
+  // restore. Cleared on finish/discard.
+  useEffect(() => {
+    if (phase !== "walking" || !yonder) return;
+    saveActiveSession({ yonder, track, startTime, pausedMs });
+  }, [phase, yonder, track, startTime, pausedMs]);
+
   useEffect(() => {
     if (phase !== "walking") return;
     void keepAwake(!paused);
@@ -203,6 +238,7 @@ export default function App() {
 
   const discard = useCallback(() => {
     void keepAwake(false);
+    clearActiveSession();
     pausedAt.current = null;
     setPaused(false);
     setYonder(null);
@@ -302,6 +338,7 @@ export default function App() {
 
   const finish = useCallback(() => {
     flushPausedAt();
+    clearActiveSession();
     const now = Date.now();
     setEndTime(now);
     setPaused(false);

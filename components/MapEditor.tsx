@@ -6,6 +6,11 @@ import { useEffect, useRef, useState } from "react";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { fmtDist } from "@/lib/geo";
 import { saveMap } from "@/lib/data";
+import {
+  clearMapDraft,
+  loadMapDraft,
+  saveMapDraft,
+} from "@/lib/storage";
 import { rankResults } from "@/lib/rank";
 import type {
   GeocodeResult,
@@ -25,6 +30,25 @@ export default function MapEditor() {
   const [results, setResults] = useState<RankedResult[]>([]);
   const [loading, setLoading] = useState(false);
   const reqId = useRef(0);
+
+  // Autosave: restore a draft once on mount, then persist as you edit, so
+  // navigating away (or a reload) never loses a map you were setting up.
+  useEffect(() => {
+    const d = loadMapDraft();
+    if (d) {
+      setName(d.name);
+      setMode(d.mode);
+      setItems(d.items);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (items.length === 0 && !name.trim()) {
+      clearMapDraft();
+      return;
+    }
+    saveMapDraft({ name, mode, items });
+  }, [name, mode, items]);
 
   useEffect(() => {
     const term = q.trim();
@@ -99,6 +123,7 @@ export default function MapEditor() {
       updatedAt: Date.now(),
     };
     await saveMap(map);
+    clearMapDraft();
     router.push(`/maps/${map.id}`);
   };
 

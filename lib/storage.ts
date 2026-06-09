@@ -1,9 +1,13 @@
 "use client";
 import type {
+  ActiveYonder,
   FavouritePlace,
+  Fix,
   SavedYonder,
   StoredMap,
+  StoredMapItem,
   StoredSaved,
+  YonderMode,
 } from "./types";
 
 const KEYS = {
@@ -11,6 +15,8 @@ const KEYS = {
   favourites: "vibe-yonder.favourites.v1",
   maps: "vibe-yonder.maps.v1",
   saved: "vibe-yonder.saved.v1",
+  mapDraft: "vibe-yonder.mapdraft.v1",
+  session: "vibe-yonder.session.v1",
 } as const;
 
 function read<T>(key: string, fallback: T): T {
@@ -155,4 +161,39 @@ export function pushSaved(s: Omit<StoredSaved, "id" | "createdAt">): StoredSaved
 
 export function removeSaved(id: string) {
   write(KEYS.saved, loadSaved().filter((s) => s.id !== id));
+}
+
+// ----- Autosave: drafts + active-walk resume (device-local) -----
+
+export type MapDraft = {
+  name: string;
+  mode: YonderMode;
+  items: StoredMapItem[];
+};
+
+export function saveMapDraft(d: MapDraft) {
+  write(KEYS.mapDraft, d);
+}
+export function loadMapDraft(): MapDraft | null {
+  return read<MapDraft | null>(KEYS.mapDraft, null);
+}
+export function clearMapDraft() {
+  write(KEYS.mapDraft, null);
+}
+
+export type ActiveSession = {
+  yonder: ActiveYonder;
+  track: Fix[];
+  startTime: number | null;
+  pausedMs: number;
+};
+
+export function saveActiveSession(s: ActiveSession) {
+  write(KEYS.session, s);
+}
+export function loadActiveSession(): ActiveSession | null {
+  return read<ActiveSession | null>(KEYS.session, null);
+}
+export function clearActiveSession() {
+  write(KEYS.session, null);
 }
