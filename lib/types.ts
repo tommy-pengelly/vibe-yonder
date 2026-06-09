@@ -64,6 +64,8 @@ export type FavouritePlace = {
   lat: number;
   lon: number;
   createdAt: number;
+  /** A personal nickname — "Home", "Work", "Best café" — shown instead of name. */
+  alias?: string;
 };
 
 export type StoredMapItem = {

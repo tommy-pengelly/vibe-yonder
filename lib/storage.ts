@@ -103,6 +103,13 @@ export function removeFavourite(id: string) {
   write(KEYS.favourites, loadFavourites().filter((f) => f.id !== id));
 }
 
+export function updateFavourite(id: string, patch: Partial<FavouritePlace>) {
+  write(
+    KEYS.favourites,
+    loadFavourites().map((f) => (f.id === id ? { ...f, ...patch, id } : f)),
+  );
+}
+
 export function isFavourite(lat: number, lon: number, name: string): boolean {
   return getFavourite(lat, lon, name) != null;
 }

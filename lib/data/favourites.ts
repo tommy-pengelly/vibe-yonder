@@ -10,6 +10,7 @@ export type PlaceRow = {
   lat: number;
   lon: number;
   created_at: string | null;
+  alias?: string | null;
 };
 
 export function rowToFavourite(r: PlaceRow): FavouritePlace {
@@ -20,6 +21,7 @@ export function rowToFavourite(r: PlaceRow): FavouritePlace {
     lat: r.lat,
     lon: r.lon,
     createdAt: r.created_at ? new Date(r.created_at).getTime() : 0,
+    alias: r.alias ?? undefined,
   };
 }
 
@@ -60,6 +62,23 @@ export async function removeFavourite(id: string): Promise<void> {
   if (!c) return local.removeFavourite(id);
   const { error } = await c.sb.from("places").delete().eq("id", id);
   if (error) console.error("removeFavourite:", error.message);
+}
+
+/** Set a favourite's personal alias ("Home", "Work", …). */
+export async function setFavouriteAlias(
+  id: string,
+  alias: string,
+): Promise<void> {
+  const c = await ctx();
+  if (!c) return local.updateFavourite(id, { alias: alias || undefined });
+  // alias is a newer column (migration 0012); best-effort so it self-heals.
+  const { error } = await c.sb
+    .from("places")
+    .update({ alias: alias || null })
+    .eq("id", id);
+  if (error) {
+    console.warn("setFavouriteAlias (apply migration 0012?):", error.message);
+  }
 }
 
 export async function isFavourite(lat: number, lon: number, name: string): Promise<boolean> {
