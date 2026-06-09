@@ -19,10 +19,45 @@ const mono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://vibeyonder.app";
+
 export const metadata: Metadata = {
-  title: "Vibe Yonder",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Vibe Yonder — wander, don't navigate",
+    template: "%s · Vibe Yonder",
+  },
   description:
-    "Pick a place. Wander there, no route, just an arrow and your own two feet.",
+    "Strava for exploring. Pick a place, wander there with no route — just an arrow and your own two feet. Detours encouraged.",
+  applicationName: "Vibe Yonder",
+  keywords: [
+    "exploring",
+    "wandering",
+    "walking",
+    "no navigation",
+    "compass",
+    "adventure",
+    "getting lost",
+  ],
+  appleWebApp: {
+    capable: true,
+    title: "Yonder",
+    statusBarStyle: "black-translucent",
+  },
+  openGraph: {
+    type: "website",
+    siteName: "Vibe Yonder",
+    title: "Vibe Yonder — wander, don't navigate",
+    description:
+      "Pick a place, wander there with no route — just an arrow and your own two feet.",
+    url: SITE_URL,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Vibe Yonder — wander, don't navigate",
+    description:
+      "Pick a place, wander there with no route — just an arrow and your own two feet.",
+  },
 };
 
 export const viewport: Viewport = {
