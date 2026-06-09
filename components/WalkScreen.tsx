@@ -6,9 +6,11 @@ import {
   Locate,
   Pause,
   Plus,
+  Sparkles,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSidequest } from "@/hooks/useSidequest";
 import { getFavourite, pushFavourite, removeFavourite } from "@/lib/data";
 import {
   ARRIVAL_RADIUS_M,
@@ -83,6 +85,15 @@ export default function WalkScreen({
   >({});
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [sidequestsOn, setSidequestsOn] = useState(true);
+
+  // A gentle nudge toward something nearby worth a detour. Paused while a
+  // sheet is open (don't interrupt) and while the walk itself is paused.
+  const { offer, accept, dismiss } = useSidequest({
+    position,
+    enabled: sidequestsOn && !paused && !addSheetOpen && !panelOpen,
+    targets: yonder.targets,
+  });
 
   const unvisited = useMemo(
     () => yonder.targets.filter((t) => !t.visited),
@@ -390,6 +401,63 @@ export default function WalkScreen({
           <p className="self-center text-center text-xs text-[var(--accent)]/90 max-w-xs">
             All places visited, keep wandering, or finish whenever.
           </p>
+        )}
+
+        {offer && !currentArrivalTarget && (
+          <div className="self-center max-w-xs rounded-2xl bg-black/55 backdrop-blur-md border border-[var(--border)] px-4 py-3 flex flex-col gap-2 pointer-events-auto">
+            <p className="text-sm text-[var(--foreground)] flex items-start gap-2">
+              <Sparkles
+                className="w-4 h-4 text-[var(--accent)] shrink-0 mt-0.5"
+                strokeWidth={1.75}
+              />
+              <span>
+                <span className="font-display text-[var(--accent)]">
+                  {offer.place.name}
+                </span>
+                {offer.place.dist != null && !hideNumbers && (
+                  <span className="text-[var(--muted)]">
+                    {" "}
+                    · {fmtDist(offer.place.dist)} off your path
+                  </span>
+                )}
+              </span>
+            </p>
+            <div className="flex items-center gap-3 self-end">
+              <button
+                type="button"
+                onClick={() => setSidequestsOn(false)}
+                className="text-[11px] text-[var(--muted)] hover:text-[var(--foreground)] px-1"
+                title="Turn off suggestions for this walk"
+              >
+                Not now
+              </button>
+              <button
+                type="button"
+                onClick={dismiss}
+                className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] px-2 py-1"
+              >
+                Skip
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const p = accept();
+                  if (p)
+                    onAddPlace({
+                      id: crypto.randomUUID(),
+                      name: p.name,
+                      label: "",
+                      lat: p.lat,
+                      lon: p.lon,
+                      visited: false,
+                    });
+                }}
+                className="rounded-full bg-[var(--accent)] text-black font-semibold px-4 py-1.5 active:opacity-80"
+              >
+                Go see it
+              </button>
+            </div>
+          </div>
         )}
 
         {currentArrivalTarget && (
