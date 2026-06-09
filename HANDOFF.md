@@ -13,6 +13,14 @@ Specs `docs/spec/04-foundations-ia.md`, `05-yonder-engine.md`, `06-discovery-com
 - **Doc 5 selection (Part A)** — clear-all-to-wander + a "Just wander" entry: zero targets is now a first-class pure-void wander. "Go next" (go-here-now) already existed from Phase D.
 - **Doc 6 completion loop (no-new-service half)** — description written in the recap (`SavedYonder.caption`), pre-fills share; places-seen is editable (add via place-search bottom sheet / remove), persisted to `destinations`.
 
+### Feedback pass (2026-06-09, also pushed)
+- "Reusable yonders" → "Your maps"; contrast lifted across tokens; **POI-scatter cards** on Maps list + MapDetail (shared `components/ui/viz` + `toUnitBox`). Fixed the add-place sheet (was opening behind the Destinations sheet).
+- **Component library = shadcn/Radix** (user-chosen): deps in (`@radix-ui/react-dialog`, `@radix-ui/react-tabs`, `vaul`, `clsx`, `tailwind-merge`, `cva`); `lib/utils` `cn`. `BottomSheet` → vaul; walk sheets + ShareControl migrated; `AuthModal` → Radix Dialog; `SegmentedTabs` → Radix Tabs. (2 moderate transitive npm-audit warnings — check before prod.)
+- **Explore → "Find"** (label/kicker; `/explore` route kept).
+- **Autosave**: map-editor drafts + resume an in-progress yonder (`lib/storage` drafts/session; App restores on mount, clears on finish/discard).
+- **Map sharing**: `setMapVisibility` + `MapShareControl` bottom sheet on MapDetail; "Shared" badge in MapsView. (`maps.visibility` already existed — no migration.)
+- Remaining shadcn sweep: other bespoke buttons/inputs could move to kit components incrementally; not urgent.
+
 ### ⚠️ Action item — apply migration 0011
 `supabase/migrations/0011_yonder_caption.sql` (adds `yonders.caption`) is **written but NOT applied** — the live-DB apply was declined by the safety classifier. Apply it (e.g. `supabase db push`, or the supabase MCP `apply_migration`) so signed-in users' recap descriptions persist to cloud. Until then: guest/localStorage works fully; `updateYonder` writes caption best-effort and self-heals once the column exists.
 
