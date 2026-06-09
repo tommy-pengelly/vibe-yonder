@@ -119,6 +119,8 @@ export type SavedYonder = {
   pausedMs: number;
   /** Optional source-map link, set when the yonder began from a saved map. */
   mapId?: string;
+  /** A note the owner writes in the recap; pre-fills the share caption. */
+  caption?: string;
 };
 
 export type AuthUser = {

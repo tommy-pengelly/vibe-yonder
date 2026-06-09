@@ -18,7 +18,7 @@ export default function ShareControl({ saved }: { saved: SavedYonder }) {
   const [status, setStatus] = useState<Vis>(null);
   const [open, setOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
-  const [caption, setCaption] = useState("");
+  const [caption, setCaption] = useState(saved.caption ?? "");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {

@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import Recap from "@/components/Recap";
 import { useAuthUser } from "@/lib/auth";
 import { getYonder, saveYonderPlaces, updateYonder } from "@/lib/data";
-import type { SavedYonder, Target } from "@/lib/types";
+import type { Destination, SavedYonder, Target } from "@/lib/types";
 
 export default function RecapViewer({ id }: { id: string }) {
   const router = useRouter();
@@ -46,6 +46,18 @@ export default function RecapViewer({ id }: { id: string }) {
 
   const renameTitle = (name: string) => {
     const next = { ...yonder, name };
+    setYonder(next);
+    void updateYonder(next);
+  };
+
+  const editCaption = (caption: string) => {
+    const next = { ...yonder, caption };
+    setYonder(next);
+    void updateYonder(next);
+  };
+
+  const editPlaces = (destinations: Destination[]) => {
+    const next = { ...yonder, destinations };
     setYonder(next);
     void updateYonder(next);
   };
@@ -94,6 +106,8 @@ export default function RecapViewer({ id }: { id: string }) {
         onRenameTitle={renameTitle}
         onDoAgain={doAgain}
         onSaveForLater={saveForLater}
+        onSaveCaption={editCaption}
+        onSavePlaces={editPlaces}
       />
     </div>
   );

@@ -17,6 +17,7 @@ export type YonderRow = {
   track: Fix[] | null;
   paused_ms: number | null;
   map_id: string | null;
+  caption?: string | null;
 };
 
 export function rowToYonder(r: YonderRow): SavedYonder {
@@ -34,6 +35,7 @@ export function rowToYonder(r: YonderRow): SavedYonder {
     track: r.track ?? [],
     pausedMs: r.paused_ms ?? 0,
     mapId: r.map_id ?? undefined,
+    caption: r.caption ?? undefined,
   };
 }
 
@@ -92,8 +94,25 @@ export async function pushYonder(y: SavedYonder): Promise<void> {
 export async function updateYonder(y: SavedYonder): Promise<void> {
   const c = await ctx();
   if (!c) return local.updateYonder(y);
-  const { error } = await c.sb.from("yonders").update({ name: y.name }).eq("id", y.id);
+  // Title + the (now-editable) places-seen list. The destinations column has
+  // existed since 0003, so this is always safe.
+  const { error } = await c.sb
+    .from("yonders")
+    .update({ name: y.name, destinations: y.destinations })
+    .eq("id", y.id);
   if (error) console.error("updateYonder:", error.message);
+  // caption is the newer column (migration 0011). Persist it best-effort in a
+  // separate update so the primary save never fails if the column isn't there
+  // yet — self-heals once 0011 is applied.
+  if (y.caption !== undefined) {
+    const { error: capErr } = await c.sb
+      .from("yonders")
+      .update({ caption: y.caption })
+      .eq("id", y.id);
+    if (capErr) {
+      console.warn("updateYonder caption (apply migration 0011?):", capErr.message);
+    }
+  }
 }
 
 export async function deleteYonder(id: string): Promise<void> {

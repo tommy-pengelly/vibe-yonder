@@ -393,6 +393,30 @@ export default function App() {
     });
   }, [savedLocally]);
 
+  const editCaption = useCallback(
+    (caption: string) => {
+      setSavedYonder((y) => {
+        if (!y) return y;
+        const next = { ...y, caption };
+        if (savedLocally) void updateYonder(next);
+        return next;
+      });
+    },
+    [savedLocally],
+  );
+
+  const editPlaces = useCallback(
+    (destinations: Destination[]) => {
+      setSavedYonder((y) => {
+        if (!y) return y;
+        const next = { ...y, destinations };
+        if (savedLocally) void updateYonder(next);
+        return next;
+      });
+    },
+    [savedLocally],
+  );
+
   const saveYonderAction = useCallback(() => {
     if (!savedYonder) return;
     void pushYonder(savedYonder);
@@ -492,6 +516,8 @@ export default function App() {
           onSave={saveYonderAction}
           onDoAgain={doAgain}
           onSaveForLater={saveForLater}
+          onSaveCaption={editCaption}
+          onSavePlaces={editPlaces}
           signedInHint={
             signedInHint ? (
               <button
