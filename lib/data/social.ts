@@ -4,7 +4,7 @@ import type { FollowCounts, Profile } from "../types";
 import { ctx } from "./ctx";
 import { getProfileById, getProfilesByIds } from "./profiles";
 
-type Subject = "yonder" | "map";
+type Subject = "yonder" | "map" | "post";
 
 // ----- Follows -----
 

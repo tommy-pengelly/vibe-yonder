@@ -11,14 +11,8 @@ import {
   PageScaffold,
   SegmentedTabs,
 } from "@/components/ui";
-import {
-  loadCommunity,
-  loadCommunityWays,
-  loadFollowingFeed,
-  loadFollowingWays,
-  searchProfiles,
-} from "@/lib/data";
-import type { FeedMap, FeedWays, FeedYonder, Profile } from "@/lib/types";
+import { loadCommunity, loadFeed, searchProfiles } from "@/lib/data";
+import type { FeedItem, FeedMap, FeedYonder, Profile } from "@/lib/types";
 
 type Tab = "feed" | "discover";
 type FeedScope = "everyone" | "following";
@@ -79,31 +73,30 @@ export default function CommunityView() {
 // ----- Feed: completed yonders (everyone / people you follow) -----
 function FeedTab({ a }: { a: ReturnType<typeof useFeedActions> }) {
   const [scope, setScope] = useState<FeedScope>("everyone");
-  const [yonders, setYonders] = useState<FeedYonder[] | null>(null);
-  const [ways, setWays] = useState<FeedWays[]>([]);
+  const [items, setItems] = useState<FeedItem[] | null>(null);
 
   useEffect(() => {
     let c = false;
-    setYonders(null);
-    setWays([]);
-    const loadY =
-      scope === "following"
-        ? loadFollowingFeed()
-        : loadCommunity("", "recent").then((r) => r.yonders);
-    const loadW = scope === "following" ? loadFollowingWays() : loadCommunityWays();
-    void loadY.then((y) => {
+    setItems(null);
+    void loadFeed(scope === "following" ? "following" : "community").then((it) => {
       if (c) return;
-      setYonders(y);
-      a.seedGrubs(y);
+      setItems(it);
+      // seed grub state for grubbable items
+      a.seedGrubs(
+        it
+          .filter((i) => i.kind === "yonder" || i.kind === "map")
+          .map((i) =>
+            i.kind === "yonder"
+              ? { id: i.id, grubs: i.y.grubs, grubbed: i.y.grubbed }
+              : { id: i.id, grubs: i.m.grubs, grubbed: i.m.grubbed },
+          ),
+      );
     });
-    void loadW.then((w) => !c && setWays(w));
     return () => {
       c = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope]);
-
-  const empty = yonders !== null && yonders.length === 0 && ways.length === 0;
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -116,36 +109,56 @@ function FeedTab({ a }: { a: ReturnType<typeof useFeedActions> }) {
           { value: "following", label: "Following" },
         ]}
       />
-      {yonders === null ? (
+      {items === null ? (
         <Loading />
-      ) : empty ? (
+      ) : items.length === 0 ? (
         <Empty
           title={scope === "following" ? "Quiet so far" : "Nothing public yet"}
           body={
             scope === "following"
               ? "Follow some explorers from search, and their wanders show up here."
-              : "Be the first — finish a yonder and share it public."
+              : "Be the first — finish a yonder, publish a map, or post a ways report."
           }
         />
       ) : (
-        <>
-          {ways.map((w) => (
-            <WaysCard key={w.id} w={w} />
-          ))}
-          {(yonders ?? []).map((y) => (
-            <YonderCard
-              key={y.id}
-              y={y}
-              grub={a.gstate(y.id, y)}
-              saved={!!a.saved[y.id]}
-              onGrub={() => a.grub("yonder", y.id)}
-              onSave={() => a.save(y)}
-              onLoad={() => a.startWalk(y.destinations, y.caption ?? y.area)}
-            />
-          ))}
-        </>
+        items.map((it) => <FeedItemCard key={it.id} item={it} a={a} />)
       )}
     </div>
+  );
+}
+
+// One feed, every kind of post — render the right card.
+function FeedItemCard({
+  item,
+  a,
+}: {
+  item: FeedItem;
+  a: ReturnType<typeof useFeedActions>;
+}) {
+  if (item.kind === "ways") return <WaysCard w={item.w} />;
+  if (item.kind === "map") {
+    const m = item.m;
+    return (
+      <MapCard
+        m={m}
+        grub={a.gstate(m.id, m)}
+        duped={!!a.duped[m.id]}
+        onGrub={() => a.grub("post", m.id)}
+        onLoad={() => a.startWalk(m.destinations, m.name, m.mapId)}
+        onDuplicate={() => a.duplicate(m)}
+      />
+    );
+  }
+  const y = item.y;
+  return (
+    <YonderCard
+      y={y}
+      grub={a.gstate(y.id, y)}
+      saved={!!a.saved[y.id]}
+      onGrub={() => a.grub("post", y.id)}
+      onSave={() => a.save(y)}
+      onLoad={() => a.startWalk(y.destinations, y.caption ?? y.area)}
+    />
   );
 }
 

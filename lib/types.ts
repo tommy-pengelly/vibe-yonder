@@ -182,9 +182,17 @@ export type FeedWays = {
   traces: number[][][]; // overlaid normalised 0–100 traces
 };
 
+/** One item in the unified feed — a community post of any kind. */
+export type FeedItem =
+  | { kind: "yonder"; id: string; when: string; y: FeedYonder }
+  | { kind: "map"; id: string; when: string; m: FeedMap }
+  | { kind: "ways"; id: string; when: string; w: FeedWays };
+
 /** A public map (collection) as the Community cards consume it. */
 export type FeedMap = {
   id: string;
+  /** The underlying map id, for Duplicate / Load (distinct from the post id). */
+  mapId?: string;
   name: string;
   who: string; // @username of author
   places: number;

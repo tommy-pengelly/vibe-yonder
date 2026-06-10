@@ -35,7 +35,7 @@ export function useFeedActions() {
   const gstate = (id: string, fallback: { grubs: number; grubbed: boolean }) =>
     grubs[id] ?? { count: fallback.grubs, active: fallback.grubbed };
 
-  const grub = (subject: "yonder" | "map", id: string) => {
+  const grub = (subject: "yonder" | "map" | "post", id: string) => {
     if (!requireAuth("Sign in to grub a yonder you loved.")) return;
     setGrubs((g) => {
       const cur = g[id] ?? { count: 0, active: false };
@@ -84,7 +84,7 @@ export function useFeedActions() {
     if (!requireAuth("Sign in to duplicate this into your maps.")) return;
     if (duped[m.id]) return;
     setDuped((d) => ({ ...d, [m.id]: true }));
-    void duplicateMap(m.id);
+    void duplicateMap(m.mapId ?? m.id);
   };
 
   return {

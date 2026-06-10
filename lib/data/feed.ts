@@ -1,6 +1,12 @@
 "use client";
 import { getSupabase } from "../supabase/client";
-import type { Destination, FeedMap, FeedWays, FeedYonder } from "../types";
+import type {
+  Destination,
+  FeedItem,
+  FeedMap,
+  FeedWays,
+  FeedYonder,
+} from "../types";
 import { ctx } from "./ctx";
 import { grubCountsFor } from "./social";
 
@@ -126,9 +132,184 @@ export async function loadUserShared(userId: string): Promise<FeedYonder[]> {
 export async function getSharedYonder(id: string): Promise<FeedYonder | null> {
   const sb = getSupabase();
   if (!sb) return null;
+  // Feed cards use post ids; resolve a post first, fall back to a legacy
+  // shared_yonders id (e.g. from search results).
+  const { data: post } = await sb
+    .from("posts")
+    .select(FEED_COLS)
+    .eq("id", id)
+    .eq("kind", "yonder")
+    .maybeSingle();
+  if (post) return (await shapeFeedYonders([post as FeedPostRow]))[0] ?? null;
   const { data } = await sb.from("shared_yonders").select(SHARED_COLS).eq("id", id).maybeSingle();
   if (!data) return null;
   return (await shapeShared([data as SharedRow]))[0] ?? null;
+}
+
+// ----- Unified feed: every community item is a post -----
+
+type FeedPostRow = {
+  id: string;
+  user_id: string;
+  kind: "yonder" | "map" | "ways";
+  ref_id: string | null;
+  caption: string | null;
+  area: string | null;
+  payload: Record<string, unknown>;
+  created_at: string | null;
+};
+
+const FEED_COLS = "id,user_id,kind,ref_id,caption,area,payload,created_at";
+
+/** Shape yonder-kind post rows into FeedYonder (id = post.id). */
+async function shapeFeedYonders(rows: FeedPostRow[]): Promise<FeedYonder[]> {
+  if (rows.length === 0) return [];
+  const profiles = await profilesByIds(rows.map((r) => r.user_id));
+  const grubs = await grubCountsFor("post", rows.map((r) => r.id));
+  return rows.map((r) => {
+    const p = profiles[r.user_id] ?? { username: "wanderer" };
+    const g = grubs[r.id] ?? { count: 0, grubbed: false };
+    const pl = r.payload ?? {};
+    const dests = (pl.destinations as Destination[]) ?? [];
+    return {
+      id: r.id,
+      userId: r.user_id,
+      who: p.displayName ?? `@${p.username}`,
+      handle: `@${p.username}`,
+      avatarUrl: p.avatarUrl,
+      when: relTime(r.created_at),
+      caption: r.caption,
+      area: r.area ?? "somewhere",
+      walked: (pl.walked_m as number) ?? 0,
+      mins: Math.round(((pl.duration_s as number) ?? 0) / 60),
+      places: (pl.places as number) ?? dests.length,
+      yondered: (pl.yondered as number) ?? 1,
+      trace: (pl.trace_public as number[][]) ?? [],
+      destinations: dests,
+      grubs: g.count,
+      grubbed: g.grubbed,
+    };
+  });
+}
+
+/** The whole feed in one read: posts of any kind → typed feed items. Community
+ * = everything public; following = posts by people you follow. */
+export async function loadFeed(
+  scope: "community" | "following",
+): Promise<FeedItem[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+
+  let rows: FeedPostRow[] = [];
+  if (scope === "following") {
+    const c = await ctx();
+    if (!c) return [];
+    const { data: follows } = await c.sb
+      .from("follows")
+      .select("following_id")
+      .eq("follower_id", c.uid)
+      .eq("status", "accepted");
+    const ids =
+      (follows as { following_id: string }[] | null)?.map((f) => f.following_id) ?? [];
+    if (ids.length === 0) return [];
+    const { data, error } = await c.sb
+      .from("posts")
+      .select(FEED_COLS)
+      .in("user_id", ids)
+      .order("created_at", { ascending: false })
+      .limit(60);
+    if (error) return [];
+    rows = (data as FeedPostRow[]) ?? [];
+  } else {
+    const { data, error } = await sb
+      .from("posts")
+      .select(FEED_COLS)
+      .eq("visibility", "public")
+      .order("created_at", { ascending: false })
+      .limit(60);
+    if (error) return [];
+    rows = (data as FeedPostRow[]) ?? [];
+  }
+  if (rows.length === 0) return [];
+
+  const profiles = await profilesByIds(rows.map((r) => r.user_id));
+  const grubs = await grubCountsFor(
+    "post",
+    rows.filter((r) => r.kind !== "ways").map((r) => r.id),
+  );
+
+  return rows.map((r): FeedItem => {
+    const p = profiles[r.user_id] ?? { username: "wanderer" };
+    const who = p.displayName ?? `@${p.username}`;
+    const handle = `@${p.username}`;
+    const when = relTime(r.created_at);
+    const g = grubs[r.id] ?? { count: 0, grubbed: false };
+    const pl = r.payload ?? {};
+
+    if (r.kind === "map") {
+      const dests = (pl.destinations as Destination[]) ?? [];
+      return {
+        kind: "map",
+        id: r.id,
+        when,
+        m: {
+          id: r.id,
+          mapId: r.ref_id ?? undefined,
+          name: (pl.name as string) ?? "A map",
+          who: handle,
+          places: dests.length,
+          grubs: g.count,
+          grubbed: g.grubbed,
+          destinations: dests,
+          previewDots: scatter(dests),
+        },
+      };
+    }
+    if (r.kind === "ways") {
+      return {
+        kind: "ways",
+        id: r.id,
+        when,
+        w: {
+          id: r.id,
+          who,
+          handle,
+          avatarUrl: p.avatarUrl,
+          when,
+          caption: r.caption,
+          count: (pl.count as number) ?? 0,
+          km: (pl.km as number) ?? 0,
+          placesSeen: (pl.placesSeen as number) ?? 0,
+          traces: (pl.traces as number[][][]) ?? [],
+        },
+      };
+    }
+    // yonder
+    const dests = (pl.destinations as Destination[]) ?? [];
+    return {
+      kind: "yonder",
+      id: r.id,
+      when,
+      y: {
+        id: r.id,
+        userId: r.user_id,
+        who,
+        handle,
+        avatarUrl: p.avatarUrl,
+        when,
+        caption: r.caption,
+        area: r.area ?? "somewhere",
+        walked: (pl.walked_m as number) ?? 0,
+        mins: Math.round(((pl.duration_s as number) ?? 0) / 60),
+        places: (pl.places as number) ?? dests.length,
+        yondered: (pl.yondered as number) ?? 1,
+        trace: (pl.trace_public as number[][]) ?? [],
+        destinations: dests,
+        grubs: g.count,
+        grubbed: g.grubbed,
+      },
+    };
+  });
 }
 
 // ----- Ways reports (posts kind='ways') -----
