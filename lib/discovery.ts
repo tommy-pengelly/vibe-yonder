@@ -110,6 +110,20 @@ export function score(c: Candidate, ctx: ScoreCtx): Scored {
   return { ...c, dist, draw, cost, value, surfaced: value >= 0 };
 }
 
+/**
+ * Snap a point to a coarse grid cell — the key behind "fetch by tile, not by
+ * tick" (Doc 7 Part F). Two nearby fixes share a cell, so we only re-query when
+ * you cross into a new one. ~0.01° ≈ 1 km.
+ */
+export function cellKey(lat: number, lon: number, step = 0.01): string {
+  return `${Math.round(lat / step)},${Math.round(lon / step)}`;
+}
+
+/** Stable id for a place that has no OSM ref — a rounded-coordinate hash. */
+export function coordId(p: { lat: number; lon: number }): string {
+  return `@${p.lat.toFixed(5)},${p.lon.toFixed(5)}`;
+}
+
 /** Score, gate (draw ≥ cost), sort by pull, and cap for the void. */
 export function rankCandidates(
   cs: Candidate[],

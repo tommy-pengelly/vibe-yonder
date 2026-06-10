@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  cellKey,
+  coordId,
   notabilityTier,
   rankCandidates,
   score,
@@ -83,5 +85,23 @@ describe("rankCandidates", () => {
       wiki: "Q",
     }));
     expect(rankCandidates(many, ctx(), 6)).toHaveLength(6);
+  });
+});
+
+describe("cellKey (tile, not tick)", () => {
+  it("keeps nearby fixes in the same cell but separates distant ones", () => {
+    const a = cellKey(51.5001, -0.1001);
+    const b = cellKey(51.5004, -0.0998); // a few tens of metres away
+    const c = cellKey(51.52, -0.1); // ~2 km away
+    expect(a).toBe(b);
+    expect(a).not.toBe(c);
+  });
+});
+
+describe("coordId", () => {
+  it("is stable for the same rounded coordinate", () => {
+    expect(coordId({ lat: 51.500001, lon: -0.100001 })).toBe(
+      coordId({ lat: 51.500002, lon: -0.100002 }),
+    );
   });
 });
