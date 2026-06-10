@@ -1,20 +1,24 @@
 "use client";
-import { Compass, Globe, Map as MapIcon, Navigation, Plus, Ruler, X } from "lucide-react";
+import { Compass, Map as MapIcon, Navigation, Plus, Ruler, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
 import BottomSheet from "@/components/ui/BottomSheet";
+import { SegmentedTabs } from "@/components/ui";
 import PlaceDetailSheet, { type PlaceLite } from "@/components/PlaceDetailSheet";
-import { loadFavourites, loadMaps } from "@/lib/data";
+import { loadCommunity, loadFavourites, loadMaps } from "@/lib/data";
 import { fmtDist } from "@/lib/geo";
 import type {
   FavouritePlace,
+  FeedMap,
   Fix,
   RankedResult,
   StoredMap,
   Target,
   YonderMode,
 } from "@/lib/types";
+
+type MapsTab = "mine" | "community";
 
 type StartOpts = {
   mapId?: string;
@@ -43,6 +47,8 @@ export default function CreateHub({
   const [maps, setMaps] = useState<StoredMap[]>([]);
   const [favourites, setFavourites] = useState<FavouritePlace[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [mapsTab, setMapsTab] = useState<MapsTab>("mine");
+  const [communityMaps, setCommunityMaps] = useState<FeedMap[] | null>(null);
   const [detail, setDetail] = useState<(PlaceLite & RankedResult) | null>(null);
 
   const building = picks.length > 0;
@@ -82,6 +88,25 @@ export default function CreateHub({
     onStart(targets, active.length === 1 ? "single" : m.mode, {
       mapId: m.id,
       mapItemIdByTargetId,
+      name: m.name,
+    });
+  };
+
+  // Lazy-load community maps the first time the Community tab is opened.
+  useEffect(() => {
+    if (!pickerOpen || mapsTab !== "community" || communityMaps !== null) return;
+    let c = false;
+    void loadCommunity().then((r) => !c && setCommunityMaps(r.maps));
+    return () => {
+      c = true;
+    };
+  }, [pickerOpen, mapsTab, communityMaps]);
+
+  const startCommunityMap = (m: FeedMap) => {
+    if (!m.destinations.length) return;
+    const targets = m.destinations.map((d) => toTarget(d));
+    onStart(targets, targets.length === 1 ? "single" : "collection", {
+      mapId: m.mapId,
       name: m.name,
     });
   };
@@ -162,22 +187,9 @@ export default function CreateHub({
           />
           <ModeRow
             icon={MapIcon}
-            title="Select a map"
-            sub={maps.length ? `Wander one of your ${maps.length}` : "None yet"}
-            disabled={maps.length === 0}
+            title="Maps"
+            sub={maps.length ? "Yours, the community's, or make one" : "Browse the community or build your own"}
             onClick={() => setPickerOpen(true)}
-          />
-          <ModeRow
-            icon={Globe}
-            title="Find a map"
-            sub="Browse the community"
-            onClick={() => router.push("/")}
-          />
-          <ModeRow
-            icon={Plus}
-            title="New map"
-            sub="Build a set of places to wander between"
-            onClick={() => router.push("/maps/new")}
           />
           <ModeRow
             icon={Ruler}
@@ -217,32 +229,89 @@ export default function CreateHub({
         </button>
       )}
 
-      {/* Map picker */}
-      <BottomSheet open={pickerOpen} onClose={() => setPickerOpen(false)} title="Select a map" minHeightVh={50}>
-        <ul className="flex flex-col divide-y divide-[var(--border)]">
-          {maps.map((m) => {
-            const remaining = m.items.filter((i) => !i.visited).length;
-            return (
+      {/* Maps picker — your maps, the community's, or make a new one */}
+      <BottomSheet open={pickerOpen} onClose={() => setPickerOpen(false)} title="Maps" minHeightVh={60}>
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <SegmentedTabs<MapsTab>
+            variant="pill"
+            value={mapsTab}
+            onChange={setMapsTab}
+            tabs={[
+              { value: "mine", label: "Mine" },
+              { value: "community", label: "Community" },
+            ]}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              setPickerOpen(false);
+              router.push("/maps/new");
+            }}
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]"
+          >
+            <Plus className="w-4 h-4" strokeWidth={1.75} />
+            New
+          </button>
+        </div>
+
+        {mapsTab === "mine" ? (
+          maps.length === 0 ? (
+            <p className="text-sm text-[var(--muted)] py-8 text-center">
+              No maps yet — make one, or browse the community.
+            </p>
+          ) : (
+            <ul className="flex flex-col divide-y divide-[var(--border)]">
+              {maps.map((m) => {
+                const remaining = m.items.filter((i) => !i.visited).length;
+                return (
+                  <li key={m.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPickerOpen(false);
+                        startMap(m);
+                      }}
+                      disabled={remaining === 0}
+                      className="w-full text-left py-3 hover:text-[var(--accent)] disabled:opacity-40"
+                    >
+                      <div className="font-display text-lg truncate">{m.name}</div>
+                      <div className="text-xs text-[var(--muted)] mt-0.5">
+                        {m.mode === "ordered" ? "Step through" : "Wander between"} ·{" "}
+                        {remaining === 0 ? "all seen" : `${remaining} left`}
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        ) : communityMaps === null ? (
+          <p className="text-sm text-[var(--muted)] py-8 text-center">Loading…</p>
+        ) : communityMaps.length === 0 ? (
+          <p className="text-sm text-[var(--muted)] py-8 text-center">
+            No public maps yet.
+          </p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-[var(--border)]">
+            {communityMaps.map((m) => (
               <li key={m.id}>
                 <button
                   type="button"
                   onClick={() => {
                     setPickerOpen(false);
-                    startMap(m);
+                    startCommunityMap(m);
                   }}
-                  disabled={remaining === 0}
-                  className="w-full text-left py-3 hover:text-[var(--accent)] disabled:opacity-40"
+                  className="w-full text-left py-3 hover:text-[var(--accent)]"
                 >
                   <div className="font-display text-lg truncate">{m.name}</div>
                   <div className="text-xs text-[var(--muted)] mt-0.5">
-                    {m.mode === "ordered" ? "Step through" : "Wander between"} ·{" "}
-                    {remaining === 0 ? "all seen" : `${remaining} left`}
+                    {m.who} · {m.places} place{m.places === 1 ? "" : "s"}
                   </div>
                 </button>
               </li>
-            );
-          })}
-        </ul>
+            ))}
+          </ul>
+        )}
       </BottomSheet>
 
       {/* Place detail — photo + actions, from a search result */}
