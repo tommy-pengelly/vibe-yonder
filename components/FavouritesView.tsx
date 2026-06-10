@@ -1,5 +1,6 @@
 "use client";
-import { Heart, Pencil, Plus, X } from "lucide-react";
+import { Footprints, Heart, Pencil, Plus, X } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
@@ -145,14 +146,24 @@ export default function FavouritesView() {
                 </button>
               )}
               {editing !== f.id && (
-                <button
-                  type="button"
-                  onClick={() => beginEdit(f)}
-                  className="size-8 flex items-center justify-center text-[var(--muted)] hover:text-[var(--accent)]"
-                  aria-label="Rename"
-                >
-                  <Pencil className="w-4 h-4" strokeWidth={1.75} />
-                </button>
+                <>
+                  <Link
+                    href={`/ways?near=${f.lat},${f.lon}&name=${encodeURIComponent(f.alias || f.name)}`}
+                    className="size-8 flex items-center justify-center text-[var(--muted)] hover:text-[var(--accent)]"
+                    aria-label={`Ways to ${f.alias || f.name}`}
+                    title="See all the ways you've wandered here"
+                  >
+                    <Footprints className="w-4 h-4" strokeWidth={1.75} />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => beginEdit(f)}
+                    className="size-8 flex items-center justify-center text-[var(--muted)] hover:text-[var(--accent)]"
+                    aria-label="Rename"
+                  >
+                    <Pencil className="w-4 h-4" strokeWidth={1.75} />
+                  </button>
+                </>
               )}
               <button
                 type="button"
