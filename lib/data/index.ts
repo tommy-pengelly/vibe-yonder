@@ -12,6 +12,7 @@ export * from "./social";
 export * from "./sharing";
 export * from "./posts";
 export * from "./feed";
+export * from "./entitlements";
 export * from "./settings";
 export * from "./notifications";
 export * from "./admin";
