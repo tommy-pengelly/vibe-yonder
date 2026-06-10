@@ -181,7 +181,7 @@ function DiscoverTab({ a }: { a: ReturnType<typeof useFeedActions> }) {
             grub={a.gstate(m.id, m)}
             duped={!!a.duped[m.id]}
             onGrub={() => a.grub("map", m.id)}
-            onLoad={() => a.startWalk(m.destinations, m.name)}
+            onLoad={() => a.startWalk(m.destinations, m.name, m.id)}
             onDuplicate={() => a.duplicate(m)}
           />
         ))
@@ -324,7 +324,7 @@ function SearchSheet({
               grub={a.gstate(m.id, m)}
               duped={!!a.duped[m.id]}
               onGrub={() => a.grub("map", m.id)}
-              onLoad={() => a.startWalk(m.destinations, m.name)}
+              onLoad={() => a.startWalk(m.destinations, m.name, m.id)}
               onDuplicate={() => a.duplicate(m)}
             />
           ))}

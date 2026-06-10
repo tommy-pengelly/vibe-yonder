@@ -52,7 +52,11 @@ export function useFeedActions() {
     void saveYonderPlaces(y.caption ?? y.area, y.destinations);
   };
 
-  const startWalk = (dests: { name: string; label?: string; lat: number; lon: number }[], name: string) => {
+  const startWalk = (
+    dests: { name: string; label?: string; lat: number; lon: number }[],
+    name: string,
+    mapId?: string,
+  ) => {
     if (typeof window === "undefined" || dests.length === 0) return;
     const targets: Target[] = dests.map((d) => ({
       id: crypto.randomUUID(),
@@ -62,9 +66,16 @@ export function useFeedActions() {
       lon: d.lon,
       visited: false,
     }));
+    // Link to the source map (e.g. a community map you loaded), so your ways
+    // show on it and it can be counted — your traces stay private to you.
     window.sessionStorage.setItem(
       "vibe-yonder.start",
-      JSON.stringify({ mode: targets.length > 1 ? "collection" : "single", targets, name }),
+      JSON.stringify({
+        mode: targets.length > 1 ? "collection" : "single",
+        targets,
+        name,
+        mapId,
+      }),
     );
     router.push("/walk");
   };
