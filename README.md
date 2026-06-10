@@ -1,4 +1,4 @@
-# Vibe Yonder
+# Yonderful
 
 > Strava for exploring.
 

@@ -46,7 +46,7 @@ export default function BootSplash() {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/brand/wordmark-light.png"
-        alt="Vibe Yonder"
+        alt="Yonderful"
         className="w-44 h-auto"
       />
     </div>

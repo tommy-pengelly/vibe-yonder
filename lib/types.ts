@@ -55,6 +55,8 @@ export type ActiveYonder = {
   /** Index of the bold/full-amber target. `null` for Collection (no current focus). */
   activeIndex: number | null;
   name?: string;
+  /** "ambient" = the just-yonder discovery mode (engine surfaces nearby places). */
+  play?: "ambient";
 };
 
 export type FavouritePlace = {

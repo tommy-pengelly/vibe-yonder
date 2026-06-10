@@ -9,6 +9,7 @@ import type {
   StoredSaved,
   YonderMode,
 } from "./types";
+import { clearLedger } from "./discovery-ledger";
 
 const KEYS = {
   yonders: "vibe-yonder.yonders.v1",
@@ -72,6 +73,7 @@ export function clearGuestData() {
   write(KEYS.favourites, []);
   write(KEYS.maps, []);
   write(KEYS.saved, []);
+  clearLedger(); // the on-device seen/skipped trail is guest-local too
 }
 
 // ----- Favourites -----

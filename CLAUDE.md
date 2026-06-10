@@ -1,14 +1,16 @@
-# CLAUDE.md — Vibe Yonder
+# CLAUDE.md — Yonderful
 
 The guide for building this app. Read it before adding anything. The build spec says *how*; this says *what it's for* and *what must never creep in*.
 
-(Name: **Vibe Yonder**. We considered "Travel Yonder" and rejected it — "travel" is generic and skews toward tourism; the magic is the everyday local wander.)
+(Name: **Yonderful**. Formerly "Vibe Yonder" — and "Travel Yonder" before that, rejected because "travel" is generic and skews to tourism. "Yonderful" is the *wonderful local surprise* you stumble onto on foot: an independent coffee, a popup, a gig. The magic is the everyday local wander.)
+
+> **Rebrand → "Yonderful" (done in code).** User-facing strings, metadata, manifest, splash, and `/explain` are renamed. **Internal identifiers stay `vibe-yonder` on purpose** — the localStorage/sessionStorage keys (`vibe-yonder.*`), the npm package name, and the repo directory — renaming them would orphan existing guests' saved data. Still TODO outside the code: set the real domain via `NEXT_PUBLIC_SITE_URL` (default is now `yonderful.app`, unconfirmed) and rename the Supabase project/links if desired.
 
 ---
 
 ## The point (read this first)
 
-**Vibe Yonder is Strava for exploring.** You pick a place, and the app points a marker straight at it — no route — and lets you find your own way there on foot. When you're done it celebrates how much you *wandered*: distance covered, places seen, how far off the straight line you strayed.
+**Yonderful is Strava for exploring.** You pick a place, and the app points a marker straight at it — no route — and lets you find your own way there on foot. When you're done it celebrates how much you *wandered*: distance covered, places seen, how far off the straight line you strayed.
 
 It is about **adventure, curiosity, and getting pleasantly lost.** It is not about getting there quickly or efficiently. Every feature, label, metric, and pixel should make exploring feel better. If it makes the journey more *optimal*, it's wrong.
 
@@ -30,6 +32,18 @@ Optimising → reject it. This single question kills most feature-bleed.
 
 ### The numbers are optional
 Metrics serve the story; they are not the point. The app offers a **"hide the numbers"** setting that removes live distances, time, and distance-travelled, leaving just you, the directional marker, and the place name. Treat measurement as something the user can switch off entirely — that's the spirit. Never make a number feel mandatory or central.
+
+---
+
+## Discovery & curation (the engine's taste)
+
+The discovery engine has a **taste**, and it sends people to good, **locally-run** places to *stumble* on — never ranks by stars. (Decided 2026-06; implemented in `score()` / `lib/discovery.ts`.)
+
+- **No ratings — ever.** Off-brand *and* not licence-cleanly free (Google ToS-blocked/paid; Foursquare = popularity). Curate by **notability** (Wikipedia/Wikidata) and **independence**, never by a score shown to the user.
+- **Independent over chain — deprioritise, don't hide.** A branded/chain outlet (`brand` / `brand:wikidata`) ranks below any independent and only fills a leftover slot when nothing local is nearby. **Notability trumps the penalty:** a place with a Wikipedia entry (the Emirates, a landmark brewery) is a *notable visit*, not a chain to bury — so the penalty bites only generic, non-notable, branded everyday amenities (café/food/pub).
+- **Curiosity, not a directory.** We surface things to *stumble on while wandering*; we are **not** Time Out / Yelp. The moment it becomes a browsable what's-on you scroll *before* leaving the house, we've lost it.
+- **Obscure-gem flavour comes from Wikidata/Wikipedia**, not Atlas Obscura (no usable, licence-clean API). The `wikipedia` ring already surfaces the curios; lean on Wikidata typing for *weirder* picks if we want more.
+- **Happenings (popups, pub quizzes, gigs) are a deferred, _community-sourced_ direction** — a venue/local posts a place + time that surfaces mid-wander (rides the social/posts layer; free and fake-proof). The discovery candidate pool is **source-agnostic**, so they slot in later with no rework. **Never** scrape commercial event APIs into a listings feed.
 
 ---
 

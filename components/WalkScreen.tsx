@@ -11,6 +11,9 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSidequest } from "@/hooks/useSidequest";
+import { useDiscovery } from "@/hooks/useDiscovery";
+import { usePlaceSearch } from "@/hooks/usePlaceSearch";
+import { CATEGORIES } from "@/lib/nearby";
 import PlaceDetailSheet, { type PlaceLite } from "@/components/PlaceDetailSheet";
 import { getFavourite, pushFavourite, removeFavourite } from "@/lib/data";
 import {
@@ -22,14 +25,11 @@ import {
   RIM_FRACTION,
   SCALE_LEVELS_M,
 } from "@/lib/constants";
-import { rankResults } from "@/lib/rank";
 import { haversine, fmtDist } from "@/lib/geo";
 import { directionsOptions } from "@/lib/maps";
 import type {
   ActiveYonder,
   Fix,
-  GeocodeResult,
-  RankedResult,
   Target,
 } from "@/lib/types";
 import Scope from "./Scope";
@@ -98,6 +98,30 @@ export default function WalkScreen({
     targets: yonder.targets,
   });
   const [missedOpen, setMissedOpen] = useState(false);
+
+  // Ambient discovery — only in the "just yonder" play mode. Faint candidate
+  // dots populate the scope; a guide (category) leans what surfaces.
+  const ambient = yonder.play === "ambient";
+  const [activeGuide, setActiveGuide] = useState<string | null>(null);
+  const committedIds = useMemo(
+    () => new Set(yonder.targets.map((t) => t.id)),
+    [yonder.targets],
+  );
+  const {
+    candidates,
+    skip: skipCandidate,
+    commit: commitCandidate,
+  } = useDiscovery({
+    position,
+    track,
+    enabled: ambient && !paused,
+    activeGuide,
+    committedIds,
+  });
+  const [revealId, setRevealId] = useState<string | null>(null);
+  const revealCand = ambient
+    ? candidates.find((c) => c.id === revealId && c.revealed) ?? null
+    : null;
 
   const unvisited = useMemo(
     () => yonder.targets.filter((t) => !t.visited),
@@ -324,6 +348,8 @@ export default function WalkScreen({
           mpp={mpp}
           hideNumbers={hideNumbers}
           onPickTarget={onSetActive}
+          candidates={ambient ? candidates : undefined}
+          onPickCandidate={ambient ? (id) => setRevealId(id) : undefined}
         />
       </div>
 
@@ -509,6 +535,29 @@ export default function WalkScreen({
           </div>
         )}
 
+        {ambient && (
+          <div className="flex gap-2 overflow-x-auto pointer-events-auto -mx-5 px-5 pb-1 [scrollbar-width:none]">
+            {CATEGORIES.map((c) => {
+              const on = activeGuide === c.key;
+              return (
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => setActiveGuide(on ? null : c.key)}
+                  aria-pressed={on}
+                  className={`shrink-0 rounded-full border px-3 py-1.5 text-sm whitespace-nowrap backdrop-blur-sm ${
+                    on
+                      ? "border-[var(--accent)] text-[var(--accent)] bg-black/40"
+                      : "border-[var(--border)] text-[var(--muted)] bg-black/30"
+                  }`}
+                >
+                  {c.emoji} {c.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <div className="flex flex-col gap-3 pointer-events-auto">
           {!hideNumbers && (
             <StatStrip
@@ -591,6 +640,14 @@ export default function WalkScreen({
             <span>±{Math.round(position.acc)} m</span>
           )}
         </div>
+
+        {ambient && (
+          // Discovery POIs come from OpenStreetMap (ODbL) — attribution is
+          // required wherever they're shown.
+          <p className="text-center text-[9px] text-[var(--muted)]/60 pointer-events-auto">
+            Nearby places · © OpenStreetMap contributors
+          </p>
+        )}
       </div>
 
       <AddPlaceSheet
@@ -646,6 +703,49 @@ export default function WalkScreen({
                       lon: p.lon,
                       visited: false,
                     });
+                  },
+                },
+              ]
+            : []
+        }
+      />
+
+      <PlaceDetailSheet
+        open={!!revealCand}
+        onClose={() => setRevealId(null)}
+        place={
+          revealCand
+            ? {
+                name: revealCand.name ?? "Nearby place",
+                lat: revealCand.lat,
+                lon: revealCand.lon,
+                category: revealCand.category,
+                dist: revealCand.dist,
+                wiki: revealCand.wiki,
+              }
+            : null
+        }
+        actions={
+          revealCand
+            ? [
+                {
+                  icon: Plus,
+                  label: "Go see it",
+                  primary: true,
+                  onClick: () => {
+                    const id = revealCand.id;
+                    setRevealId(null);
+                    const t = commitCandidate(id);
+                    if (t) onAddPlace(t);
+                  },
+                },
+                {
+                  icon: X,
+                  label: "Not this one",
+                  onClick: () => {
+                    const id = revealCand.id;
+                    setRevealId(null);
+                    skipCandidate(id);
                   },
                 },
               ]
@@ -845,43 +945,10 @@ function AddPlaceSheet({
   onAdd: (t: Target) => void;
   onClose: () => void;
 }) {
-  const [q, setQ] = useState("");
-  const [results, setResults] = useState<RankedResult[]>([]);
-  const [loading, setLoading] = useState(false);
-  const reqId = useRef(0);
-
-  useEffect(() => {
-    const term = q.trim();
-    if (term.length < 3) {
-      setResults([]);
-      setLoading(false);
-      return;
-    }
-    const myReq = ++reqId.current;
-    setLoading(true);
-    const handle = setTimeout(async () => {
-      try {
-        const near = position
-          ? `&lat=${position.lat}&lon=${position.lon}`
-          : "";
-        const res = await fetch(
-          `/api/geocode?q=${encodeURIComponent(term)}${near}`,
-        );
-        if (myReq !== reqId.current) return;
-        if (!res.ok) {
-          setResults([]);
-          return;
-        }
-        const data = (await res.json()) as GeocodeResult[];
-        setResults(rankResults(data, position));
-      } catch {
-        if (myReq === reqId.current) setResults([]);
-      } finally {
-        if (myReq === reqId.current) setLoading(false);
-      }
-    }, 550);
-    return () => clearTimeout(handle);
-  }, [q, position]);
+  // Shared debounced search — reads the live position via a ref, so a moving
+  // GPS fix doesn't re-fire the geocode on every tick (the old local copy here
+  // depended on `position` and over-queried during a walk).
+  const { q, setQ, results, loading } = usePlaceSearch(position);
 
   return (
     <BottomSheet open={open} onClose={onClose} title="Add a place" minHeightVh={60}>

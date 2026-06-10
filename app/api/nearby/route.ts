@@ -1,12 +1,25 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { categoryByKey, type NearbyPlace } from "@/lib/nearby";
+import {
+  categoryByKey,
+  INTERESTING_FILTERS,
+  NEARBY_RINGS,
+  type NearbyPlace,
+} from "@/lib/nearby";
 
-// Vibe Yonder's third server route: "places of type X near a point", for
+// Yonderful's third server route: "places of type X near a point", for
 // category search ("find me a café") and sidequests. Keyless, OSM via Overpass
 // — env-swappable to a managed provider later (NEARBY_PROVIDER). Coverage is
 // uneven by design; returns [] gracefully. Results are for *wandering toward*,
 // never a nearest-amenity finder, so we shuffle-ish by distance bands rather
 // than strictly nearest-first (see ordering below).
+//
+// Two shapes share this route:
+//  - default      `?category=&lat=&lon=&radius=`  → one category in one radius
+//                 (sidequests, category search). Unchanged behaviour.
+//  - `?scope=ambient` → the Doc 7 ring stack: the active category up close, then
+//                 anything *interesting*, then only the *notable* far out. Each
+//                 place carries a `klass` + stable `id` so the client engine can
+//                 score it.
 
 const CONTACT = process.env.NOMINATIM_CONTACT ?? "tom.peng95@gmail.com";
 // A couple of community endpoints; we try them in order (the main one 504s when
@@ -27,53 +40,127 @@ function haversine(aLat: number, aLon: number, bLat: number, bLon: number) {
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
+type OverpassEl = {
+  type?: string;
+  id?: number;
+  tags?: {
+    name?: string;
+    wikipedia?: string;
+    wikidata?: string;
+    tourism?: string;
+    historic?: string;
+    leisure?: string;
+    natural?: string;
+    waterway?: string;
+    /** Settlement/locality label (city/town/suburb) — not a wander destination. */
+    place?: string;
+    brand?: string;
+    "brand:wikidata"?: string;
+  };
+  lat?: number;
+  lon?: number;
+  center?: { lat: number; lon: number };
+};
+
+/** Infer a display category + ring class from an element's tags (ambient rings,
+ * where a place may have matched the interesting/wiki clauses rather than the
+ * requested category). Falls back to the asked-for category. */
+function classify(
+  tags: NonNullable<OverpassEl["tags"]>,
+  fallbackCat: string,
+): { klass: "any" | "interesting"; category: string } {
+  if (tags.tourism === "viewpoint") return { klass: "interesting", category: "viewpoint" };
+  if (tags.tourism === "artwork" || tags.tourism === "gallery")
+    return { klass: "interesting", category: "art" };
+  if (tags.tourism === "museum" || tags.historic)
+    return { klass: "interesting", category: "history" };
+  if (tags.leisure === "park") return { klass: "interesting", category: "park" };
+  if (tags.leisure === "garden") return { klass: "interesting", category: "garden" };
+  if (tags.natural === "water" || tags.waterway)
+    return { klass: "interesting", category: "water" };
+  return { klass: "any", category: fallbackCat };
+}
+
+function toPlace(
+  el: OverpassEl,
+  originLat: number,
+  originLon: number,
+  fallbackCat: string,
+  ambient: boolean,
+): NearbyPlace | null {
+  const name = el.tags?.name;
+  if (!name) return null; // unnamed → not worth pointing at
+  if (el.tags?.place) return null; // a settlement/locality label, not a place to visit
+  const plat = el.lat ?? el.center?.lat;
+  const plon = el.lon ?? el.center?.lon;
+  if (plat == null || plon == null) return null;
+  const dist = Math.round(haversine(originLat, originLon, plat, plon));
+  const wiki = el.tags?.wikipedia ?? el.tags?.wikidata;
+  const id = el.type && el.id != null ? `${el.type}/${el.id}` : undefined;
+  const chain = !!(el.tags?.brand || el.tags?.["brand:wikidata"]);
+  if (!ambient) {
+    return { name, lat: plat, lon: plon, category: fallbackCat, dist, wiki, id, chain };
+  }
+  const { klass, category } = classify(el.tags ?? {}, fallbackCat);
+  return {
+    name,
+    lat: plat,
+    lon: plon,
+    category,
+    dist,
+    wiki,
+    id,
+    chain,
+    // A place with a wiki entry beyond the interesting ring is "notable"; close
+    // in it keeps its tag-derived class (wiki still lifts its score either way).
+    klass: wiki && dist > NEARBY_RINGS.interesting ? "notable" : klass,
+  };
+}
+
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const lat = parseFloat(sp.get("lat") ?? "");
   const lon = parseFloat(sp.get("lon") ?? "");
+  const ambient = sp.get("scope") === "ambient";
   const cat = categoryByKey(sp.get("category") ?? "");
-  const radius = Math.min(
-    Math.max(parseInt(sp.get("radius") ?? "1500", 10) || 1500, 100),
-    5000,
-  );
-  if (!Number.isFinite(lat) || !Number.isFinite(lon) || !cat) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
     return NextResponse.json([]);
   }
+  // Default path still requires a category; ambient can run guide-less.
+  if (!ambient && !cat) return NextResponse.json([]);
 
-  // Build an Overpass union over node+way for each tag selector.
-  const sel = cat.filters
-    .flatMap((f) => [
-      `node[${f}](around:${radius},${lat},${lon});`,
-      `way[${f}](around:${radius},${lat},${lon});`,
-    ])
-    .join("");
-  const query = `[out:json][timeout:20];(${sel});out center 40;`;
+  const query = ambient
+    ? ambientQuery(lat, lon, cat?.filters ?? [])
+    : defaultQuery(lat, lon, cat!.filters, clampRadius(sp.get("radius")));
 
   try {
     const data = await runOverpass(query);
-    const seen = new Set<string>();
+    const seenId = new Set<string>();
+    const seenName = new Set<string>();
     const places: NearbyPlace[] = [];
     for (const el of data.elements ?? []) {
-      const name = el.tags?.name;
-      if (!name) continue; // unnamed → not worth pointing at
-      const plat = el.lat ?? el.center?.lat;
-      const plon = el.lon ?? el.center?.lon;
-      if (plat == null || plon == null) continue;
-      const k = name.toLowerCase();
-      if (seen.has(k)) continue;
-      seen.add(k);
-      places.push({
-        name,
-        lat: plat,
-        lon: plon,
-        category: cat.key,
-        dist: Math.round(haversine(lat, lon, plat, plon)),
-        wiki: el.tags?.wikipedia ?? el.tags?.wikidata,
-      });
+      const p = toPlace(el, lat, lon, cat?.key ?? "", ambient);
+      if (!p) continue;
+      if (p.id && seenId.has(p.id)) continue;
+      const nk = p.name.toLowerCase();
+      if (seenName.has(nk)) continue;
+      if (p.id) seenId.add(p.id);
+      seenName.add(nk);
+      places.push(p);
     }
-    // Wander-toward ordering: nearest-first but not laser-optimised — keep the
-    // closest handful, then a few from further out for a sense of adventure.
     places.sort((a, b) => (a.dist ?? 0) - (b.dist ?? 0));
+
+    if (ambient) {
+      // Keep a bounded, varied pool — the client's score()/rankCandidates does
+      // the real gating. Never drop the notable far ones in favour of near
+      // clutter, so partition: nearest non-wiki + nearest wiki.
+      const wiki = places.filter((p) => p.wiki).slice(0, 6);
+      const rest = places.filter((p) => !p.wiki).slice(0, 8);
+      return NextResponse.json([...rest, ...wiki]);
+    }
+
+    // Default wander-toward ordering: closest handful, then a few from further
+    // out for a sense of adventure.
     const near = places.slice(0, 5);
     const far = places.slice(5).slice(0, 4);
     return NextResponse.json([...near, ...far]);
@@ -82,16 +169,46 @@ export async function GET(req: NextRequest) {
   }
 }
 
-type OverpassEl = {
-  tags?: {
-    name?: string;
-    wikipedia?: string;
-    wikidata?: string;
-  };
-  lat?: number;
-  lon?: number;
-  center?: { lat: number; lon: number };
-};
+function clampRadius(raw: string | null): number {
+  return Math.min(Math.max(parseInt(raw ?? "1500", 10) || 1500, 100), 5000);
+}
+
+/** One category, one radius — node+way union. */
+function defaultQuery(lat: number, lon: number, filters: string[], radius: number) {
+  const sel = filters
+    .flatMap((f) => [
+      `node[${f}](around:${radius},${lat},${lon});`,
+      `way[${f}](around:${radius},${lat},${lon});`,
+    ])
+    .join("");
+  return `[out:json][timeout:20];(${sel});out center 40;`;
+}
+
+/** The ambient ring stack: category@400 · interesting@1200 · wiki@3000. One
+ * round-trip, but each ring gets its **own `out` budget** so a dense outer ring
+ * (central cities have hundreds of wiki nodes) can't truncate the near rings
+ * away. This is the per-ring cap from Doc 7 Part B, enforced at the source. */
+function ambientQuery(lat: number, lon: number, catFilters: string[]) {
+  const ringSet = (filters: string[], r: number) =>
+    "(" +
+    filters
+      .flatMap((f) => [
+        `node[${f}](around:${r},${lat},${lon});`,
+        `way[${f}](around:${r},${lat},${lon});`,
+      ])
+      .join("") +
+    ")";
+  const parts: string[] = [];
+  if (catFilters.length)
+    parts.push(`${ringSet(catFilters, NEARBY_RINGS.any)};out center 20;`);
+  parts.push(`${ringSet(INTERESTING_FILTERS, NEARBY_RINGS.interesting)};out center 30;`);
+  // Ring 2 is keyed on `wikipedia` only (not `wikidata`): a Wikipedia article is
+  // a selective "notable" signal, whereas wikidata blankets every junction and
+  // locality and would flood dense areas. wikidata is still read as a notability
+  // hint when a near place happens to carry it.
+  parts.push(`${ringSet(['"wikipedia"'], NEARBY_RINGS.notable)};out center 30;`);
+  return `[out:json][timeout:25];${parts.join("")}`;
+}
 
 async function runOverpass(
   query: string,
@@ -103,7 +220,7 @@ async function runOverpass(
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": `VibeYonder/1.0 (${CONTACT})`,
+          "User-Agent": `Yonderful/1.0 (${CONTACT})`,
         },
         body: `data=${encodeURIComponent(query)}`,
         next: { revalidate: 60 * 60 * 6 },

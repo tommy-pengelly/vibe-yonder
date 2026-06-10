@@ -11,7 +11,7 @@ import type { PlacePhotoData } from "@/lib/types";
 // monetising, so it must be displayed.
 
 const CONTACT = process.env.NOMINATIM_CONTACT ?? "tom.peng95@gmail.com";
-const UA = `VibeYonder/1.0 (${CONTACT})`;
+const UA = `Yonderful/1.0 (${CONTACT})`;
 const WEEK = 60 * 60 * 24 * 7;
 
 export async function GET(req: NextRequest) {

@@ -144,7 +144,7 @@ export default function SettingsView() {
           </>
         ) : (
           <p className="text-sm text-[var(--muted)]">
-            You&apos;re using Vibe Yonder as a guest. Sign in from{" "}
+            You&apos;re using Yonderful as a guest. Sign in from{" "}
             <Link href="/you" className="text-[var(--accent)]">
               You
             </Link>{" "}

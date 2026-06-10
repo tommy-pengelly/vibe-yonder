@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { haversine } from "@/lib/geo";
+import { coordId, score } from "@/lib/discovery";
 import { type NearbyPlace } from "@/lib/nearby";
 import type { Fix, Target } from "@/lib/types";
 
@@ -72,6 +73,15 @@ export function useSidequest({
     void fetch(`/api/nearby?category=${cat}&lat=${lat}&lon=${lon}&radius=${RADIUS_M}`)
       .then((r) => (r.ok ? r.json() : []))
       .then((places: NearbyPlace[]) => {
+        // Detour-band filter (a real but casual detour, not on the plan, not
+        // dismissed) — then rank through the shared score() so a *notable*
+        // detour beats a merely nearer one. Same brain as ambient discovery.
+        const ctx = {
+          origin: { lat, lon },
+          travelBearing: null,
+          confidence: 0,
+          activeGuide: null,
+        };
         const pick = places
           .filter((p) => {
             const d = p.dist ?? haversine(lat, lon, p.lat, p.lon);
@@ -82,7 +92,8 @@ export function useSidequest({
               (t) => haversine(t.lat, t.lon, p.lat, p.lon) < 30,
             );
           })
-          .sort((a, b) => (a.dist ?? 0) - (b.dist ?? 0))[0];
+          .map((p) => ({ p, v: score({ ...p, id: p.id ?? coordId(p) }, ctx).value }))
+          .sort((a, b) => b.v - a.v)[0]?.p;
         if (pick) {
           setOffer({ place: pick });
           lastActionAt.current = Date.now();

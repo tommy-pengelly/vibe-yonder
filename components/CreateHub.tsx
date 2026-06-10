@@ -1,5 +1,5 @@
 "use client";
-import { Compass, Globe, Map as MapIcon, Navigation, Plus, Ruler, X } from "lucide-react";
+import { Compass, Globe, Map as MapIcon, Navigation, Plus, Ruler, Telescope, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
@@ -20,6 +20,7 @@ type StartOpts = {
   mapId?: string;
   mapItemIdByTargetId?: Record<string, string>;
   name?: string;
+  play?: "ambient";
 };
 
 function toTarget(r: { name: string; label?: string; lat: number; lon: number }): Target {
@@ -88,7 +89,7 @@ export default function CreateHub({
   return (
     <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-10 pb-6 gap-5">
       <header className="flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">Vibe Yonder</span>
+        <span className="text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">Yonderful</span>
         <button type="button" onClick={onClose} aria-label="Close" className="size-9 -mr-2 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]">
           <X className="w-4 h-4" strokeWidth={1.75} />
         </button>
@@ -153,10 +154,16 @@ export default function CreateHub({
       {idle && !building && (
         <div className="flex flex-col gap-2">
           <ModeRow
+            icon={Telescope}
+            title="Discover nearby"
+            sub="Mystery places reveal as you wander toward them"
+            accent
+            onClick={() => onStart([], "collection", { play: "ambient" })}
+          />
+          <ModeRow
             icon={Compass}
             title="Just wander"
             sub="No destination — see where you end up"
-            accent
             onClick={() => onStart([], "single")}
           />
           <ModeRow

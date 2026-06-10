@@ -14,6 +14,59 @@
 
 ---
 
+## Revision R1 — reconcile with session-4 state (2026-06-10)
+
+A parallel session shipped ~17 commits (search fix, unified posts/feed Doc 8, Yonder+ premium scaffold, **Discovery polish (D)**, **PlaceDetailSheet**). Re-read the overlap; the net effect is that **session 4 pre-built part of this spec — scope goes *down*, not up.** Where this section and a phase below disagree, **this section wins.**
+
+**Already built (do not rebuild):**
+- **`NearbyPlace.wiki?: string`** (Wikipedia title / wikidata id) is added *and* the route already returns it (`route.ts` reads `tags.wikipedia ?? tags.wikidata`). Our notability `wiki` signal is wired — and it's a **string**, not the boolean I specced. `Candidate` should reuse this string (truthy = notable).
+- **`components/PlaceDetailSheet.tsx`** — a vaul drawer showing a Wikimedia photo, category, distance, a **"✦ Noted"** badge when `wiki` is set, a Favourite toggle, and caller-supplied `actions[]`. Already reused by search **and** sidequests (`WalkScreen` opens it from the offer card with a "Go see it" action). **This _is_ our reveal-on-approach card.** Reuse it; don't build a new one.
+- **`PlacePhoto`** already renders **CC attribution** (author · license, linking to source) per its comment + JSX. The photo half of Phase 6 is done.
+- **`useSidequest`** now also returns **`missed` + `clearMissed`** and auto-dismisses an unanswered offer into a session "missed" list after 30s. Phase 7 must preserve this.
+- **`usePlaceSearch`** was refactored to read `position` via a **ref** so a moving GPS fix doesn't re-fire the fetch (effect depends on `q` only). This is exactly our **tile-not-tick** idiom and is now the house pattern — `useDiscovery` should copy it verbatim.
+- **CreateHub** idle state is a stack of `ModeRow`s incl. **"Just wander" → `onStart([], "single")`** — so `beginYonder` already accepts **empty targets** on the direct path. The empty-target guard worry only ever applied to the `sessionStorage` cross-route path.
+
+**Still ours, no collision (confirmed):**
+- `lib/geo.ts` only gained `toUnitBoxMulti`/`spanMeters` → **`makeTravelBearing` is clear.**
+- No `score()` / `notability()` function and no familiarity ledger exist. ("notability" in their code = the `wiki` "✦ Noted" badge, not a scoring fn.) **Phases 0 and 2 stand as written.**
+
+**Per-phase deltas (supersede the phase text):**
+
+| Phase | Change vs original |
+|---|---|
+| **0** — geo + `score()` | Unchanged. One edit: `Candidate.wiki` is the existing `string` (truthy ⇒ notable), drop the planned `wiki?: boolean`. |
+| **1** — `/api/nearby` | `wiki` **done**. Still needed: **ring-tiered union + `id` + `klass`**. Smaller than specced. |
+| **2** — ledger | Unchanged. Note: our persistent seen/skipped is the **cross-session** layer; session `missed`/`dismissed` in `useSidequest` is separate and stays. |
+| **3** — `useDiscovery` | Unchanged design; **adopt the `usePlaceSearch` posRef idiom** explicitly for tile-not-tick. |
+| **4** — Scope + reveal | **Reveal = open `PlaceDetailSheet`** (candidate → `PlaceLite`, action "Go see it" → `commit`/`onAddPlace`), mirroring `WalkScreen`'s existing usage. Only the **faint candidate-dot canvas layer** in `Scope.tsx` is new. |
+| **5** — launch + guide | Simpler: add `play?: "ambient"` to `ActiveYonder` + `StartOpts`; add a **`ModeRow` "Just yonder"** → `onStart([], "collection", { play: "ambient" })`; `beginYonder` sets `newYonder.play`; `WalkScreen` branches on `yonder.play === "ambient"`. Guide chips from `CATEGORIES` unchanged. ⚠️ **Naming:** differentiate from the existing **"Just wander"** (pure void, no suggestions) — ambient is the *richer sibling* (void + discovery). Decide copy with Tom. |
+| **6** — content + attribution | Photo + **CC attribution done** (`PlacePhoto`). Remaining: (a) optional Wikipedia **blurb extract** — `PlaceDetailSheet` shows photo+label, no prose; decide if worth adding; (b) **OSM contributor credit** exists only as prose in `/explain`, not on the discovery surface — add a small persistent credit (or About link) where live POIs render, to satisfy ODbL on-medium. |
+| **7** — unify | When folding `useSidequest` into `useDiscovery`, **preserve `missed`/`clearMissed`** and the 30s auto-dismiss-to-missed behaviour. |
+
+**Product flag (not a build task):** a **Yonder+** premium scaffold now exists (`useEntitlement`, `YonderPlusSheet`, `entitlements`, Stripe webhook), currently hidden "until a premium tier is decided." Ambient discovery is a plausible Yonder+ feature — a positioning decision for Tom, not something to wire into these phases now.
+
+**Net:** Phase 0 is still the right, conflict-free starting brick. Phases 1, 4, 5, 6 shrink (wiki + PlaceDetailSheet + photo-attribution already exist). Nothing in the design changed — only the amount left to build.
+
+### R1.1 — idea-dump triage (2026-06-10)
+
+Tom dumped a list; the only items that change *this* build (rest were already shipped or are other features):
+
+- **Notability feedback → qualitative tiers, never a number (P0 + P4).** `score().notability` already exists as a 0..1; expose it to the UI only as **tiers** ("✦ Noted" for `wiki`, a faint stronger glow for high notability). **No numeric score, no "rating," no stars** — that's the banned line. Add a `notabilityTier(c): "none" | "noted" | "notable"` helper alongside `score()`.
+- **Category glyph on dots → revealed dots only (P4).** Category emoji already show in `PlaceDetailSheet`. On the scope, draw a tiny category glyph **only on _revealed_ candidate dots**; unrevealed mystery dots stay bare to preserve the surprise and keep the resting void clean.
+- **Radius on the discover scope → the subtle bottom-right key, not drawn rings (P4).** Brand rule holds (no rings on the resting void); the existing centre-to-rim scale key is how distance is read, now meaningful with a scatter of dots.
+- **Reveal sheet actions (P4).** Reuse `PlaceDetailSheet`'s `actions[]`: "Go see it" (→ `commit`/`onAddPlace`), plus the built-in Favourite; "add to a map" is an optional extra action, not core.
+- **Ledger feeds the profile, doesn't duplicate it (P2).** Session 4 shipped a lifetime "places seen" stat; our `markSeen` ledger is the live engine layer — wire it to *contribute*, don't build a second counter.
+
+**Brand calls locked (Non-goals):**
+- **Price/cost of places → banned.** Journey-optimization *and* not licence-cleanly free — same reasoning as ratings. Never add.
+- **Filter out closed places → on-request category mode only, never ambient/mystery**, and even there optional (OSM `opening_hours` coverage is patchy). You may happily wander past a shuttered curiosity — the joy is that it exists.
+
+**Naming (decide, don't drift):** "**constellation**" is an appealing term for the ambient dot-scatter (navigate by the lights around you) but is *new* vs the established **scope / dot / marker** vocabulary in CLAUDE.md. Adopt deliberately (and add to the vocab table) or not at all.
+
+**Done separately:** the "search sends too frequently" bug was the in-walk Add-a-place sheet keeping its own `[q, position]` geocode effect — migrated to `usePlaceSearch` (depends on `q`, position via ref). Fixed outside these phases.
+
+---
+
 ## Phase 0 — Foundations: pure, testable, no UI
 
 Two pure modules with unit tests. Ships nothing user-facing; unblocks everything. **Do this first** — it's the cheap, high-confidence core.
@@ -254,7 +307,9 @@ Now that the brain exists, route the older surfaces through it so behaviour is c
 
 ## Tuning constants (one block, all commented "tunable")
 
-`STEP` (tile ~0.01°), throttle (≥60s), `halfLifeM` (~150), `minStepM` (~5), `REFERENCE_M` (~1200), `DIR_WEIGHT` (~1.2), `GUIDE_BOOST` (~0.5), `REVEAL_M` (~60), ring radii (400/1200/3000), per-ring caps (4/3/2), on-canvas cap (6), seen penalty (0.85), skipped base (0.6) + `COOLDOWN_M` (~600), ledger cap (~200). Expect to tune on a real walk; keep them centralized.
+`STEP` (tile ~0.01°), throttle (≥60s), `halfLifeM` (~150), `minStepM` (~5), **`REFERENCE_M` (~3500 — must be calibrated to the far ring radius, not below it; see below)**, `DIR_WEIGHT` (~1.2), `GUIDE_BOOST` (~0.5), `REVEAL_M` (~60), ring radii (400/1200/3000), per-ring caps (4/3/2), on-canvas cap (6), seen penalty (0.85), skipped base (0.6) + `COOLDOWN_M` (~600), ledger cap (~200). Expect to tune on a real walk; keep them centralized.
+
+> **`REFERENCE_M` calibration (learned in Phase 0):** with `cost = dist / REFERENCE_M`, a node surfaces only while `notability ≥ dist / REFERENCE_M`, i.e. out to `notability × REFERENCE_M`. So `REFERENCE_M` must sit **above the far ring (3000 m)** or notable places get gated by distance before they can appear. At 3500: wiki (~0.9) reaches ~3.1 km, "interesting" (~0.55) ~1.9 km, plain amenity (~0.2) ~700 m — which lines the score gate up with the 400/1200/3000 ring radii. A value like 1200 silently caps even notable nodes at ~1 km. **As built in `lib/discovery.ts`.**
 
 ---
 
