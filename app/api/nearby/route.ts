@@ -68,6 +68,7 @@ export async function GET(req: NextRequest) {
         lon: plon,
         category: cat.key,
         dist: Math.round(haversine(lat, lon, plat, plon)),
+        wiki: el.tags?.wikipedia ?? el.tags?.wikidata,
       });
     }
     // Wander-toward ordering: nearest-first but not laser-optimised — keep the
@@ -82,7 +83,11 @@ export async function GET(req: NextRequest) {
 }
 
 type OverpassEl = {
-  tags?: { name?: string };
+  tags?: {
+    name?: string;
+    wikipedia?: string;
+    wikidata?: string;
+  };
   lat?: number;
   lon?: number;
   center?: { lat: number; lon: number };

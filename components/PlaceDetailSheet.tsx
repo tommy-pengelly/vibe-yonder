@@ -18,6 +18,8 @@ export type PlaceLite = {
   label?: string;
   category?: string;
   dist?: number;
+  /** Has a Wikipedia/wikidata entry — shows a subtle "noted" mark. */
+  wiki?: string;
 };
 
 export type PlaceAction = {
@@ -114,6 +116,11 @@ export default function PlaceDetailSheet({
                       {place.dist != null && (
                         <span className="text-[11px] font-mono text-[var(--accent)] tabular-nums">
                           {fmtDist(place.dist)} away
+                        </span>
+                      )}
+                      {place.wiki && (
+                        <span className="text-[11px] text-[var(--accent)]">
+                          ✦ Noted
                         </span>
                       )}
                     </div>

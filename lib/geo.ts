@@ -41,6 +41,19 @@ export function haversine(
 export const fmtDist = (m: number) =>
   m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(2)} km`;
 
+/** Rough real-world extent of a set of points: the bounding-box diagonal. */
+export function spanMeters(pts: { lat: number; lon: number }[]): number {
+  if (pts.length < 2) return 0;
+  const lats = pts.map((p) => p.lat);
+  const lons = pts.map((p) => p.lon);
+  return haversine(
+    Math.min(...lats),
+    Math.min(...lons),
+    Math.max(...lats),
+    Math.max(...lons),
+  );
+}
+
 /**
  * Normalise lat/lon points into a padded 0–100 box (north-up) for tiny SVG
  * cards — trace shapes and POI scatters. Longitude is scaled by cos(lat) so the

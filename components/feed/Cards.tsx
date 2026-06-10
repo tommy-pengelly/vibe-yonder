@@ -72,7 +72,7 @@ export function YonderCard({
       </Link>
       {y.caption && <p className="text-sm leading-relaxed mx-3.5 mt-2.5 text-pretty">{y.caption}</p>}
       <Link href={`/yonder/${y.id}`} className="relative mt-3 block">
-        <Trace points={y.trace} height={150} />
+        <Trace points={y.trace} height={150} scaleLabel={fmtDist(y.walked)} />
         <div className="absolute left-4 bottom-2.5 font-mono text-[11px] text-[var(--muted)]">{y.area}</div>
         <div className="absolute right-4 top-3 text-right">
           <div className="font-display text-[26px] leading-none text-[var(--accent)] tabular-nums tracking-tight">

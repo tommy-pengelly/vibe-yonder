@@ -14,7 +14,7 @@ import { BottomSheet, EmptyState, PageHeader, PageScaffold } from "@/components/
 import { DotMap } from "@/components/ui/viz";
 import { useAuthUser } from "@/lib/auth";
 import { deleteMap, loadMaps } from "@/lib/data";
-import { toUnitBox } from "@/lib/geo";
+import { fmtDist, spanMeters, toUnitBox } from "@/lib/geo";
 import type { StoredMap, Target } from "@/lib/types";
 
 function mapSubtitle(m: StoredMap): string {
@@ -140,7 +140,15 @@ export default function MapsView() {
                   </div>
                 </div>
                 {m.items.length > 0 && (
-                  <DotMap points={toUnitBox(m.items)} height={120} />
+                  <DotMap
+                    points={toUnitBox(m.items)}
+                    height={120}
+                    scaleLabel={
+                      m.items.length > 1
+                        ? `${fmtDist(spanMeters(m.items))} across`
+                        : undefined
+                    }
+                  />
                 )}
               </Link>
               <button

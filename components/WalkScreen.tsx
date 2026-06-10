@@ -91,11 +91,12 @@ export default function WalkScreen({
 
   // A gentle nudge toward something nearby worth a detour. Paused while a
   // sheet is open (don't interrupt) and while the walk itself is paused.
-  const { offer, accept, dismiss } = useSidequest({
+  const { offer, accept, dismiss, missed, clearMissed } = useSidequest({
     position,
     enabled: sidequestsOn && !paused && !addSheetOpen && !panelOpen,
     targets: yonder.targets,
   });
+  const [missedOpen, setMissedOpen] = useState(false);
 
   const unvisited = useMemo(
     () => yonder.targets.filter((t) => !t.visited),
@@ -357,15 +358,28 @@ export default function WalkScreen({
             )}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setPanelOpen(true)}
-          aria-label="Destinations"
-          className="shrink-0 inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-[var(--border)] text-[var(--muted)] hover:text-[var(--accent)] pointer-events-auto bg-black/30 backdrop-blur-sm"
-        >
-          <ListChecks className="w-4 h-4" strokeWidth={1.75} />
-          <span className="text-sm tabular-nums">{yonder.targets.length}</span>
-        </button>
+        <div className="shrink-0 flex items-center gap-2 pointer-events-auto">
+          {missed.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setMissedOpen(true)}
+              aria-label="Missed suggestions"
+              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-[var(--border)] text-[var(--muted)] hover:text-[var(--accent)] bg-black/30 backdrop-blur-sm"
+            >
+              <Sparkles className="w-4 h-4" strokeWidth={1.75} />
+              <span className="text-sm tabular-nums">{missed.length}</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setPanelOpen(true)}
+            aria-label="Destinations"
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-[var(--border)] text-[var(--muted)] hover:text-[var(--accent)] bg-black/30 backdrop-blur-sm"
+          >
+            <ListChecks className="w-4 h-4" strokeWidth={1.75} />
+            <span className="text-sm tabular-nums">{yonder.targets.length}</span>
+          </button>
+        </div>
       </header>
 
       <div className="relative z-10 flex-1 flex flex-col justify-end px-5 pb-8 gap-4 pointer-events-none">
@@ -623,6 +637,7 @@ export default function WalkScreen({
                     const p = detailPlace;
                     setDetailPlace(null);
                     accept();
+                    clearMissed(p.name);
                     onAddPlace({
                       id: crypto.randomUUID(),
                       name: p.name,
@@ -637,6 +652,38 @@ export default function WalkScreen({
             : []
         }
       />
+
+      <BottomSheet
+        open={missedOpen}
+        onClose={() => setMissedOpen(false)}
+        title="Suggestions you passed"
+      >
+        {missed.length === 0 ? (
+          <p className="text-sm text-[var(--muted)] py-2">Nothing missed.</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-[var(--border)]">
+            {missed.map((p, i) => (
+              <li key={`${p.name}-${i}`}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMissedOpen(false);
+                    setDetailPlace(p);
+                  }}
+                  className="w-full text-left py-3 hover:text-[var(--accent)]"
+                >
+                  <div className="font-display text-base truncate">{p.name}</div>
+                  {p.dist != null && (
+                    <div className="text-[11px] font-mono text-[var(--muted)] tabular-nums">
+                      {fmtDist(p.dist)} off your path
+                    </div>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </BottomSheet>
     </div>
   );
 }

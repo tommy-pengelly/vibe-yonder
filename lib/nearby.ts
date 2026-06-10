@@ -7,6 +7,9 @@ export type NearbyPlace = {
   lon: number;
   category: string;
   dist?: number;
+  /** Wikipedia title or wikidata id when the place has one — a free, on-brand
+   * "notable" signal (no external ratings). */
+  wiki?: string;
 };
 
 export type Category = {

@@ -8,7 +8,7 @@ import PlacePhoto from "@/components/PlacePhoto";
 import { DotMap } from "@/components/ui/viz";
 import { useAuthUser } from "@/lib/auth";
 import { deleteMap, getMap, saveMap } from "@/lib/data";
-import { toUnitBox } from "@/lib/geo";
+import { fmtDist, spanMeters, toUnitBox } from "@/lib/geo";
 import type { StoredMap, Target } from "@/lib/types";
 
 export default function MapDetail({ id }: { id: string }) {
@@ -114,7 +114,15 @@ export default function MapDetail({ id }: { id: string }) {
 
         {map.items.length > 0 && (
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
-            <DotMap points={toUnitBox(map.items)} height={150} />
+            <DotMap
+              points={toUnitBox(map.items)}
+              height={150}
+              scaleLabel={
+                map.items.length > 1
+                  ? `${fmtDist(spanMeters(map.items))} across`
+                  : undefined
+              }
+            />
           </div>
         )}
 

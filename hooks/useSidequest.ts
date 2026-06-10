@@ -21,6 +21,7 @@ const QUERY_THROTTLE_MS = 90 * 1000; // ≥90s between Overpass queries
 const RADIUS_M = 400; // look this far off your path
 const MIN_DETOUR_M = 40; // closer than this, you're basically there
 const MAX_DETOUR_M = 320; // further than this isn't a casual detour
+const OFFER_TTL_MS = 30 * 1000; // an unanswered offer fades after 30s
 
 export type Sidequest = { place: NearbyPlace };
 
@@ -34,11 +35,26 @@ export function useSidequest({
   targets: Target[];
 }) {
   const [offer, setOffer] = useState<Sidequest | null>(null);
+  // Offers you didn't answer in time — quietly auto-dismissed but kept so you
+  // can glance back at what you passed up.
+  const [missed, setMissed] = useState<NearbyPlace[]>([]);
   const dismissed = useRef<Set<string>>(new Set());
   const lastActionAt = useRef<number>(0); // last offer shown / dismissed
   const lastQueryAt = useRef<number>(0);
   const catIdx = useRef<number>(0);
   const busy = useRef(false);
+
+  // Auto-dismiss an offer that's gone unanswered → move it to "missed".
+  useEffect(() => {
+    if (!offer) return;
+    const t = setTimeout(() => {
+      setMissed((m) => [offer.place, ...m].slice(0, 12));
+      dismissed.current.add(offer.place.name.toLowerCase());
+      setOffer(null);
+      lastActionAt.current = Date.now();
+    }, OFFER_TTL_MS);
+    return () => clearTimeout(t);
+  }, [offer]);
 
   useEffect(() => {
     if (!enabled || !position || offer || busy.current) return;
@@ -93,5 +109,10 @@ export function useSidequest({
     return taken;
   }, [offer]);
 
-  return { offer, accept, dismiss };
+  // Drop a place from the missed list (e.g. once acted on).
+  const clearMissed = useCallback((name: string) => {
+    setMissed((m) => m.filter((p) => p.name !== name));
+  }, []);
+
+  return { offer, accept, dismiss, missed, clearMissed };
 }
