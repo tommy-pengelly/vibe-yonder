@@ -23,10 +23,12 @@ import type {
   ActiveYonder,
   Destination,
   Fix,
+  PlayMode,
   SavedYonder,
   Target,
   YonderMode,
 } from "@/lib/types";
+import { scoreStraightLine } from "@/lib/straightline";
 import {
   clearActiveSession,
   loadActiveSession,
@@ -81,6 +83,12 @@ export default function App() {
     ) {
       lastFix.current = f;
       setTrack((t) => [...t, f]);
+      // Straight-line: A is where you actually set off — the first real fix.
+      setYonder((y) =>
+        y && y.play === "straightline" && !y.origin
+          ? { ...y, origin: { lat: f.lat, lon: f.lon } }
+          : y,
+      );
     }
   }, []);
 
@@ -105,7 +113,8 @@ export default function App() {
         mapId?: string;
         mapItemIdByTargetId?: Record<string, string>;
         name?: string;
-        play?: "ambient";
+        play?: PlayMode;
+        missionId?: string;
       };
       if (payload?.targets?.length || payload?.play === "ambient") {
         void beginYonder(payload.targets ?? [], payload.mode, {
@@ -113,6 +122,7 @@ export default function App() {
           mapItemIdByTargetId: payload.mapItemIdByTargetId,
           name: payload.name,
           play: payload.play,
+          missionId: payload.missionId,
         });
       }
     } catch {
@@ -200,7 +210,8 @@ export default function App() {
         mapId?: string;
         mapItemIdByTargetId?: Record<string, string>;
         name?: string;
-        play?: "ambient";
+        play?: PlayMode;
+        missionId?: string;
       } = {},
     ) => {
       await requestAccess();
@@ -214,6 +225,7 @@ export default function App() {
         activeIndex,
         name: opts.name,
         play: opts.play,
+        missionId: opts.missionId,
       };
       setYonder(newYonder);
       setTrack([]);
@@ -384,6 +396,17 @@ export default function App() {
         ? `${seen.length} places`
         : (primaryTarget?.name ?? "Yonder").split(",")[0].trim());
 
+    // Straight-line: score the track against the line A(origin)→B(target).
+    const slOrigin = yonder?.origin;
+    const slTarget = yonder?.targets[0];
+    const straightLine =
+      yonder?.play === "straightline" && slOrigin && slTarget
+        ? scoreStraightLine(track, slOrigin, {
+            lat: slTarget.lat,
+            lon: slTarget.lon,
+          })
+        : undefined;
+
     const y: SavedYonder = {
       id: crypto.randomUUID(),
       name: autoName || "Yonder",
@@ -398,6 +421,10 @@ export default function App() {
       track,
       pausedMs,
       mapId: sourceMapIdRef.current ?? undefined,
+      play: yonder?.play,
+      origin: slOrigin,
+      straightLine,
+      missionId: yonder?.missionId,
     };
 
     // Auto-save: a finished yonder is kept by default (cloud if signed in,

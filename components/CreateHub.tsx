@@ -14,6 +14,7 @@ import type {
   Fix,
   RankedResult,
   StoredMap,
+  PlayMode,
   Target,
   YonderMode,
 } from "@/lib/types";
@@ -24,7 +25,8 @@ type StartOpts = {
   mapId?: string;
   mapItemIdByTargetId?: Record<string, string>;
   name?: string;
-  play?: "ambient";
+  play?: PlayMode;
+  missionId?: string;
 };
 
 function toTarget(r: { name: string; label?: string; lat: number; lon: number }): Target {
@@ -50,9 +52,15 @@ export default function CreateHub({
   const [mapsTab, setMapsTab] = useState<MapsTab>("mine");
   const [communityMaps, setCommunityMaps] = useState<FeedMap[] | null>(null);
   const [detail, setDetail] = useState<(PlaceLite & RankedResult) | null>(null);
+  const [lineMode, setLineMode] = useState(false);
 
   const building = picks.length > 0;
   const idle = q.trim().length < 3;
+
+  const startStraightLine = (r: { name: string; label?: string; lat: number; lon: number }) => {
+    setLineMode(false);
+    onStart([toTarget(r)], "single", { play: "straightline", name: `Straight line to ${r.name}` });
+  };
 
   useEffect(() => {
     let c = false;
@@ -70,7 +78,8 @@ export default function CreateHub({
   const removePick = (id: string) => setPicks((p) => p.filter((t) => t.id !== id));
 
   const onResultTap = (r: RankedResult) => {
-    if (building) addPick(r);
+    if (lineMode) startStraightLine(r);
+    else if (building) addPick(r);
     else setDetail({ ...r, dist: r.dist });
   };
 
@@ -120,13 +129,29 @@ export default function CreateHub({
         </button>
       </header>
 
-      <h1 className="font-display text-4xl tracking-tight leading-[0.95]">Where to?</h1>
+      <h1 className="font-display text-4xl tracking-tight leading-[0.95]">
+        {lineMode ? "Straight line to?" : "Where to?"}
+      </h1>
+
+      {lineMode && (
+        <div className="flex items-center gap-2 -mt-2 text-xs text-[var(--muted)]">
+          <Ruler className="w-3.5 h-3.5 text-[var(--accent)]" strokeWidth={1.75} />
+          <span>Pick a far point — then hold the line to it.</span>
+          <button
+            type="button"
+            onClick={() => setLineMode(false)}
+            className="ml-auto text-[var(--muted)] hover:text-[var(--foreground)]"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       <input
         autoFocus
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Search a place to wander to…"
+        placeholder={lineMode ? "Search the far point…" : "Search a place to wander to…"}
         className="w-full bg-transparent border-b border-[var(--border)] px-1 py-3 text-lg outline-none focus:border-[var(--accent)] placeholder:text-[var(--muted)]/60"
         inputMode="search"
         enterKeyHint="search"
@@ -176,7 +201,7 @@ export default function CreateHub({
       )}
 
       {/* Idle: stacked modes */}
-      {idle && !building && (
+      {idle && !building && !lineMode && (
         <div className="flex flex-col gap-2">
           <ModeRow
             icon={Compass}
@@ -194,8 +219,8 @@ export default function CreateHub({
           <ModeRow
             icon={Ruler}
             title="Straight line"
-            sub="Coming soon"
-            disabled
+            sub="Pick a far point, hold the line — earn a medal"
+            onClick={() => setLineMode(true)}
           />
 
           {favourites.length > 0 && (

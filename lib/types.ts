@@ -48,6 +48,10 @@ export type Target = {
   visitedAt?: number;
 };
 
+export type PlayMode = "ambient" | "straightline";
+
+export type Medal = "platinum" | "gold" | "silver" | "bronze" | "none";
+
 export type ActiveYonder = {
   id: string;
   mode: YonderMode;
@@ -55,8 +59,15 @@ export type ActiveYonder = {
   /** Index of the bold/full-amber target. `null` for Collection (no current focus). */
   activeIndex: number | null;
   name?: string;
-  /** "ambient" = the just-yonder discovery mode (engine surfaces nearby places). */
-  play?: "ambient";
+  /**
+   * "ambient" = the just-yonder discovery mode (engine surfaces nearby places).
+   * "straightline" = hold the line from `origin` to the single target.
+   */
+  play?: PlayMode;
+  /** Straight-line start point (A), captured when the yonder begins. */
+  origin?: LatLon;
+  /** Optional shared mission this straight-line attempt is against. */
+  missionId?: string;
 };
 
 export type FavouritePlace = {
@@ -127,6 +138,17 @@ export type SavedYonder = {
   mapId?: string;
   /** A note the owner writes in the recap; pre-fills the share caption. */
   caption?: string;
+  /** Play mode, when not a plain wander. */
+  play?: PlayMode;
+  /** Straight-line: the line walked (A) and its result. */
+  origin?: LatLon;
+  straightLine?: {
+    maxDeviation: number;
+    avgDeviation: number;
+    inCorridorPct: number;
+    medal: Medal;
+  };
+  missionId?: string;
 };
 
 export type AuthUser = {

@@ -1,11 +1,9 @@
 import { crossTrack } from "./geo";
-import type { LatLon } from "./types";
+import type { LatLon, Medal } from "./types";
 
 // The straight-line mode: walk the line from A to B as straight as you can.
 // Scored by deviation (never time). Medal = your *worst* moment off the line;
 // the tiebreaker is average deviation — how tight you held the whole way.
-
-export type Medal = "platinum" | "gold" | "silver" | "bronze" | "none";
 
 /** Corridor half-widths (m), tightest → loosest. "Either way" = ± this. */
 export const MEDAL_BANDS: { medal: Exclude<Medal, "none">; half: number }[] = [
