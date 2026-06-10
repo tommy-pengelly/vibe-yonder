@@ -22,8 +22,11 @@ export default function YouHub() {
     const places = new Set<string>();
     let metres = 0;
     for (const y of yonders) {
-      metres += y.walked;
-      for (const d of y.destinations) {
+      metres += y.walked ?? 0;
+      // Free-wander / ambient yonders can have no destinations; guard against
+      // any partial record so the whole page never crashes on one bad entry.
+      for (const d of y.destinations ?? []) {
+        if (d?.lat == null || d?.lon == null) continue;
         places.add(`${d.name}|${d.lat.toFixed(4)},${d.lon.toFixed(4)}`);
       }
     }
@@ -145,11 +148,11 @@ export default function YouHub() {
                           month: "short",
                           day: "numeric",
                         })}{" "}
-                        · {fmtDist(y.walked)}
+                        · {fmtDist(y.walked ?? 0)}
                       </div>
                     </div>
                     <div className="text-xs font-mono text-[var(--accent)] tabular-nums shrink-0">
-                      {y.yondered.toFixed(2)}×
+                      {(y.yondered ?? 1).toFixed(2)}×
                     </div>
                   </Link>
                 </li>
