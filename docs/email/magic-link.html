@@ -1,0 +1,26 @@
+<!--
+  Yonderful magic-link email.
+  Paste into Supabase Dashboard -> Authentication -> Email Templates -> "Magic Link"
+  (and apply the same to "Confirm signup" so brand-new accounts match).
+  Subject: Your way in to Yonderful
+  Variable {{ .ConfirmationURL }} is filled in by Supabase.
+-->
+<div style="background:#0a0b0d;padding:40px 24px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#ededed;">
+  <div style="max-width:420px;margin:0 auto;text-align:center;">
+    <img src="https://yonderful.app/icons/icon-192.png" width="56" height="56" alt="Yonderful" style="border-radius:14px;margin:0 auto 22px;display:block;" />
+    <h1 style="font-size:22px;font-weight:600;margin:0 0 12px;color:#ededed;letter-spacing:-0.01em;">Your way in</h1>
+    <p style="font-size:15px;line-height:1.55;color:#ada89d;margin:0 0 28px;">
+      Tap below to sign in to Yonderful. Eyes up, the wander's waiting.
+    </p>
+    <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#f5a623;color:#0a0b0d;font-weight:600;text-decoration:none;padding:14px 30px;border-radius:999px;font-size:15px;">
+      Open Yonderful
+    </a>
+    <p style="font-size:12px;color:#6b6862;margin:30px 0 0;line-height:1.55;">
+      If the button doesn't work, paste this into your browser:<br />
+      <a href="{{ .ConfirmationURL }}" style="color:#f5a623;word-break:break-all;">{{ .ConfirmationURL }}</a>
+    </p>
+    <p style="font-size:12px;color:#6b6862;margin:22px 0 0;">
+      Didn't ask for this? You can safely ignore it.
+    </p>
+  </div>
+</div>
