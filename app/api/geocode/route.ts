@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-// Vibe Yonder's one server route: turn typed text into coordinates.
+// Yonderful's one server route: turn typed text into coordinates.
 // Provider is swappable via GEOCODER env (photon | nominatim). Photon is the
 // default — it's built for search-as-you-type and biases results toward the
 // user's location, which is exactly right for a local-wander app.
@@ -62,7 +62,7 @@ async function viaPhoton(
   if (near) url += `&lat=${near.lat}&lon=${near.lon}`;
 
   const res = await fetch(url, {
-    headers: { "User-Agent": `VibeYonder/1.0 (${CONTACT})` },
+    headers: { "User-Agent": `Yonderful/1.0 (${CONTACT})` },
     next: { revalidate: 60 * 60 * 24 },
   });
   if (!res.ok) throw new Error("photon");
@@ -120,7 +120,7 @@ async function viaNominatim(
 
   const res = await fetch(url, {
     headers: {
-      "User-Agent": `VibeYonder/1.0 (${CONTACT})`,
+      "User-Agent": `Yonderful/1.0 (${CONTACT})`,
       Accept: "application/json",
     },
     next: { revalidate: 60 * 60 * 24 },

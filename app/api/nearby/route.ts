@@ -6,7 +6,7 @@ import {
   type NearbyPlace,
 } from "@/lib/nearby";
 
-// Vibe Yonder's third server route: "places of type X near a point", for
+// Yonderful's third server route: "places of type X near a point", for
 // category search ("find me a café") and sidequests. Keyless, OSM via Overpass
 // — env-swappable to a managed provider later (NEARBY_PROVIDER). Coverage is
 // uneven by design; returns [] gracefully. Results are for *wandering toward*,
@@ -220,7 +220,7 @@ async function runOverpass(
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": `VibeYonder/1.0 (${CONTACT})`,
+          "User-Agent": `Yonderful/1.0 (${CONTACT})`,
         },
         body: `data=${encodeURIComponent(query)}`,
         next: { revalidate: 60 * 60 * 6 },

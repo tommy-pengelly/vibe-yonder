@@ -89,7 +89,7 @@ export default function CreateHub({
   return (
     <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-10 pb-6 gap-5">
       <header className="flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">Vibe Yonder</span>
+        <span className="text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">Yonderful</span>
         <button type="button" onClick={onClose} aria-label="Close" className="size-9 -mr-2 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]">
           <X className="w-4 h-4" strokeWidth={1.75} />
         </button>

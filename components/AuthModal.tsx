@@ -52,7 +52,7 @@ export default function AuthModal({ open, reason, onClose }: Props) {
             <Dialog.Description
               className={reason ? "text-sm text-[var(--muted)] mt-1" : "sr-only"}
             >
-              {reason ?? "Sign in to Vibe Yonder."}
+              {reason ?? "Sign in to Yonderful."}
             </Dialog.Description>
           </div>
 

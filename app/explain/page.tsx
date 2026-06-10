@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "How Vibe Yonder works",
+  title: "How Yonderful works",
 };
 
 export default function ExplainPage() {
@@ -15,11 +15,11 @@ export default function ExplainPage() {
       </Link>
 
       <h1 className="text-2xl font-semibold tracking-tight mt-6">
-        How Vibe Yonder works
+        How Yonderful works
       </h1>
 
       <p className="mt-4 text-[var(--foreground)] leading-relaxed">
-        Vibe Yonder doesn&apos;t give you a route. It shows an arrow pointing
+        Yonderful doesn&apos;t give you a route. It shows an arrow pointing
         straight at your destination, as the crow flies, and lets you choose
         your own streets. Wander, detour, double back. Getting there the long
         way is the whole idea.
@@ -51,17 +51,27 @@ export default function ExplainPage() {
       </dl>
 
       <p className="text-sm text-[var(--muted)] mt-10">
-        Geocoding is provided by{" "}
+        Place search and nearby discoveries come from{" "}
         <a
-          href="https://nominatim.openstreetmap.org/"
+          href="https://www.openstreetmap.org/copyright"
           target="_blank"
           rel="noopener noreferrer"
           className="underline"
         >
-          Nominatim
+          OpenStreetMap
         </a>{" "}
-        / OpenStreetMap. We don&apos;t store your walks anywhere, everything
-        lives in your browser tab.
+        contributors; photos from{" "}
+        <a
+          href="https://commons.wikimedia.org/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline"
+        >
+          Wikimedia
+        </a>{" "}
+        (CC). As a guest, your yonders stay on your device. Sign in and they save
+        to your account so you can pick up anywhere — never anyone else&apos;s to
+        see unless you choose to share.
       </p>
     </div>
   );

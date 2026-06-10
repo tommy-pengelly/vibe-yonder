@@ -4,8 +4,8 @@ import type { MetadataRoute } from "next";
 // opens like a native app.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Vibe Yonder",
-    short_name: "Yonder",
+    name: "Yonderful",
+    short_name: "Yonderful",
     description:
       "Strava for exploring. Pick a place, wander there with no route — just an arrow and your own two feet.",
     start_url: "/",

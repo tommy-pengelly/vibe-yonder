@@ -1,16 +1,16 @@
-# CLAUDE.md — Vibe Yonder
+# CLAUDE.md — Yonderful
 
 The guide for building this app. Read it before adding anything. The build spec says *how*; this says *what it's for* and *what must never creep in*.
 
-(Name: **Vibe Yonder**. We considered "Travel Yonder" and rejected it — "travel" is generic and skews toward tourism; the magic is the everyday local wander.)
+(Name: **Yonderful**. Formerly "Vibe Yonder" — and "Travel Yonder" before that, rejected because "travel" is generic and skews to tourism. "Yonderful" is the *wonderful local surprise* you stumble onto on foot: an independent coffee, a popup, a gig. The magic is the everyday local wander.)
 
-> **Rebrand planned (pending): "Yonderful."** Same product, a warmer and more ownable name — the *wonderful local surprise* you stumble onto on foot (an independent coffee, a popup, a gig). Hold the sweep (metadata, splash, copy) until the name is finalised; the *Discovery & curation* direction below is decided.
+> **Rebrand → "Yonderful" (done in code).** User-facing strings, metadata, manifest, splash, and `/explain` are renamed. **Internal identifiers stay `vibe-yonder` on purpose** — the localStorage/sessionStorage keys (`vibe-yonder.*`), the npm package name, and the repo directory — renaming them would orphan existing guests' saved data. Still TODO outside the code: set the real domain via `NEXT_PUBLIC_SITE_URL` (default is now `yonderful.app`, unconfirmed) and rename the Supabase project/links if desired.
 
 ---
 
 ## The point (read this first)
 
-**Vibe Yonder is Strava for exploring.** You pick a place, and the app points a marker straight at it — no route — and lets you find your own way there on foot. When you're done it celebrates how much you *wandered*: distance covered, places seen, how far off the straight line you strayed.
+**Yonderful is Strava for exploring.** You pick a place, and the app points a marker straight at it — no route — and lets you find your own way there on foot. When you're done it celebrates how much you *wandered*: distance covered, places seen, how far off the straight line you strayed.
 
 It is about **adventure, curiosity, and getting pleasantly lost.** It is not about getting there quickly or efficiently. Every feature, label, metric, and pixel should make exploring feel better. If it makes the journey more *optimal*, it's wrong.
 
