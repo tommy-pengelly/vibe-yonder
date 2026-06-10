@@ -29,7 +29,7 @@ export default function CommunityView() {
       <PageScaffold>
         <PageHeader
           kicker="Community"
-          title="Out yonder"
+          title="Roam"
           action={
             <button
               type="button"
