@@ -162,3 +162,66 @@ export function makeAngleSmoother() {
     return acc;
   };
 }
+
+export type BearingEstimate = {
+  /** Smoothed direction of travel, degrees from true north, or null when unknown. */
+  bearing: number | null;
+  /** How committed the heading is, 0 (churning / stopped) → 1 (dead-straight). */
+  confidence: number;
+};
+
+/**
+ * Travel-bearing + confidence estimator for the discovery engine. Distinct from
+ * `makeAngleSmoother` (that only unwraps an angle for CSS): this measures the
+ * *trend* of where you're actually walking.
+ *
+ * Bearings wrap at 360°, so we can't average them as scalars — we keep a
+ * decaying, displacement-weighted mean of heading **unit-vectors**. One vector
+ * yields both signals: its angle is the smoothed bearing, its length (0–1) is
+ * the confidence (the circular resultant length). Standstill jitter (steps
+ * below `minStepM`) is ignored, so confidence falls back gracefully and callers
+ * can degrade to a pure distance gate when it's low.
+ */
+export function makeTravelBearing(opts?: { halfLifeM?: number; minStepM?: number }) {
+  const halfLifeM = opts?.halfLifeM ?? 150;
+  const minStepM = opts?.minStepM ?? 5;
+  let prev: { lat: number; lon: number } | null = null;
+  let ax = 0; // Σ unit.x · weight (decayed)
+  let ay = 0; // Σ unit.y · weight (decayed)
+  let w = 0; // Σ weight (decayed)
+  let last: BearingEstimate = { bearing: null, confidence: 0 };
+
+  const value = () => last;
+
+  const push = (fix: { lat: number; lon: number }): BearingEstimate => {
+    if (!prev) {
+      prev = { lat: fix.lat, lon: fix.lon };
+      return last;
+    }
+    const d = haversine(prev.lat, prev.lon, fix.lat, fix.lon);
+    if (d < minStepM) return last; // jitter / standstill — keep prev anchor
+    const b = bearing(prev.lat, prev.lon, fix.lat, fix.lon);
+    const rad = toRad(b);
+    // Distance-window decay: older motion fades over ~halfLifeM of travel.
+    const k = Math.exp(-d / halfLifeM);
+    ax = ax * k + Math.cos(rad) * d;
+    ay = ay * k + Math.sin(rad) * d;
+    w = w * k + d;
+    prev = { lat: fix.lat, lon: fix.lon };
+    const mx = ax / w;
+    const my = ay / w;
+    last = {
+      bearing: (toDeg(Math.atan2(my, mx)) + 360) % 360,
+      confidence: Math.min(1, Math.hypot(mx, my)),
+    };
+    return last;
+  };
+
+  const reset = () => {
+    prev = null;
+    ax = ay = w = 0;
+    last = { bearing: null, confidence: 0 };
+  };
+
+  return { push, value, reset };
+}
