@@ -29,7 +29,7 @@ export default function CommunityView() {
       <PageScaffold>
         <PageHeader
           kicker="Community"
-          title="Where others wandered"
+          title="Out yonder"
           action={
             <button
               type="button"
@@ -49,7 +49,7 @@ export default function CommunityView() {
           tabs={[
             { value: "following", label: "Following" },
             { value: "everyone", label: "Everyone" },
-            { value: "discover", label: "Discover" },
+            { value: "discover", label: "Maps" },
           ]}
         />
 
