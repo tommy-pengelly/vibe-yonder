@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
 import { fmtDist, fmtDuration } from "@/lib/geo";
 import { projectTrack, summarize } from "@/lib/stats";
+import { MEDAL_LABEL } from "@/lib/straightline";
 import type { Destination, Fix, RankedResult, SavedYonder } from "@/lib/types";
 import BottomSheet from "./ui/BottomSheet";
 import PlacePhoto from "./PlacePhoto";
@@ -104,6 +105,8 @@ export default function Recap({
       ? Math.round(summary.yondered).toString()
       : summary.yondered.toFixed(summary.yondered >= 2 ? 1 : 2);
 
+  const sl = saved.play === "straightline" ? saved.straightLine : undefined;
+
   return (
     <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-6 pb-10 gap-6">
       <header className="flex items-start justify-between gap-3">
@@ -182,10 +185,17 @@ export default function Recap({
         )}
       </div>
 
-      <p className="font-display text-3xl tracking-tight text-center leading-tight">
-        You yondered{" "}
-        <span className="text-[var(--accent)]">{yonderedDisplay}×</span>.
-      </p>
+      {sl ? (
+        <p className="font-display text-3xl tracking-tight text-center leading-tight">
+          <span className="text-[var(--accent)]">{MEDAL_LABEL[sl.medal]}</span>
+          {sl.medal === "none" ? " — you finished the line." : " — you held the line."}
+        </p>
+      ) : (
+        <p className="font-display text-3xl tracking-tight text-center leading-tight">
+          You yondered{" "}
+          <span className="text-[var(--accent)]">{yonderedDisplay}×</span>.
+        </p>
+      )}
 
       {onSaveCaption && (
         <textarea
@@ -198,12 +208,21 @@ export default function Recap({
         />
       )}
 
-      <div className="grid grid-cols-2 gap-3">
-        <Tile label="Walked" value={fmtDist(summary.walked)} />
-        <Tile label="Time" value={fmtDuration(summary.durationMs)} />
-        <Tile label="Direct" value={fmtDist(summary.direct)} />
-        <Tile label="Yondered" value={`${yonderedDisplay}×`} hero />
-      </div>
+      {sl ? (
+        <div className="grid grid-cols-2 gap-3">
+          <Tile label="Max off line" value={fmtDist(sl.maxDeviation)} hero />
+          <Tile label="Avg off line" value={fmtDist(sl.avgDeviation)} />
+          <Tile label="In corridor" value={`${Math.round(sl.inCorridorPct)}%`} />
+          <Tile label="Walked" value={fmtDist(summary.walked)} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <Tile label="Walked" value={fmtDist(summary.walked)} />
+          <Tile label="Time" value={fmtDuration(summary.durationMs)} />
+          <Tile label="Direct" value={fmtDist(summary.direct)} />
+          <Tile label="Yondered" value={`${yonderedDisplay}×`} hero />
+        </div>
+      )}
 
       {(saved.destinations.length > 0 || onSavePlaces) && (
         <section className="flex flex-col gap-3">
