@@ -37,6 +37,13 @@ Straight-line mission (GeoWizard, scored by deviation/straightness — never tim
 - **Maps**: **edit existing map** (`/maps/[id]/edit`, `MapEditor editId`), Edit action on MapDetail, per-map **kebab → Yonder/Edit/Delete** in MapsView.
 - **Map completion = personal**: verified `duplicateMap` resets `visited:false` and community reads select only name/label/lat/lon (no visited). ⚠️ *Follow-up:* the public-map RLS still exposes `map_items.visited(_at)` columns to a direct API caller (UI never reads them) — seal with a column-restricted policy or a `public_map_items` view (needs a migration).
 
+### Session 4 (2026-06-10) — feedback B/C/D + F (profile & map↔yonder story)
+- **B** search fired on every GPS tick → fixed (position via ref, key on query).
+- **C** unified **PlaceDetailSheet** (vaul snap, photo+actions+favourite); wired to search results and mid-walk suggestions.
+- **D** centred/scaled mini-map cards; free **notability** (`wiki`) → "✦ Noted"; sidequests **auto-dismiss (30s) → "missed" sheet**.
+- **F**: yonders **auto-save** on finish; recap actions = visibility (Share) + Save-places + Do-again (no Save buttons). **Me** shows lifetime **places seen · yonders · wandered**. MapDetail overlays **"the ways you've wandered here"** (yonders by `mapId`, `Traces` viz) + **Continue / Yonder again**. **/ways** = your-yonders overlay, `?near=lat,lon&name=` → "Ways to Home" (linked from Me + each favourite's footprints action).
+- New geo helpers: `spanMeters`, `toUnitBoxMulti`; viz `Traces`.
+
 ### ⚠️ Action items — apply migrations 0011 + 0012
 `0012_place_alias_map_area.sql` (places.alias, maps.area) joins `0011_yonder_caption.sql` as written-but-unapplied (live-DB apply blocked for the agent). Apply both to enable cloud caption + alias persistence.
 
