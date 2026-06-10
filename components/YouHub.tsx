@@ -1,11 +1,9 @@
 "use client";
-import { Bell, ChevronRight, Footprints, Heart, Map as MapIcon, Settings as SettingsIcon, Telescope } from "lucide-react";
+import { Bell, ChevronRight, Footprints, Heart, Map as MapIcon, Settings as SettingsIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import AuthModal from "@/components/AuthModal";
 import FollowRequests from "@/components/FollowRequests";
-import YonderPlusSheet from "@/components/YonderPlusSheet";
-import { useEntitlement } from "@/hooks/useEntitlement";
 import { useAuthUser, signOut } from "@/lib/auth";
 import { loadFavourites, loadMaps, loadYonders, unreadNotificationCount } from "@/lib/data";
 import { fmtDist } from "@/lib/geo";
@@ -18,8 +16,6 @@ export default function YouHub() {
   const [mapsCount, setMapsCount] = useState(0);
   const [unread, setUnread] = useState(0);
   const [authOpen, setAuthOpen] = useState(false);
-  const [plusOpen, setPlusOpen] = useState(false);
-  const { premium } = useEntitlement();
 
   // Lifetime exploration story — places seen is the headline number.
   const stats = useMemo(() => {
@@ -112,19 +108,6 @@ export default function YouHub() {
         )}
         <Row href="/maps" Icon={MapIcon} label="Maps" count={mapsCount} />
         <Row href="/favourites" Icon={Heart} label="Favourites" count={favourites.length} />
-
-        <button
-          type="button"
-          onClick={() => setPlusOpen(true)}
-          className="w-full flex items-center gap-3 py-3 border-b border-[var(--border)] text-left hover:text-[var(--accent)] [&_svg]:hover:text-[var(--accent)]"
-        >
-          <Telescope className="w-5 h-5 text-[var(--accent)]" strokeWidth={1.75} />
-          <div className="flex-1 font-display text-lg">Yonder+</div>
-          <div className="text-xs text-[var(--muted)]">
-            {premium ? "Active" : "Go further"}
-          </div>
-          <ChevronRight className="w-4 h-4 text-[var(--muted)]" strokeWidth={1.75} />
-        </button>
         {user && <Row href="/you/notifications" Icon={Bell} label="Notifications" count={unread} />}
 
         {user && <FollowRequests />}
@@ -188,7 +171,6 @@ export default function YouHub() {
         )}
       </div>
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
-      <YonderPlusSheet open={plusOpen} onClose={() => setPlusOpen(false)} />
     </>
   );
 }
