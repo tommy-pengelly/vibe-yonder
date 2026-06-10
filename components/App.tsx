@@ -105,12 +105,14 @@ export default function App() {
         mapId?: string;
         mapItemIdByTargetId?: Record<string, string>;
         name?: string;
+        play?: "ambient";
       };
-      if (payload?.targets?.length) {
-        void beginYonder(payload.targets, payload.mode, {
+      if (payload?.targets?.length || payload?.play === "ambient") {
+        void beginYonder(payload.targets ?? [], payload.mode, {
           mapId: payload.mapId,
           mapItemIdByTargetId: payload.mapItemIdByTargetId,
           name: payload.name,
+          play: payload.play,
         });
       }
     } catch {
@@ -198,6 +200,7 @@ export default function App() {
         mapId?: string;
         mapItemIdByTargetId?: Record<string, string>;
         name?: string;
+        play?: "ambient";
       } = {},
     ) => {
       await requestAccess();
@@ -210,6 +213,7 @@ export default function App() {
         targets,
         activeIndex,
         name: opts.name,
+        play: opts.play,
       };
       setYonder(newYonder);
       setTrack([]);

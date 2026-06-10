@@ -11,7 +11,9 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSidequest } from "@/hooks/useSidequest";
+import { useDiscovery } from "@/hooks/useDiscovery";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
+import { CATEGORIES } from "@/lib/nearby";
 import PlaceDetailSheet, { type PlaceLite } from "@/components/PlaceDetailSheet";
 import { getFavourite, pushFavourite, removeFavourite } from "@/lib/data";
 import {
@@ -96,6 +98,30 @@ export default function WalkScreen({
     targets: yonder.targets,
   });
   const [missedOpen, setMissedOpen] = useState(false);
+
+  // Ambient discovery — only in the "just yonder" play mode. Faint candidate
+  // dots populate the scope; a guide (category) leans what surfaces.
+  const ambient = yonder.play === "ambient";
+  const [activeGuide, setActiveGuide] = useState<string | null>(null);
+  const committedIds = useMemo(
+    () => new Set(yonder.targets.map((t) => t.id)),
+    [yonder.targets],
+  );
+  const {
+    candidates,
+    skip: skipCandidate,
+    commit: commitCandidate,
+  } = useDiscovery({
+    position,
+    track,
+    enabled: ambient && !paused,
+    activeGuide,
+    committedIds,
+  });
+  const [revealId, setRevealId] = useState<string | null>(null);
+  const revealCand = ambient
+    ? candidates.find((c) => c.id === revealId && c.revealed) ?? null
+    : null;
 
   const unvisited = useMemo(
     () => yonder.targets.filter((t) => !t.visited),
@@ -322,6 +348,8 @@ export default function WalkScreen({
           mpp={mpp}
           hideNumbers={hideNumbers}
           onPickTarget={onSetActive}
+          candidates={ambient ? candidates : undefined}
+          onPickCandidate={ambient ? (id) => setRevealId(id) : undefined}
         />
       </div>
 
@@ -507,6 +535,29 @@ export default function WalkScreen({
           </div>
         )}
 
+        {ambient && (
+          <div className="flex gap-2 overflow-x-auto pointer-events-auto -mx-5 px-5 pb-1 [scrollbar-width:none]">
+            {CATEGORIES.map((c) => {
+              const on = activeGuide === c.key;
+              return (
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => setActiveGuide(on ? null : c.key)}
+                  aria-pressed={on}
+                  className={`shrink-0 rounded-full border px-3 py-1.5 text-sm whitespace-nowrap backdrop-blur-sm ${
+                    on
+                      ? "border-[var(--accent)] text-[var(--accent)] bg-black/40"
+                      : "border-[var(--border)] text-[var(--muted)] bg-black/30"
+                  }`}
+                >
+                  {c.emoji} {c.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <div className="flex flex-col gap-3 pointer-events-auto">
           {!hideNumbers && (
             <StatStrip
@@ -644,6 +695,49 @@ export default function WalkScreen({
                       lon: p.lon,
                       visited: false,
                     });
+                  },
+                },
+              ]
+            : []
+        }
+      />
+
+      <PlaceDetailSheet
+        open={!!revealCand}
+        onClose={() => setRevealId(null)}
+        place={
+          revealCand
+            ? {
+                name: revealCand.name ?? "Nearby place",
+                lat: revealCand.lat,
+                lon: revealCand.lon,
+                category: revealCand.category,
+                dist: revealCand.dist,
+                wiki: revealCand.wiki,
+              }
+            : null
+        }
+        actions={
+          revealCand
+            ? [
+                {
+                  icon: Plus,
+                  label: "Go see it",
+                  primary: true,
+                  onClick: () => {
+                    const id = revealCand.id;
+                    setRevealId(null);
+                    const t = commitCandidate(id);
+                    if (t) onAddPlace(t);
+                  },
+                },
+                {
+                  icon: X,
+                  label: "Not this one",
+                  onClick: () => {
+                    const id = revealCand.id;
+                    setRevealId(null);
+                    skipCandidate(id);
                   },
                 },
               ]

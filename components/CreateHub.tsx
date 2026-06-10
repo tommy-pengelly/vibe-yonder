@@ -1,5 +1,5 @@
 "use client";
-import { Compass, Globe, Map as MapIcon, Navigation, Plus, Ruler, X } from "lucide-react";
+import { Compass, Globe, Map as MapIcon, Navigation, Plus, Ruler, Telescope, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
@@ -20,6 +20,7 @@ type StartOpts = {
   mapId?: string;
   mapItemIdByTargetId?: Record<string, string>;
   name?: string;
+  play?: "ambient";
 };
 
 function toTarget(r: { name: string; label?: string; lat: number; lon: number }): Target {
@@ -153,10 +154,16 @@ export default function CreateHub({
       {idle && !building && (
         <div className="flex flex-col gap-2">
           <ModeRow
+            icon={Telescope}
+            title="Discover nearby"
+            sub="Mystery places reveal as you wander toward them"
+            accent
+            onClick={() => onStart([], "collection", { play: "ambient" })}
+          />
+          <ModeRow
             icon={Compass}
             title="Just wander"
             sub="No destination — see where you end up"
-            accent
             onClick={() => onStart([], "single")}
           />
           <ModeRow
