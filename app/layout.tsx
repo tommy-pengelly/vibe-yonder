@@ -19,7 +19,13 @@ const mono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://yonderful.app";
+// Explicit override (set this to the real domain — e.g. yonderful.app — once
+// it's owned) → else Vercel's production URL (auto) → else the current deploy.
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "https://vibe-yonder.vercel.app");
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
