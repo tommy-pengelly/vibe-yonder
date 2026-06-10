@@ -1,6 +1,6 @@
 "use client";
 import { getSupabase } from "../supabase/client";
-import type { Destination, FeedMap, FeedYonder } from "../types";
+import type { Destination, FeedMap, FeedWays, FeedYonder } from "../types";
 import { ctx } from "./ctx";
 import { grubCountsFor } from "./social";
 
@@ -129,6 +129,81 @@ export async function getSharedYonder(id: string): Promise<FeedYonder | null> {
   const { data } = await sb.from("shared_yonders").select(SHARED_COLS).eq("id", id).maybeSingle();
   if (!data) return null;
   return (await shapeShared([data as SharedRow]))[0] ?? null;
+}
+
+// ----- Ways reports (posts kind='ways') -----
+
+type WaysPostRow = {
+  id: string;
+  user_id: string;
+  caption: string | null;
+  payload: {
+    count?: number;
+    km?: number;
+    placesSeen?: number;
+    traces?: number[][][];
+  } | null;
+  created_at: string | null;
+};
+
+const WAYS_COLS = "id,user_id,caption,payload,created_at";
+
+async function shapeWays(rows: WaysPostRow[]): Promise<FeedWays[]> {
+  if (rows.length === 0) return [];
+  const profiles = await profilesByIds(rows.map((r) => r.user_id));
+  return rows.map((r) => {
+    const p = profiles[r.user_id] ?? { username: "wanderer" };
+    const pl = r.payload ?? {};
+    return {
+      id: r.id,
+      who: p.displayName ?? `@${p.username}`,
+      handle: `@${p.username}`,
+      avatarUrl: p.avatarUrl,
+      when: relTime(r.created_at),
+      caption: r.caption,
+      count: pl.count ?? 0,
+      km: pl.km ?? 0,
+      placesSeen: pl.placesSeen ?? 0,
+      traces: pl.traces ?? [],
+    };
+  });
+}
+
+/** Public ways reports for the community feed. Safe-empty if posts isn't there. */
+export async function loadCommunityWays(): Promise<FeedWays[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from("posts")
+    .select(WAYS_COLS)
+    .eq("kind", "ways")
+    .eq("visibility", "public")
+    .order("created_at", { ascending: false })
+    .limit(30);
+  if (error) return [];
+  return shapeWays((data as WaysPostRow[]) ?? []);
+}
+
+/** Ways reports from people you follow. */
+export async function loadFollowingWays(): Promise<FeedWays[]> {
+  const c = await ctx();
+  if (!c) return [];
+  const { data: follows } = await c.sb
+    .from("follows")
+    .select("following_id")
+    .eq("follower_id", c.uid)
+    .eq("status", "accepted");
+  const ids = (follows as { following_id: string }[] | null)?.map((f) => f.following_id) ?? [];
+  if (ids.length === 0) return [];
+  const { data, error } = await c.sb
+    .from("posts")
+    .select(WAYS_COLS)
+    .eq("kind", "ways")
+    .in("user_id", ids)
+    .order("created_at", { ascending: false })
+    .limit(30);
+  if (error) return [];
+  return shapeWays((data as WaysPostRow[]) ?? []);
 }
 
 // ----- Community: public yonders + public maps -----

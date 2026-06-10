@@ -3,7 +3,7 @@ import { Search, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
-import { Empty, Loading, MapCard, YonderCard } from "@/components/feed/Cards";
+import { Empty, Loading, MapCard, WaysCard, YonderCard } from "@/components/feed/Cards";
 import { useFeedActions } from "@/components/feed/useFeedActions";
 import {
   BottomSheet,
@@ -13,10 +13,12 @@ import {
 } from "@/components/ui";
 import {
   loadCommunity,
+  loadCommunityWays,
   loadFollowingFeed,
+  loadFollowingWays,
   searchProfiles,
 } from "@/lib/data";
-import type { FeedMap, FeedYonder, Profile } from "@/lib/types";
+import type { FeedMap, FeedWays, FeedYonder, Profile } from "@/lib/types";
 
 type Tab = "feed" | "discover";
 type FeedScope = "everyone" | "following";
@@ -78,24 +80,30 @@ export default function CommunityView() {
 function FeedTab({ a }: { a: ReturnType<typeof useFeedActions> }) {
   const [scope, setScope] = useState<FeedScope>("everyone");
   const [yonders, setYonders] = useState<FeedYonder[] | null>(null);
+  const [ways, setWays] = useState<FeedWays[]>([]);
 
   useEffect(() => {
     let c = false;
     setYonders(null);
-    const load =
+    setWays([]);
+    const loadY =
       scope === "following"
         ? loadFollowingFeed()
         : loadCommunity("", "recent").then((r) => r.yonders);
-    void load.then((y) => {
+    const loadW = scope === "following" ? loadFollowingWays() : loadCommunityWays();
+    void loadY.then((y) => {
       if (c) return;
       setYonders(y);
       a.seedGrubs(y);
     });
+    void loadW.then((w) => !c && setWays(w));
     return () => {
       c = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope]);
+
+  const empty = yonders !== null && yonders.length === 0 && ways.length === 0;
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -110,7 +118,7 @@ function FeedTab({ a }: { a: ReturnType<typeof useFeedActions> }) {
       />
       {yonders === null ? (
         <Loading />
-      ) : yonders.length === 0 ? (
+      ) : empty ? (
         <Empty
           title={scope === "following" ? "Quiet so far" : "Nothing public yet"}
           body={
@@ -120,17 +128,22 @@ function FeedTab({ a }: { a: ReturnType<typeof useFeedActions> }) {
           }
         />
       ) : (
-        yonders.map((y) => (
-          <YonderCard
-            key={y.id}
-            y={y}
-            grub={a.gstate(y.id, y)}
-            saved={!!a.saved[y.id]}
-            onGrub={() => a.grub("yonder", y.id)}
-            onSave={() => a.save(y)}
-            onLoad={() => a.startWalk(y.destinations, y.caption ?? y.area)}
-          />
-        ))
+        <>
+          {ways.map((w) => (
+            <WaysCard key={w.id} w={w} />
+          ))}
+          {(yonders ?? []).map((y) => (
+            <YonderCard
+              key={y.id}
+              y={y}
+              grub={a.gstate(y.id, y)}
+              saved={!!a.saved[y.id]}
+              onGrub={() => a.grub("yonder", y.id)}
+              onSave={() => a.save(y)}
+              onLoad={() => a.startWalk(y.destinations, y.caption ?? y.area)}
+            />
+          ))}
+        </>
       )}
     </div>
   );

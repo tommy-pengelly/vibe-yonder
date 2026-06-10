@@ -168,6 +168,20 @@ export type FeedYonder = {
   grubbed: boolean;
 };
 
+/** A "ways report" post — someone's exploration overview — in the feed. */
+export type FeedWays = {
+  id: string;
+  who: string;
+  handle: string;
+  avatarUrl?: string;
+  when: string;
+  caption: string | null;
+  count: number; // ways (yonders) in the report
+  km: number;
+  placesSeen: number;
+  traces: number[][][]; // overlaid normalised 0–100 traces
+};
+
 /** A public map (collection) as the Community cards consume it. */
 export type FeedMap = {
   id: string;

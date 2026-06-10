@@ -4,9 +4,9 @@
 // useFeedActions.
 import { Bookmark, Copy, Navigation, Sprout } from "lucide-react";
 import Link from "next/link";
-import { DotMap, Trace } from "@/components/ui/viz";
+import { DotMap, Trace, Traces } from "@/components/ui/viz";
 import { fmtDist } from "@/lib/geo";
-import type { FeedMap, FeedYonder } from "@/lib/types";
+import type { FeedMap, FeedWays, FeedYonder } from "@/lib/types";
 
 export { DotMap, Trace } from "@/components/ui/viz";
 
@@ -179,6 +179,38 @@ export function GrubButton({ count, active, onToggle }: { count: number; active:
       <Sprout className="w-[17px] h-[17px]" strokeWidth={1.75} />
       {count}
     </button>
+  );
+}
+
+export function WaysCard({ w }: { w: FeedWays }) {
+  return (
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
+      <Link
+        href={`/u/${w.handle.slice(1)}`}
+        className="flex items-center gap-2.5 px-3.5 pt-3.5"
+      >
+        <Avatar name={w.who} />
+        <div className="min-w-0 flex-1">
+          <div className="font-display text-base leading-tight truncate hover:text-[var(--accent)]">
+            {w.who}
+          </div>
+          <div className="text-[11px] text-[var(--muted)]">
+            {w.handle} · {w.when} · ways report
+          </div>
+        </div>
+      </Link>
+      {w.caption && (
+        <p className="text-sm leading-relaxed mx-3.5 mt-2.5 text-pretty">
+          {w.caption}
+        </p>
+      )}
+      <div className="mt-3">
+        <Traces tracks={w.traces} height={170} />
+      </div>
+      <div className="font-mono text-[11px] text-[var(--muted)] px-3.5 py-3 tabular-nums">
+        {w.placesSeen} places seen · {w.count} ways · {fmtDist(w.km * 1000)} wandered
+      </div>
+    </div>
   );
 }
 
