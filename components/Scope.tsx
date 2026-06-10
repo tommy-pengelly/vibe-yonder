@@ -12,6 +12,8 @@ import {
   makeAngleSmoother,
   toRad,
 } from "@/lib/geo";
+import { categoryByKey } from "@/lib/nearby";
+import type { ScopeCandidate } from "@/hooks/useDiscovery";
 import type { Fix, LatLon, Target } from "@/lib/types";
 
 type Props = {
@@ -25,6 +27,10 @@ type Props = {
   hideNumbers: boolean;
   /** When set, tapping a target's marker focuses it (Collection mode). */
   onPickTarget?: (id: string) => void;
+  /** Ambient discovery: faint mystery dots that resolve on approach. */
+  candidates?: ScopeCandidate[];
+  /** Tapping a candidate dot opens its detail/reveal. */
+  onPickCandidate?: (id: string) => void;
 };
 
 const ACCENT = "#f5a623";
@@ -40,11 +46,16 @@ export default function Scope({
   mpp,
   hideNumbers,
   onPickTarget,
+  candidates = [],
+  onPickCandidate,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rotSmoother = useRef(makeAngleSmoother());
   // Each drawn target's marker position, for tap hit-testing.
   const hitsRef = useRef<{ id: string; x: number; y: number }[]>([]);
+  // Drawn candidate-dot positions, hit-tested separately so a tap routes to the
+  // reveal rather than to target focus.
+  const candHitsRef = useRef<{ id: string; x: number; y: number }[]>([]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -185,6 +196,22 @@ export default function Scope({
       }
     }
 
+    // Ambient discovery candidates: faint mystery dots that gain a name + a
+    // category glyph once you're within reveal range. On-canvas only (mystery
+    // lives in the void, never as a rim chevron). Drawn under the user dot;
+    // muted white, never amber — amber stays reserved for the destination.
+    candHitsRef.current = [];
+    if (position) {
+      for (const c of candidates) {
+        const raw = projectAt(c, position, cx, cy, mpp);
+        const r = Math.hypot(raw.x - cx, raw.y - cy);
+        if (r >= rimR) continue;
+        const { x, y } = applyRot(raw.x, raw.y);
+        drawCandidate(ctx, x, y, c);
+        candHitsRef.current.push({ id: c.id, x, y });
+      }
+    }
+
     // The dot: an upward arrowhead (you, heading-up). Dimmer while acquiring.
     {
       const o = position ? 1 : 0.45;
@@ -288,23 +315,33 @@ export default function Scope({
     ctx.textAlign = "right";
     ctx.textBaseline = "alphabetic";
     ctx.fillText(formatScale(snapMetres), sxRight, syBaseline - 7);
-  }, [position, heading, track, targets, activeIndex, mpp, hideNumbers]);
+  }, [position, heading, track, targets, activeIndex, mpp, hideNumbers, candidates]);
 
   const handleClick = (e: ReactMouseEvent<HTMLCanvasElement>) => {
-    if (!onPickTarget) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    let best: string | null = null;
-    let bestD = 44; // tap slop in px
-    for (const hit of hitsRef.current) {
-      const d = Math.hypot(hit.x - x, hit.y - y);
-      if (d < bestD) {
-        bestD = d;
-        best = hit.id;
+    const nearest = (hits: { id: string; x: number; y: number }[]) => {
+      let best: string | null = null;
+      let bestD = 44; // tap slop in px
+      for (const hit of hits) {
+        const d = Math.hypot(hit.x - x, hit.y - y);
+        if (d < bestD) {
+          bestD = d;
+          best = hit.id;
+        }
       }
+      return best;
+    };
+    // A candidate dot under the finger wins (it's the discovery action); fall
+    // back to focusing a destination.
+    const cand = onPickCandidate ? nearest(candHitsRef.current) : null;
+    if (cand) {
+      onPickCandidate!(cand);
+      return;
     }
-    if (best) onPickTarget(best);
+    const target = onPickTarget ? nearest(hitsRef.current) : null;
+    if (target) onPickTarget!(target);
   };
 
   return (
@@ -327,6 +364,47 @@ function drawDestDot(
   ctx.beginPath();
   ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
   ctx.fill();
+}
+
+function drawCandidate(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  c: ScopeCandidate,
+) {
+  if (!c.revealed) {
+    // Mystery: a faint, nameless point. The void stays calm.
+    ctx.fillStyle = "rgba(237, 237, 237, 0.26)";
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  // Revealed: a brighter dot, a category glyph, and the name. A notable place
+  // gets a subtle ring (the on-scope echo of the sheet's "✦ Noted").
+  if (c.tier === "notable") {
+    ctx.strokeStyle = "rgba(237, 237, 237, 0.45)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(x, y, 8, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.fillStyle = "rgba(237, 237, 237, 0.85)";
+  ctx.beginPath();
+  ctx.arc(x, y, 4, 0, Math.PI * 2);
+  ctx.fill();
+  const emoji = c.category ? categoryByKey(c.category)?.emoji : undefined;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  if (emoji) {
+    ctx.font = "12px system-ui, sans-serif";
+    ctx.fillText(emoji, x, y - 14);
+  }
+  if (c.name) {
+    ctx.fillStyle = "rgba(237, 237, 237, 0.7)";
+    ctx.font = "500 11px var(--font-sans), system-ui, sans-serif";
+    ctx.fillText(truncate(c.name, 18), x, y + 16);
+  }
 }
 
 function projectAt(
