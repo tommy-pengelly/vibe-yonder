@@ -15,6 +15,12 @@ export function usePlaceSearch(position: Fix | null) {
   const [error, setError] = useState<string | null>(null);
   const reqId = useRef(0);
 
+  // Read position via a ref so a moving GPS fix doesn't re-fire the search on
+  // every tick — we only want a new request when the *query* changes (queries
+  // still get proximity bias from the latest position).
+  const posRef = useRef(position);
+  posRef.current = position;
+
   useEffect(() => {
     const term = q.trim();
     if (term.length < 3) {
@@ -26,8 +32,9 @@ export function usePlaceSearch(position: Fix | null) {
     const myReq = ++reqId.current;
     setLoading(true);
     const handle = setTimeout(async () => {
+      const pos = posRef.current;
       try {
-        const near = position ? `&lat=${position.lat}&lon=${position.lon}` : "";
+        const near = pos ? `&lat=${pos.lat}&lon=${pos.lon}` : "";
         const res = await fetch(`/api/geocode?q=${encodeURIComponent(term)}${near}`);
         if (myReq !== reqId.current) return;
         if (!res.ok) {
@@ -36,7 +43,7 @@ export function usePlaceSearch(position: Fix | null) {
           return;
         }
         const data = (await res.json()) as GeocodeResult[];
-        setResults(rankResults(data, position));
+        setResults(rankResults(data, pos));
         setError(null);
       } catch {
         if (myReq === reqId.current) {
@@ -48,7 +55,7 @@ export function usePlaceSearch(position: Fix | null) {
       }
     }, 300);
     return () => clearTimeout(handle);
-  }, [q, position]);
+  }, [q]);
 
   const reset = () => {
     setQ("");

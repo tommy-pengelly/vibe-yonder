@@ -33,6 +33,9 @@ export default function MapEditor({ editId }: { editId?: string } = {}) {
   const [results, setResults] = useState<RankedResult[]>([]);
   const [loading, setLoading] = useState(false);
   const reqId = useRef(0);
+  // Position via ref so a moving fix doesn't re-fire search every GPS tick.
+  const fixRef = useRef(fix);
+  fixRef.current = fix;
 
   // Editing an existing map: load it. Otherwise (new) restore any draft so
   // navigating away never loses a map you were setting up.
@@ -86,7 +89,7 @@ export default function MapEditor({ editId }: { editId?: string } = {}) {
           return;
         }
         const data = (await res.json()) as GeocodeResult[];
-        setResults(rankResults(data, fix));
+        setResults(rankResults(data, fixRef.current));
       } catch {
         if (myReq === reqId.current) setResults([]);
       } finally {
@@ -94,7 +97,7 @@ export default function MapEditor({ editId }: { editId?: string } = {}) {
       }
     }, 300);
     return () => clearTimeout(handle);
-  }, [q, fix]);
+  }, [q]);
 
   const add = (r: { name: string; label: string; lat: number; lon: number }) => {
     setItems((prev) => [

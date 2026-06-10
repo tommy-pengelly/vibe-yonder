@@ -117,6 +117,42 @@ The engine must not re-offer what you've already done or just waved off. This is
 
 ---
 
+## Part F — efficiency, caching & cost
+
+The engine touches **no DB at runtime** and its local compute is rounding error on top of the GPS the walk already runs. The **only** metered axis is external API calls — and ambient mode is *continuous* (it follows you), unlike the one-shot category search. So one rule governs the whole cost profile:
+
+### Fetch by tile, not by tick
+
+Never re-query `/api/nearby` per GPS fix — that hammers a fair-use endpoint and wakes the network radio constantly (the real battery cost). Instead:
+
+- **Snap + tile.** Anchor each fetch to a coarse grid cell (snap lat/lon to ~0.01°), not your live point. Re-fetch only on crossing into a new cell or nearing the edge of the fetched area. The 3 km ring radius covers most of a walk, so a typical ambient wander is **~1–3 `nearby` calls total**, not hundreds. Snapping also stabilises the Next.js fetch-cache key, so backtracking/looping is free.
+- **Expensive radius ⟺ sparse filter** (invariant, from Part B). The wide 3 km clause matches only sparse `wikipedia`/`wikidata` nodes; the dense "any café" clause is confined to the 400 m inner ring. Keeps the union light even at 3 km.
+- **Lazy reveals.** `/api/place-photo` and the Wikipedia blurb fire **only on reveal** — for the handful of dots you actually approach, never the whole candidate set. Cache by node `id`. (Note: `place-photo` returns a *URL*; the client loads the image straight from Wikimedia, so image bytes never cost Vercel bandwidth.)
+
+### Caching is allowed *and* encouraged
+
+- **Persistence is licence-clean.** OSM/Overpass data is **ODbL** — store/cache/reuse freely (commercial too); obligation is **attribution** ("© OpenStreetMap contributors" shown where POI data appears) + share-alike *only if you redistribute a derived database* (we don't — showing POIs in-app is a "Produced Work"). Wikimedia photos/blurbs are per-file **CC** — cache with attribution (the route already emits it).
+- **Caching reduces Overpass load**, which is exactly what its usage policy wants — licence and scale concerns point the same way. Prefer the **transient tile cache** (the route's `revalidate: 6h` edge cache) over warehousing POIs in Supabase: warehousing makes you a database holder (attribution + staleness + share-alike-on-redistribute), and the engine doesn't need it.
+- **Standing obligation regardless of scale: attributions on screen** (OSM contributors; per-image CC). Easy to forget until launch — wire it where POIs/photos render.
+
+### Cost shape (order-of-magnitude; floors dominate)
+
+Assume an active user ≈ **10 yonders/month**, ~13 route calls each, ~75% cache hits → ~3–4 upstream calls. Track ≈ 15 KB. Caching is a cost *reducer* on every axis; DB is untouched by the engine.
+
+| Active users | Vercel | Supabase | External POIs | Total/mo | Per user/mo |
+|---|---|---|---|---|---|
+| 100 | $20 (Pro floor) | $0–25 | $0 (free) | ~$20–45 | $0.20–0.45 |
+| 1,000 | $20 (floor) | $25 (Pro) | $0 (free) | ~$45 | ~$0.045 |
+| 10,000 | $20–40 | $25–35 | $20–40 (provider/VPS) | ~$65–115 | ~$0.007–0.011 |
+
+- **Floor-dominated to ~10k users** — per-user cost *falls* as you grow; the engine's marginal cost is ~nil.
+- **Supabase grows only from stored yonder tracks** (~15 KB each), not from the engine — compress/archive before it matters.
+- **The one growth lever is external POIs.** $0 inside fair use (tiling keeps upstream calls growing *sub*-linearly with users); around **~10k active users** continuous traffic crosses public-Overpass fair use → swap to **self-hosted Overpass (~$20–40/mo VPS)** or **Geoapify/Foursquare** via the existing `NEARBY_PROVIDER` seam. A swap, not a rewrite.
+
+**Verdict: not a cost concern at current scale.** The only thing to get right *now* is tile-don't-tick + attribution-on-screen — cheap to build in, annoying to retrofit. Everything else (durable POI tables, provider switch) is a future, bounded, tens-of-dollars problem.
+
+---
+
 ## Data / migrations
 
 - **No DB migration.** `lib/discovery.ts` (`score()`), `lib/geo.ts` (bearing/confidence estimator), the ring-tier query edit in `app/api/nearby/route.ts`, and the `localStorage` ledger. `NearbyPlace` gains `id` + optional `wiki`/`importance`/`tags` for scoring.
