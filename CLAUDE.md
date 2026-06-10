@@ -72,7 +72,7 @@ The discovery engine has a **taste**, and it sends people to good, **locally-run
 
 ## Brand
 
-**Voice & tone.** Warm, playful, a little wry. Encourages getting lost and rewards meandering. Never naggy, never a performance coach, never corporate. Copy is short and human ("Pick a place. Walk toward the arrow.", "You yondered 32×."). Celebrate the ramble.
+**Voice & tone.** Warm, playful, a little wry. Encourages getting lost and rewards meandering. Never naggy, never a performance coach, never corporate. Copy is short and human ("Pick a place. Walk toward the arrow.", "You yondered 32×."). Celebrate the ramble. **No em dashes anywhere in copy** (a house rule). Use a comma, a period, or restructure.
 
 **Visual language.**
 - Near-black field (`#0a0b0d`). A single **amber** accent (`#f5a623`) used *sparingly* — the directional marker and one primary action per screen. Warm-grey for secondary text. Amber is precious; don't spray it.
