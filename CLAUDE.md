@@ -18,6 +18,9 @@ It is about **adventure, curiosity, and getting pleasantly lost.** It is not abo
 Before adding anything, ask: **"Does this make exploring more joyful, or is it optimising the journey?"**
 Optimising → reject it. This single question kills most feature-bleed.
 
+### Vibe walking (the feeling)
+The mood is **eyes up, read the signs.** You don't want to *miss* anything good — an independent coffee, a quiet square, something happening — but you want to stay *free to explore*, not herded. So you navigate by what's around you, the way people once read the **constellations**: glance up, take a bearing, wander on. The app's job is to put a few points of light in your sky, not a turn list in your hand. Don't-miss-anything **and** free-to-roam — hold both. (This is why discovery is a calm *constellation* on the scope plus an on-demand *suggestions* sheet, never an interrupting feed.)
+
 ---
 
 ## What it is NOT (guardrails — this is where drift happens)
@@ -57,7 +60,9 @@ The discovery engine has a **taste**, and it sends people to good, **locally-run
 | a **grub** (the one-tap kudos on a shared yonder); "grub it" | like / kudos / heart (in the social feed) |
 | **Direct** (straight-line start→finish) | (the idiom "as the crow flies" is fine in Explain copy only) |
 | **scope** (the full-bleed view), **the dot** (you), **the marker / directional head** | minimap / radar / arrow |
-| **places seen**, **explore**, **wander** | — |
+| **the constellation** (the scatter of faint nearby-discovery dots on the scope) | radar / pins / map markers |
+| a **sidequest** (a suggestion/detour you take mid-wander — now surfaced via the suggestions sheet; the old standalone offer card + `useSidequest` are retired) | — |
+| **places seen**, **explore**, **wander**, **eyes up** | — |
 
 **A yonder vs a map.** A **yonder** is an *outing* — you walk it; it has a trace, time, and a Yondered score. A **map** is a *plan* — a curated set of places, no trace, that you can yonder anytime, do again, keep for later, or (Doc 3) share publicly so others **Load / Duplicate** its places and wander their own way. The two are separate objects (the `yonders` table = activities; the `maps` table = plans).
 

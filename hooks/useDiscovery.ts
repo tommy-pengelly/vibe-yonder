@@ -98,20 +98,20 @@ export function useDiscovery({
       ON_CANVAS_CAP,
     );
     setCandidates(
-      scored.map((s) => {
-        const revealed = s.dist < REVEAL_M;
-        return {
-          id: s.id,
-          lat: s.lat,
-          lon: s.lon,
-          dist: s.dist,
-          revealed,
-          tier: notabilityTier(s),
-          name: revealed ? s.name : undefined,
-          category: revealed ? s.category : undefined,
-          wiki: revealed ? s.wiki : undefined,
-        };
-      }),
+      scored.map((s) => ({
+        id: s.id,
+        lat: s.lat,
+        lon: s.lon,
+        dist: s.dist,
+        // `revealed` gates the on-scope label (mystery dots until you're close);
+        // the full name/category travel with it so the suggestions sheet — the
+        // deliberate "show me what's around" view — can display them.
+        revealed: s.dist < REVEAL_M,
+        tier: notabilityTier(s),
+        name: s.name,
+        category: s.category,
+        wiki: s.wiki,
+      })),
     );
   }, [position, activeGuide]);
 
