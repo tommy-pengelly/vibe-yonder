@@ -10,11 +10,9 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSidequest } from "@/hooks/useSidequest";
 import { useDiscovery } from "@/hooks/useDiscovery";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
-import { CATEGORIES } from "@/lib/nearby";
-import PlaceDetailSheet, { type PlaceLite } from "@/components/PlaceDetailSheet";
+import SuggestionsSheet from "@/components/SuggestionsSheet";
 import { getFavourite, pushFavourite, removeFavourite } from "@/lib/data";
 import {
   ARRIVAL_RADIUS_M,
@@ -86,22 +84,14 @@ export default function WalkScreen({
   >({});
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [sidequestsOn, setSidequestsOn] = useState(true);
-  const [detailPlace, setDetailPlace] = useState<PlaceLite | null>(null);
   const [directionsOpen, setDirectionsOpen] = useState(false);
 
-  // A gentle nudge toward something nearby worth a detour. Paused while a
-  // sheet is open (don't interrupt) and while the walk itself is paused.
-  const { offer, accept, dismiss, missed, clearMissed } = useSidequest({
-    position,
-    enabled: sidequestsOn && !paused && !addSheetOpen && !panelOpen,
-    targets: yonder.targets,
-  });
-  const [missedOpen, setMissedOpen] = useState(false);
-
-  // Ambient discovery — only in the "just yonder" play mode. Faint candidate
-  // dots populate the scope; a guide (category) leans what surfaces.
-  const ambient = yonder.play === "ambient";
+  // Discovery — the single suggestions engine (replaces the old sidequest).
+  // Faint candidate dots populate the scope (the eyes-up constellation); the
+  // suggestions sheet is the deliberate "show me what's around" view. A guide
+  // leans what surfaces. On for every wander, silenceable per-walk.
+  const [suggestionsOn, setSuggestionsOn] = useState(true);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [activeGuide, setActiveGuide] = useState<string | null>(null);
   const committedIds = useMemo(
     () => new Set(yonder.targets.map((t) => t.id)),
@@ -114,14 +104,23 @@ export default function WalkScreen({
   } = useDiscovery({
     position,
     track,
-    enabled: ambient && !paused,
+    enabled: suggestionsOn && !paused,
     activeGuide,
     committedIds,
   });
-  const [revealId, setRevealId] = useState<string | null>(null);
-  const revealCand = ambient
-    ? candidates.find((c) => c.id === revealId && c.revealed) ?? null
-    : null;
+
+  // Promote a suggestion to the place you're heading for next.
+  const takeNext = useCallback(
+    (id: string) => {
+      const t = commitCandidate(id);
+      if (t) {
+        onAddPlace(t);
+        onSetActive(t.id);
+      }
+      setSuggestionsOpen(false);
+    },
+    [commitCandidate, onAddPlace, onSetActive],
+  );
 
   const unvisited = useMemo(
     () => yonder.targets.filter((t) => !t.visited),
@@ -348,8 +347,8 @@ export default function WalkScreen({
           mpp={mpp}
           hideNumbers={hideNumbers}
           onPickTarget={onSetActive}
-          candidates={ambient ? candidates : undefined}
-          onPickCandidate={ambient ? (id) => setRevealId(id) : undefined}
+          candidates={suggestionsOn ? candidates : undefined}
+          onPickCandidate={suggestionsOn ? () => setSuggestionsOpen(true) : undefined}
         />
       </div>
 
@@ -386,15 +385,24 @@ export default function WalkScreen({
           </div>
         </div>
         <div className="shrink-0 flex items-center gap-2 pointer-events-auto">
-          {missed.length > 0 && (
+          {suggestionsOn ? (
             <button
               type="button"
-              onClick={() => setMissedOpen(true)}
-              aria-label="Missed suggestions"
+              onClick={() => setSuggestionsOpen(true)}
+              aria-label="Suggestions around you"
               className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-[var(--border)] text-[var(--muted)] hover:text-[var(--accent)] bg-black/30 backdrop-blur-sm"
             >
               <Sparkles className="w-4 h-4" strokeWidth={1.75} />
-              <span className="text-sm tabular-nums">{missed.length}</span>
+              <span className="text-sm tabular-nums">{candidates.length}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setSuggestionsOn(true)}
+              aria-label="Turn suggestions on"
+              className="inline-flex items-center justify-center size-9 rounded-full border border-[var(--border)] text-[var(--muted)]/50 hover:text-[var(--accent)] bg-black/30 backdrop-blur-sm"
+            >
+              <Sparkles className="w-4 h-4" strokeWidth={1.75} />
             </button>
           )}
           <button
@@ -446,67 +454,6 @@ export default function WalkScreen({
           </p>
         )}
 
-        {offer && !currentArrivalTarget && (
-          <div className="self-center max-w-xs rounded-2xl bg-black/55 backdrop-blur-md border border-[var(--border)] px-4 py-3 flex flex-col gap-2 pointer-events-auto">
-            <p className="text-sm text-[var(--foreground)] flex items-start gap-2">
-              <Sparkles
-                className="w-4 h-4 text-[var(--accent)] shrink-0 mt-0.5"
-                strokeWidth={1.75}
-              />
-              <span>
-                <button
-                  type="button"
-                  onClick={() => setDetailPlace(offer.place)}
-                  className="font-display text-[var(--accent)] underline decoration-[var(--accent)]/30 underline-offset-2"
-                >
-                  {offer.place.name}
-                </button>
-                {offer.place.dist != null && !hideNumbers && (
-                  <span className="text-[var(--muted)]">
-                    {" "}
-                    · {fmtDist(offer.place.dist)} off your path
-                  </span>
-                )}
-              </span>
-            </p>
-            <div className="flex items-center gap-3 self-end">
-              <button
-                type="button"
-                onClick={() => setSidequestsOn(false)}
-                className="text-[11px] text-[var(--muted)] hover:text-[var(--foreground)] px-1"
-                title="Turn off suggestions for this walk"
-              >
-                Not now
-              </button>
-              <button
-                type="button"
-                onClick={dismiss}
-                className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] px-2 py-1"
-              >
-                Skip
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const p = accept();
-                  if (p)
-                    onAddPlace({
-                      id: crypto.randomUUID(),
-                      name: p.name,
-                      label: "",
-                      lat: p.lat,
-                      lon: p.lon,
-                      visited: false,
-                    });
-                }}
-                className="rounded-full bg-[var(--accent)] text-black font-semibold px-4 py-1.5 active:opacity-80"
-              >
-                Go see it
-              </button>
-            </div>
-          </div>
-        )}
-
         {currentArrivalTarget && (
           <div className="self-center rounded-2xl bg-black/55 backdrop-blur-md border border-[var(--accent)]/40 px-4 py-3 flex flex-col items-center gap-2 pointer-events-auto">
             <p className="text-sm text-[var(--foreground)] text-center">
@@ -532,29 +479,6 @@ export default function WalkScreen({
                 Visited ✓
               </button>
             </div>
-          </div>
-        )}
-
-        {ambient && (
-          <div className="flex gap-2 overflow-x-auto pointer-events-auto -mx-5 px-5 pb-1 [scrollbar-width:none]">
-            {CATEGORIES.map((c) => {
-              const on = activeGuide === c.key;
-              return (
-                <button
-                  key={c.key}
-                  type="button"
-                  onClick={() => setActiveGuide(on ? null : c.key)}
-                  aria-pressed={on}
-                  className={`shrink-0 rounded-full border px-3 py-1.5 text-sm whitespace-nowrap backdrop-blur-sm ${
-                    on
-                      ? "border-[var(--accent)] text-[var(--accent)] bg-black/40"
-                      : "border-[var(--border)] text-[var(--muted)] bg-black/30"
-                  }`}
-                >
-                  {c.emoji} {c.label}
-                </button>
-              );
-            })}
           </div>
         )}
 
@@ -641,7 +565,7 @@ export default function WalkScreen({
           )}
         </div>
 
-        {ambient && (
+        {suggestionsOn && (
           // Discovery POIs come from OpenStreetMap (ODbL) — attribution is
           // required wherever they're shown.
           <p className="text-center text-[9px] text-[var(--muted)]/60 pointer-events-auto">
@@ -679,78 +603,27 @@ export default function WalkScreen({
         onClose={() => setPanelOpen(false)}
       />
 
-      <PlaceDetailSheet
-        open={!!detailPlace}
-        onClose={() => setDetailPlace(null)}
-        place={detailPlace}
-        actions={
-          detailPlace
-            ? [
-                {
-                  icon: Plus,
-                  label: "Go see it",
-                  primary: true,
-                  onClick: () => {
-                    const p = detailPlace;
-                    setDetailPlace(null);
-                    accept();
-                    clearMissed(p.name);
-                    onAddPlace({
-                      id: crypto.randomUUID(),
-                      name: p.name,
-                      label: p.label ?? "",
-                      lat: p.lat,
-                      lon: p.lon,
-                      visited: false,
-                    });
-                  },
-                },
-              ]
-            : []
-        }
-      />
-
-      <PlaceDetailSheet
-        open={!!revealCand}
-        onClose={() => setRevealId(null)}
-        place={
-          revealCand
-            ? {
-                name: revealCand.name ?? "Nearby place",
-                lat: revealCand.lat,
-                lon: revealCand.lon,
-                category: revealCand.category,
-                dist: revealCand.dist,
-                wiki: revealCand.wiki,
-              }
-            : null
-        }
-        actions={
-          revealCand
-            ? [
-                {
-                  icon: Plus,
-                  label: "Go see it",
-                  primary: true,
-                  onClick: () => {
-                    const id = revealCand.id;
-                    setRevealId(null);
-                    const t = commitCandidate(id);
-                    if (t) onAddPlace(t);
-                  },
-                },
-                {
-                  icon: X,
-                  label: "Not this one",
-                  onClick: () => {
-                    const id = revealCand.id;
-                    setRevealId(null);
-                    skipCandidate(id);
-                  },
-                },
-              ]
-            : []
-        }
+      <SuggestionsSheet
+        open={suggestionsOpen}
+        onClose={() => setSuggestionsOpen(false)}
+        suggestions={candidates}
+        activeGuide={activeGuide}
+        onSetGuide={setActiveGuide}
+        onTakeNext={takeNext}
+        onSaveForLater={(c) => {
+          void pushFavourite({
+            name: c.name ?? "Nearby place",
+            lat: c.lat,
+            lon: c.lon,
+          });
+          skipCandidate(c.id);
+        }}
+        onDecline={skipCandidate}
+        onTurnOff={() => {
+          setSuggestionsOn(false);
+          setSuggestionsOpen(false);
+        }}
+        hideNumbers={hideNumbers}
       />
 
       <BottomSheet
@@ -781,37 +654,6 @@ export default function WalkScreen({
         </ul>
       </BottomSheet>
 
-      <BottomSheet
-        open={missedOpen}
-        onClose={() => setMissedOpen(false)}
-        title="Suggestions you passed"
-      >
-        {missed.length === 0 ? (
-          <p className="text-sm text-[var(--muted)] py-2">Nothing missed.</p>
-        ) : (
-          <ul className="flex flex-col divide-y divide-[var(--border)]">
-            {missed.map((p, i) => (
-              <li key={`${p.name}-${i}`}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMissedOpen(false);
-                    setDetailPlace(p);
-                  }}
-                  className="w-full text-left py-3 hover:text-[var(--accent)]"
-                >
-                  <div className="font-display text-base truncate">{p.name}</div>
-                  {p.dist != null && (
-                    <div className="text-[11px] font-mono text-[var(--muted)] tabular-nums">
-                      {fmtDist(p.dist)} off your path
-                    </div>
-                  )}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </BottomSheet>
     </div>
   );
 }
