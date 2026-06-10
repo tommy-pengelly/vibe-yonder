@@ -10,6 +10,7 @@ export * from "./import";
 export * from "./profiles";
 export * from "./social";
 export * from "./sharing";
+export * from "./posts";
 export * from "./feed";
 export * from "./settings";
 export * from "./notifications";

@@ -2,6 +2,7 @@
 import { areaLabel, obfuscateTrace, type PrivacyZone } from "../privacy";
 import type { SavedYonder, Visibility } from "../types";
 import { ctx } from "./ctx";
+import { createYonderPost, deleteYonderPost } from "./posts";
 
 export type ShareVisibility = Exclude<Visibility, "private">;
 
@@ -32,12 +33,15 @@ export async function publishYonder(
     trace_public: obfuscateTrace(y.track, opts.zone),
     destinations: y.destinations,
   });
+  // Dual-write the unified post (0013). Safe no-op until the table exists.
+  await createYonderPost(y, opts);
 }
 
 export async function unpublishYonder(yonderId: string): Promise<void> {
   const c = await ctx();
   if (!c) return;
   await c.sb.from("shared_yonders").delete().eq("yonder_id", yonderId);
+  await deleteYonderPost(yonderId);
 }
 
 /** Current share status of one of your own yonders (for the recap control). */

@@ -4,6 +4,7 @@ import * as local from "../storage";
 import type { Destination, StoredMap, StoredMapItem, YonderMode } from "../types";
 import { ctx } from "./ctx";
 import { pushFavourite } from "./favourites";
+import { setMapPost } from "./posts";
 
 export type MapRow = {
   id: string;
@@ -151,6 +152,9 @@ export async function setMapVisibility(
     console.error("setMapVisibility:", error.message);
     return false;
   }
+  // Dual-write the unified post (0013). Safe no-op until the table exists.
+  const map = await getMap(id);
+  if (map) await setMapPost(map, visibility === "public");
   return true;
 }
 
