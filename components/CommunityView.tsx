@@ -17,7 +17,7 @@ import type { FeedItem, FeedMap, FeedYonder, Profile } from "@/lib/types";
 type Tab = "following" | "everyone" | "discover";
 
 // The outward tab. A search button in the header opens a search sheet; below,
-// three tabs: Following (your people's wanders — the default feed), Everyone
+// three tabs: Following (your people's wanders, the default feed), Everyone
 // (the whole community), and Discover (maps to wander).
 export default function CommunityView() {
   const a = useFeedActions();
@@ -124,7 +124,7 @@ function FeedTab({
         ) : (
           <Empty
             title="Nothing public yet"
-            body="Be the first — finish a yonder, publish a map, or post a ways report."
+            body="Be the first, finish a yonder, publish a map, or post a ways report."
           />
         )
       ) : (
@@ -134,7 +134,7 @@ function FeedTab({
   );
 }
 
-// One feed, every kind of post — render the right card.
+// One feed, every kind of post, render the right card.
 function FeedItemCard({
   item,
   a,

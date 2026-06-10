@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 
 // Calm boot splash: the spyglass mark + wordmark on the dark field, held for a
 // beat then faded once fonts are ready. Lives in AppChrome, which stays mounted
-// across client navigations, so it shows once per cold load — never on tab
+// across client navigations, so it shows once per cold load, never on tab
 // switches. Minimal motion: a single gentle fade, nothing pulses.
 export default function BootSplash() {
   const [phase, setPhase] = useState<"show" | "fading" | "done">("show");

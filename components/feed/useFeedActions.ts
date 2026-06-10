@@ -67,7 +67,7 @@ export function useFeedActions() {
       visited: false,
     }));
     // Link to the source map (e.g. a community map you loaded), so your ways
-    // show on it and it can be counted — your traces stay private to you.
+    // show on it and it can be counted, your traces stay private to you.
     window.sessionStorage.setItem(
       "vibe-yonder.start",
       JSON.stringify({

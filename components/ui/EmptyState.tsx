@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
-// An inviting empty state — centred, generous, with a clear primary action.
+// An inviting empty state, centred, generous, with a clear primary action.
 // Turns a lonely grey line into a prompt that sells the concept. Amber stays
 // precious: the icon tile is muted; colour lives only in the action.
 export default function EmptyState({

@@ -18,7 +18,7 @@ export default function BottomSheet({
   onClose: () => void;
   title?: string;
   children: ReactNode;
-  /** Open at least this tall (% of viewport) — e.g. search sheets want room. */
+  /** Open at least this tall (% of viewport), e.g. search sheets want room. */
   minHeightVh?: number;
 }) {
   return (

@@ -8,7 +8,7 @@ import {
 
 // Yonderful's third server route: "places of type X near a point", for
 // category search ("find me a café") and sidequests. Keyless, OSM via Overpass
-// — env-swappable to a managed provider later (NEARBY_PROVIDER). Coverage is
+//, env-swappable to a managed provider later (NEARBY_PROVIDER). Coverage is
 // uneven by design; returns [] gracefully. Results are for *wandering toward*,
 // never a nearest-amenity finder, so we shuffle-ish by distance bands rather
 // than strictly nearest-first (see ordering below).
@@ -52,7 +52,7 @@ type OverpassEl = {
     leisure?: string;
     natural?: string;
     waterway?: string;
-    /** Settlement/locality label (city/town/suburb) — not a wander destination. */
+    /** Settlement/locality label (city/town/suburb), not a wander destination. */
     place?: string;
     brand?: string;
     "brand:wikidata"?: string;
@@ -151,7 +151,7 @@ export async function GET(req: NextRequest) {
     places.sort((a, b) => (a.dist ?? 0) - (b.dist ?? 0));
 
     if (ambient) {
-      // Keep a bounded, varied pool — the client's score()/rankCandidates does
+      // Keep a bounded, varied pool, the client's score()/rankCandidates does
       // the real gating. Never drop the notable far ones in favour of near
       // clutter, so partition: nearest non-wiki + nearest wiki.
       const wiki = places.filter((p) => p.wiki).slice(0, 6);
@@ -173,7 +173,7 @@ function clampRadius(raw: string | null): number {
   return Math.min(Math.max(parseInt(raw ?? "1500", 10) || 1500, 100), 5000);
 }
 
-/** One category, one radius — node+way union. */
+/** One category, one radius, node+way union. */
 function defaultQuery(lat: number, lon: number, filters: string[], radius: number) {
   const sel = filters
     .flatMap((f) => [

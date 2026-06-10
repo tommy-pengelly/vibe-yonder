@@ -1,13 +1,13 @@
 import type { MetadataRoute } from "next";
 
-// PWA manifest. Dark field + amber, installable, standalone — a calm tool that
+// PWA manifest. Dark field + amber, installable, standalone, a calm tool that
 // opens like a native app.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Yonderful",
     short_name: "Yonderful",
     description:
-      "Strava for exploring. Pick a place, wander there with no route — just an arrow and your own two feet.",
+      "Vibe walking for the curious. A bearing, not a route. Wander your own way on foot and stumble onto good, local things. Eyes up.",
     start_url: "/",
     display: "standalone",
     background_color: "#0a0b0d",

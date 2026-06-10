@@ -70,7 +70,7 @@ export default function ExplainPage() {
           Wikimedia
         </a>{" "}
         (CC). As a guest, your yonders stay on your device. Sign in and they save
-        to your account so you can pick up anywhere — never anyone else&apos;s to
+        to your account so you can pick up anywhere, never anyone else&apos;s to
         see unless you choose to share.
       </p>
     </div>

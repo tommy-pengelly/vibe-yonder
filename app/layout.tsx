@@ -19,25 +19,27 @@ const mono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
-// The canonical site URL — drives OG/canonical/metadataBase. Override per-env
+// The canonical site URL, drives OG/canonical/metadataBase. Override per-env
 // with NEXT_PUBLIC_SITE_URL (e.g. for preview deploys); defaults to the domain.
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://yonderful.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Yonderful — wander, don't navigate",
+    default: "Yonderful · eyes up, wander",
     template: "%s · Yonderful",
   },
   description:
-    "Strava for exploring. Pick a place, wander there with no route — just an arrow and your own two feet. Detours encouraged.",
+    "Vibe walking for the curious. Take a bearing, not a route, and find your own way there on foot. Eyes up: stumble onto good, local, independent things, and brag about how far you strayed.",
   applicationName: "Yonderful",
   keywords: [
     "exploring",
+    "vibe walking",
     "wandering",
     "walking",
+    "local",
+    "independent",
     "no navigation",
-    "compass",
     "adventure",
     "getting lost",
   ],
@@ -49,16 +51,16 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "Yonderful",
-    title: "Yonderful — wander, don't navigate",
+    title: "Yonderful · eyes up, wander",
     description:
-      "Pick a place, wander there with no route — just an arrow and your own two feet.",
+      "A bearing, not a route. Wander your own way on foot and stumble onto good, local things. Eyes up.",
     url: SITE_URL,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Yonderful — wander, don't navigate",
+    title: "Yonderful · eyes up, wander",
     description:
-      "Pick a place, wander there with no route — just an arrow and your own two feet.",
+      "A bearing, not a route. Wander your own way on foot and stumble onto good, local things. Eyes up.",
   },
 };
 

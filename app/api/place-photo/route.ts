@@ -1,13 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { PlacePhotoData } from "@/lib/types";
 
-// Resolve a photo for a place from Wikimedia — keyless, on-brand (CLAUDE.md
+// Resolve a photo for a place from Wikimedia, keyless, on-brand (CLAUDE.md
 // anticipates "Wikipedia blurbs"). Photos feed curiosity, never navigation, so
 // coverage is uneven by design: famous places resolve, a random corner returns
 // null and the UI shows nothing. Two strategies, best-relevance first:
 //   A) the lead image of a Wikipedia article near the coords (high relevance)
 //   B) any geotagged photo on Commons near the coords (broad coverage)
-// Attribution is always returned — required by the CC licences, and you're
+// Attribution is always returned, required by the CC licences, and you're
 // monetising, so it must be displayed.
 
 const CONTACT = process.env.NOMINATIM_CONTACT ?? "tom.peng95@gmail.com";

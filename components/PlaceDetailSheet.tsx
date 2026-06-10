@@ -18,7 +18,7 @@ export type PlaceLite = {
   label?: string;
   category?: string;
   dist?: number;
-  /** Has a Wikipedia/wikidata entry — shows a subtle "noted" mark. */
+  /** Has a Wikipedia/wikidata entry, shows a subtle "noted" mark. */
   wiki?: string;
 };
 
@@ -30,7 +30,7 @@ export type PlaceAction = {
 };
 
 // One sheet for "tell me more about this place", reused wherever a place shows
-// up — search, category results, sidequests. Opens partway and drags to full;
+// up, search, category results, sidequests. Opens partway and drags to full;
 // shows a Wikimedia photo, what kind of place it is, and context actions. A
 // built-in Favourite toggle (universal) sits alongside the caller's actions.
 export default function PlaceDetailSheet({

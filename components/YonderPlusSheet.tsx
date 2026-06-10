@@ -5,12 +5,12 @@ import { useAuthUser } from "@/lib/auth";
 import BottomSheet from "@/components/ui/BottomSheet";
 import AuthModal from "./AuthModal";
 
-// The Yonder+ upsell — shown only when someone reaches for a premium extra.
+// The Yonder+ upsell, shown only when someone reaches for a premium extra.
 // The core wander is never behind this. Checkout is a stub until Stripe keys +
 // the webhook are wired (see supabase/functions/stripe-webhook).
 const PERKS = [
-  "The discovery radar — nearby wonders surfaced as you go",
-  "Game modes — straight-line missions, clue hunts, tours",
+  "The discovery radar, nearby wonders surfaced as you go",
+  "Game modes, straight-line missions, clue hunts, tours",
   "Unlimited maps, and collaborate on them",
   "Ways reports, full history & your exploration heatmap",
 ];
@@ -43,7 +43,7 @@ export default function YonderPlusSheet({
         <div className="flex items-center gap-2 -mt-1">
           <Telescope className="w-5 h-5 text-[var(--accent)]" strokeWidth={1.75} />
           <p className="text-sm text-[var(--warm)]">
-            {reason ?? "Go further. The wander itself is always free — Yonder+ adds the extras."}
+            {reason ?? "Go further. The wander itself is always free, Yonder+ adds the extras."}
           </p>
         </div>
         <ul className="flex flex-col gap-2.5 my-1">

@@ -17,7 +17,7 @@ export default function YouHub() {
   const [unread, setUnread] = useState(0);
   const [authOpen, setAuthOpen] = useState(false);
 
-  // Lifetime exploration story — places seen is the headline number.
+  // Lifetime exploration story, places seen is the headline number.
   const stats = useMemo(() => {
     const places = new Set<string>();
     let metres = 0;

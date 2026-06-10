@@ -6,7 +6,7 @@ import { CATEGORIES, categoryByKey } from "@/lib/nearby";
 import { fmtDist } from "@/lib/geo";
 import type { ScopeCandidate } from "@/hooks/useDiscovery";
 
-// The one place all live suggestions surface — the deliberate "show me what's
+// The one place all live suggestions surface, the deliberate "show me what's
 // around" view (the scope's constellation stays the eyes-up, mysterious one).
 // A swipeable row of cards; each can be taken-next, saved, or declined. The
 // guide chips lean what the engine surfaces ("I fancy a coffee").
@@ -58,7 +58,7 @@ export default function SuggestionsSheet({
 
       {suggestions.length === 0 ? (
         <p className="text-sm text-[var(--muted)] py-10 text-center">
-          Nothing&apos;s caught the light yet — keep wandering, eyes up.
+          Nothing&apos;s caught the light yet, keep wandering, eyes up.
         </p>
       ) : (
         <div className="flex gap-3 overflow-x-auto -mx-5 px-5 pb-2 snap-x snap-mandatory [scrollbar-width:none]">

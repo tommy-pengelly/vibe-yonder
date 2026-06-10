@@ -112,7 +112,7 @@ export default function FavouritesView() {
         <EmptyState
           icon={Heart}
           title="No favourites yet"
-          body="Heart a place on a yonder to keep it here, then nickname it — Home, Work, the best café — for one-tap wandering."
+          body="Heart a place on a yonder to keep it here, then nickname it, Home, Work, the best café, for one-tap wandering."
         />
       ) : (
         <ul className="flex flex-col divide-y divide-[var(--border)]">
@@ -128,7 +128,7 @@ export default function FavouritesView() {
                     if (e.key === "Enter") void commitEdit(f);
                     if (e.key === "Escape") setEditing(null);
                   }}
-                  placeholder="Nickname — Home, Work, café…"
+                  placeholder="Nickname, Home, Work, café…"
                   className="flex-1 min-w-0 bg-transparent border-b border-[var(--accent)] px-1 py-1.5 text-base outline-none placeholder:text-[var(--muted)]/60"
                 />
               ) : (

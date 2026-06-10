@@ -23,7 +23,8 @@ import {
   RIM_FRACTION,
   SCALE_LEVELS_M,
 } from "@/lib/constants";
-import { haversine, fmtDist } from "@/lib/geo";
+import { crossTrack, haversine, fmtDist } from "@/lib/geo";
+import { MEDAL_LABEL, medalFor } from "@/lib/straightline";
 import { directionsOptions } from "@/lib/maps";
 import type {
   ActiveYonder,
@@ -86,7 +87,7 @@ export default function WalkScreen({
   const [panelOpen, setPanelOpen] = useState(false);
   const [directionsOpen, setDirectionsOpen] = useState(false);
 
-  // Discovery — the single suggestions engine (replaces the old sidequest).
+  // Discovery, the single suggestions engine (replaces the old sidequest).
   // Faint candidate dots populate the scope (the eyes-up constellation); the
   // suggestions sheet is the deliberate "show me what's around" view. A guide
   // leans what surfaces. On for every wander, silenceable per-walk.
@@ -149,6 +150,23 @@ export default function WalkScreen({
   }, [yonder.activeIndex, yonder.targets, position]);
 
   const activeTarget = focusIndex != null ? yonder.targets[focusIndex] : null;
+
+  // Straight-line live feedback: how far off the line right now, and the worst
+  // so far (which sets the medal you're on track for).
+  const lineStats = useMemo(() => {
+    if (yonder.play !== "straightline" || !yonder.origin || !yonder.targets[0]) {
+      return null;
+    }
+    const a = yonder.origin;
+    const b = yonder.targets[0];
+    const current = position ? Math.abs(crossTrack(position, a, b)) : 0;
+    let worst = 0;
+    for (const p of track) {
+      const d = Math.abs(crossTrack(p, a, b));
+      if (d > worst) worst = d;
+    }
+    return { current, worst, medal: medalFor(worst) };
+  }, [yonder.play, yonder.origin, yonder.targets, position, track]);
 
   // Favourite the active destination (the only walk-screen way to create a
   // favourite). Tracks the stored record's id so it can be un-favourited.
@@ -349,6 +367,7 @@ export default function WalkScreen({
           onPickTarget={onSetActive}
           candidates={suggestionsOn ? candidates : undefined}
           onPickCandidate={suggestionsOn ? () => setSuggestionsOpen(true) : undefined}
+          lineOrigin={yonder.play === "straightline" ? (yonder.origin ?? null) : null}
         />
       </div>
 
@@ -416,6 +435,21 @@ export default function WalkScreen({
           </button>
         </div>
       </header>
+
+      {lineStats && (
+        <div className="relative z-10 -mt-1 flex justify-center pointer-events-none">
+          <div className="rounded-full bg-black/40 backdrop-blur-sm border border-[var(--border)] px-3 py-1.5 text-xs flex items-center gap-2">
+            <span className="font-mono text-[var(--accent)]">
+              {MEDAL_LABEL[lineStats.medal]}
+            </span>
+            {!hideNumbers && (
+              <span className="font-mono text-[var(--muted)] tabular-nums">
+                ±{Math.round(lineStats.current)}m · worst {Math.round(lineStats.worst)}m
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="relative z-10 flex-1 flex flex-col justify-end px-5 pb-8 gap-4 pointer-events-none">
         {!position && (
@@ -566,7 +600,7 @@ export default function WalkScreen({
         </div>
 
         {suggestionsOn && (
-          // Discovery POIs come from OpenStreetMap (ODbL) — attribution is
+          // Discovery POIs come from OpenStreetMap (ODbL), attribution is
           // required wherever they're shown.
           <p className="text-center text-[9px] text-[var(--muted)]/60 pointer-events-auto">
             Nearby places · © OpenStreetMap contributors
@@ -632,7 +666,7 @@ export default function WalkScreen({
         title="Open in maps"
       >
         <p className="text-xs text-[var(--muted)] -mt-1">
-          Hand off to a maps app for walking directions — then come back and
+          Hand off to a maps app for walking directions, then come back and
           keep wandering.
         </p>
         <ul className="flex flex-col divide-y divide-[var(--border)]">
@@ -720,7 +754,7 @@ function DestinationsSheet({
           })}
           {targets.length === 0 ? (
             <li className="text-sm text-[var(--muted)] py-2.5">
-              Wandering free — no destination. Add a place any time, or just keep going.
+              Wandering free, no destination. Add a place any time, or just keep going.
             </li>
           ) : (
             unvisited.length === 0 && (
@@ -787,7 +821,7 @@ function AddPlaceSheet({
   onAdd: (t: Target) => void;
   onClose: () => void;
 }) {
-  // Shared debounced search — reads the live position via a ref, so a moving
+  // Shared debounced search, reads the live position via a ref, so a moving
   // GPS fix doesn't re-fire the geocode on every tick (the old local copy here
   // depended on `position` and over-queried during a walk).
   const { q, setQ, results, loading } = usePlaceSearch(position);

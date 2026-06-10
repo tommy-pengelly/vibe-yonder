@@ -83,7 +83,7 @@ export default function App() {
     ) {
       lastFix.current = f;
       setTrack((t) => [...t, f]);
-      // Straight-line: A is where you actually set off — the first real fix.
+      // Straight-line: A is where you actually set off, the first real fix.
       setYonder((y) =>
         y && y.play === "straightline" && !y.origin
           ? { ...y, origin: { lat: f.lat, lon: f.lon } }
@@ -133,7 +133,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Resume an in-progress yonder after a reload or accidental exit — so a
+  // Resume an in-progress yonder after a reload or accidental exit, so a
   // dump never loses the walk (and the map) you'd set up. A fresh start
   // payload always wins over a stale session.
   useEffect(() => {
@@ -303,7 +303,7 @@ export default function App() {
   }, []);
 
   // Remove a destination. Removing the last one drops you into a pure wander
-  // (no target, just the void) — a first-class state, not an error.
+  // (no target, just the void), a first-class state, not an error.
   const onRemoveTarget = useCallback((targetId: string) => {
     setYonder((y) => {
       if (!y) return y;
@@ -428,7 +428,7 @@ export default function App() {
     };
 
     // Auto-save: a finished yonder is kept by default (cloud if signed in,
-    // localStorage otherwise). No "Save" button — the recap is just for the
+    // localStorage otherwise). No "Save" button, the recap is just for the
     // story (caption, places, visibility, do-again).
     setSavedYonder(y);
     setSavedLocally(true);

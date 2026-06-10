@@ -11,7 +11,7 @@ import { createWaysPost, loadYonders } from "@/lib/data";
 import { fmtDist, haversine, toUnitBoxMulti } from "@/lib/geo";
 import type { SavedYonder, Visibility } from "@/lib/types";
 
-// Every way you've moved — overlaid. Optionally narrowed to yonders that
+// Every way you've moved, overlaid. Optionally narrowed to yonders that
 // involved a place (?near=lat,lon&name=Home → "all the ways I've ventured
 // home"). A personal lens on your own tracks.
 const NEAR_RADIUS_M = 250;
@@ -107,7 +107,7 @@ export default function WaysView() {
           body={
             near
               ? "Once you wander to this place, every route you took shows up here, overlaid."
-              : "Go wander — every way you move gets drawn here, all together."
+              : "Go wander, every way you move gets drawn here, all together."
           }
         />
       ) : (
@@ -174,7 +174,7 @@ function PostWaysSheet({
   return (
     <BottomSheet open={open} onClose={onClose} title="Post a ways report">
       <p className="text-xs text-[var(--muted)] -mt-1">
-        Share your overlaid wanders to the feed — your traces are shown as a
+        Share your overlaid wanders to the feed, your traces are shown as a
         normalised memento, never precise coordinates.
       </p>
       <textarea

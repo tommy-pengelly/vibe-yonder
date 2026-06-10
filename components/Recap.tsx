@@ -188,7 +188,7 @@ export default function Recap({
       {sl ? (
         <p className="font-display text-3xl tracking-tight text-center leading-tight">
           <span className="text-[var(--accent)]">{MEDAL_LABEL[sl.medal]}</span>
-          {sl.medal === "none" ? " — you finished the line." : " — you held the line."}
+          {sl.medal === "none" ? ", you finished the line." : ", you held the line."}
         </p>
       ) : (
         <p className="font-display text-3xl tracking-tight text-center leading-tight">

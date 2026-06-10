@@ -31,6 +31,8 @@ type Props = {
   candidates?: ScopeCandidate[];
   /** Tapping a candidate dot opens its detail/reveal. */
   onPickCandidate?: (id: string) => void;
+  /** Straight-line mode: A (start). The line runs A→targets[0]; faint corridor. */
+  lineOrigin?: LatLon | null;
 };
 
 const ACCENT = "#f5a623";
@@ -48,6 +50,7 @@ export default function Scope({
   onPickTarget,
   candidates = [],
   onPickCandidate,
+  lineOrigin,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rotSmoother = useRef(makeAngleSmoother());
@@ -95,6 +98,49 @@ export default function Scope({
         y: cy + dx * sinR + dy * cosR,
       };
     };
+
+    // --- Straight-line corridor: the line A→B + faint medal bands, drawn
+    // under the trail. Bands are offset perpendicular in screen pixels
+    // (d metres = d / mpp px), so no need to reproject offset world points.
+    if (lineOrigin && position && targets[0]) {
+      const pa = projectAt(lineOrigin, position, cx, cy, mpp);
+      const pb = projectAt(targets[0], position, cx, cy, mpp);
+      const a2 = applyRot(pa.x, pa.y);
+      const b2 = applyRot(pb.x, pb.y);
+      let dx = b2.x - a2.x;
+      let dy = b2.y - a2.y;
+      const len = Math.hypot(dx, dy) || 1;
+      dx /= len;
+      dy /= len;
+      const px = -dy;
+      const py = dx; // perpendicular
+      const BIG = 2 * Math.max(w, h);
+      const drawLine = (off: number, color: string, dash: number[] | null) => {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.setLineDash(dash ?? []);
+        const ox = px * off;
+        const oy = py * off;
+        ctx.beginPath();
+        ctx.moveTo(a2.x + ox - dx * BIG, a2.y + oy - dy * BIG);
+        ctx.lineTo(a2.x + ox + dx * BIG, a2.y + oy + dy * BIG);
+        ctx.stroke();
+        ctx.restore();
+      };
+      const bands: [number, number][] = [
+        [12.5, 0.18],
+        [25, 0.13],
+        [50, 0.09],
+        [100, 0.06],
+      ];
+      for (const [half, op] of bands) {
+        const offPx = half / mpp;
+        drawLine(offPx, `rgba(237, 237, 237, ${op})`, [4, 5]);
+        drawLine(-offPx, `rgba(237, 237, 237, ${op})`, [4, 5]);
+      }
+      drawLine(0, "rgba(245, 166, 35, 0.45)", null);
+    }
 
     // --- World space: only the trail rotates with the scope ---
     ctx.save();
@@ -199,7 +245,7 @@ export default function Scope({
     // Ambient discovery candidates: faint mystery dots that gain a name + a
     // category glyph once you're within reveal range. On-canvas only (mystery
     // lives in the void, never as a rim chevron). Drawn under the user dot;
-    // muted white, never amber — amber stays reserved for the destination.
+    // muted white, never amber, amber stays reserved for the destination.
     candHitsRef.current = [];
     if (position) {
       for (const c of candidates) {
@@ -315,7 +361,7 @@ export default function Scope({
     ctx.textAlign = "right";
     ctx.textBaseline = "alphabetic";
     ctx.fillText(formatScale(snapMetres), sxRight, syBaseline - 7);
-  }, [position, heading, track, targets, activeIndex, mpp, hideNumbers, candidates]);
+  }, [position, heading, track, targets, activeIndex, mpp, hideNumbers, candidates, lineOrigin]);
 
   const handleClick = (e: ReactMouseEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();

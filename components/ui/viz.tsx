@@ -53,7 +53,7 @@ export function Trace({
   );
 }
 
-// Several traces overlaid in a shared box — every way you've moved around a
+// Several traces overlaid in a shared box, every way you've moved around a
 // place/area. Pre-normalise with toUnitBoxMulti so they line up.
 export function Traces({
   tracks,

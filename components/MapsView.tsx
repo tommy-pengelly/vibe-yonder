@@ -106,7 +106,7 @@ export default function MapsView() {
         <EmptyState
           icon={MapIcon}
           title="No maps yet"
-          body="A map is a set of places to wander between — any time, over as many days as you like. Make one and keep it."
+          body="A map is a set of places to wander between, any time, over as many days as you like. Make one and keep it."
           action={
             <Link
               href="/maps/new"

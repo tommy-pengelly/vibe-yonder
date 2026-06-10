@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // Yonderful's one server route: turn typed text into coordinates.
 // Provider is swappable via GEOCODER env (photon | nominatim). Photon is the
-// default — it's built for search-as-you-type and biases results toward the
+// default, it's built for search-as-you-type and biases results toward the
 // user's location, which is exactly right for a local-wander app.
 type GeocodeResult = {
   name: string;
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   const q = sp.get("q")?.trim();
   if (!q || q.length < 3) return NextResponse.json([]);
 
-  // Optional proximity bias — the dot's current position, when we have it.
+  // Optional proximity bias, the dot's current position, when we have it.
   const lat = parseFloat(sp.get("lat") ?? "");
   const lon = parseFloat(sp.get("lon") ?? "");
   const near =
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// --- Photon (komoot) — default. Keyless, OSM-based, proximity-aware. -------
+// --- Photon (komoot), default. Keyless, OSM-based, proximity-aware. -------
 type PhotonFeature = {
   geometry: { coordinates: [number, number] };
   properties: {
@@ -94,7 +94,7 @@ async function viaPhoton(
   });
 }
 
-// --- Nominatim — fallback. Set GEOCODER=nominatim to use the OSM server. ---
+// --- Nominatim, fallback. Set GEOCODER=nominatim to use the OSM server. ---
 type NominatimResult = {
   name?: string;
   display_name: string;

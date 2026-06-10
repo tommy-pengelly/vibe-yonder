@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-// The member-screen wrapper — one source of truth for page rhythm. The bottom
+// The member-screen wrapper, one source of truth for page rhythm. The bottom
 // nav lives in AppChrome (a sibling, not an overlay), so pages need no extra
 // nav padding. NOT for the walk scope, which is a full-bleed borderless void.
 export default function PageScaffold({

@@ -10,8 +10,7 @@ import BottomSheet from "./ui/BottomSheet";
 type Vis = "private" | "public";
 
 /**
- * Publish a map to the community (or take it private again). Cloud-only —
- * gates on sign-in. Publishing shares the *places*, so others can Load or
+ * Publish a map to the community (or take it private again). Cloud-only,  * gates on sign-in. Publishing shares the *places*, so others can Load or
  * Duplicate them; it never exposes your yonders or your location.
  */
 export default function MapShareControl({

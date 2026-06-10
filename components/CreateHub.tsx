@@ -136,7 +136,7 @@ export default function CreateHub({
       {lineMode && (
         <div className="flex items-center gap-2 -mt-2 text-xs text-[var(--muted)]">
           <Ruler className="w-3.5 h-3.5 text-[var(--accent)]" strokeWidth={1.75} />
-          <span>Pick a far point — then hold the line to it.</span>
+          <span>Pick a far point, then hold the line to it.</span>
           <button
             type="button"
             onClick={() => setLineMode(false)}
@@ -206,7 +206,7 @@ export default function CreateHub({
           <ModeRow
             icon={Compass}
             title="Just wander"
-            sub="No destination — eyes up, see what you find"
+            sub="No destination, eyes up, see what you find"
             accent
             onClick={() => onStart([], "single")}
           />
@@ -219,7 +219,7 @@ export default function CreateHub({
           <ModeRow
             icon={Ruler}
             title="Straight line"
-            sub="Pick a far point, hold the line — earn a medal"
+            sub="Pick a far point, hold the line, earn a medal"
             onClick={() => setLineMode(true)}
           />
 
@@ -254,7 +254,7 @@ export default function CreateHub({
         </button>
       )}
 
-      {/* Maps picker — your maps, the community's, or make a new one */}
+      {/* Maps picker, your maps, the community's, or make a new one */}
       <BottomSheet open={pickerOpen} onClose={() => setPickerOpen(false)} title="Maps" minHeightVh={60}>
         <div className="flex items-center justify-between gap-3 mb-3">
           <SegmentedTabs<MapsTab>
@@ -282,7 +282,7 @@ export default function CreateHub({
         {mapsTab === "mine" ? (
           maps.length === 0 ? (
             <p className="text-sm text-[var(--muted)] py-8 text-center">
-              No maps yet — make one, or browse the community.
+              No maps yet, make one, or browse the community.
             </p>
           ) : (
             <ul className="flex flex-col divide-y divide-[var(--border)]">
@@ -339,7 +339,7 @@ export default function CreateHub({
         )}
       </BottomSheet>
 
-      {/* Place detail — photo + actions, from a search result */}
+      {/* Place detail, photo + actions, from a search result */}
       <PlaceDetailSheet
         open={!!detail}
         onClose={() => setDetail(null)}
