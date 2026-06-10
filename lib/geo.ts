@@ -42,6 +42,19 @@ export const fmtDist = (m: number) =>
   m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(2)} km`;
 
 /**
+ * Signed cross-track distance (metres) from point P to the great-circle line
+ * through A→B — how far off the straight line you are. Sign = which side
+ * (positive ≈ to the right of A→B). The straight-line mode scores on |this|.
+ */
+export function crossTrack(p: LatLon, a: LatLon, b: LatLon): number {
+  const R = 6371000;
+  const d13 = haversine(a.lat, a.lon, p.lat, p.lon) / R; // angular A→P
+  const th13 = toRad(bearing(a.lat, a.lon, p.lat, p.lon));
+  const th12 = toRad(bearing(a.lat, a.lon, b.lat, b.lon));
+  return Math.asin(Math.sin(d13) * Math.sin(th13 - th12)) * R;
+}
+
+/**
  * Normalise several tracks into a *shared* 0–100 box (one combined bounding
  * box), so overlaid traces line up — "all the ways you moved around here".
  */
