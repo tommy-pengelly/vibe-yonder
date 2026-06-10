@@ -14,14 +14,14 @@ import {
 import { loadCommunity, loadFeed, searchProfiles } from "@/lib/data";
 import type { FeedItem, FeedMap, FeedYonder, Profile } from "@/lib/types";
 
-type Tab = "feed" | "discover";
-type FeedScope = "everyone" | "following";
+type Tab = "following" | "everyone" | "discover";
 
 // The outward tab. A search button in the header opens a search sheet; below,
-// two tabs: Feed (completed yonders) and Discover (maps to wander).
+// three tabs: Following (your people's wanders — the default feed), Everyone
+// (the whole community), and Discover (maps to wander).
 export default function CommunityView() {
   const a = useFeedActions();
-  const [tab, setTab] = useState<Tab>("feed");
+  const [tab, setTab] = useState<Tab>("following");
   const [searchOpen, setSearchOpen] = useState(false);
 
   return (
@@ -29,7 +29,7 @@ export default function CommunityView() {
       <PageScaffold>
         <PageHeader
           kicker="Community"
-          title="Find your next yonder"
+          title="Where others wandered"
           action={
             <button
               type="button"
@@ -47,12 +47,17 @@ export default function CommunityView() {
           value={tab}
           onChange={setTab}
           tabs={[
-            { value: "feed", label: "Feed" },
+            { value: "following", label: "Following" },
+            { value: "everyone", label: "Everyone" },
             { value: "discover", label: "Discover" },
           ]}
         />
 
-        {tab === "feed" ? <FeedTab a={a} /> : <DiscoverTab a={a} />}
+        {tab === "discover" ? (
+          <DiscoverTab a={a} />
+        ) : (
+          <FeedTab a={a} scope={tab} onBrowseEveryone={() => setTab("everyone")} />
+        )}
       </PageScaffold>
 
       <SearchSheet
@@ -70,9 +75,16 @@ export default function CommunityView() {
   );
 }
 
-// ----- Feed: completed yonders (everyone / people you follow) -----
-function FeedTab({ a }: { a: ReturnType<typeof useFeedActions> }) {
-  const [scope, setScope] = useState<FeedScope>("everyone");
+// ----- Feed: completed yonders (Following / Everyone, set by the top tab) -----
+function FeedTab({
+  a,
+  scope,
+  onBrowseEveryone,
+}: {
+  a: ReturnType<typeof useFeedActions>;
+  scope: "following" | "everyone";
+  onBrowseEveryone: () => void;
+}) {
   const [items, setItems] = useState<FeedItem[] | null>(null);
 
   useEffect(() => {
@@ -100,26 +112,21 @@ function FeedTab({ a }: { a: ReturnType<typeof useFeedActions> }) {
 
   return (
     <div className="flex flex-col gap-3.5">
-      <SegmentedTabs<FeedScope>
-        variant="pill"
-        value={scope}
-        onChange={setScope}
-        tabs={[
-          { value: "everyone", label: "Everyone" },
-          { value: "following", label: "Following" },
-        ]}
-      />
       {items === null ? (
         <Loading />
       ) : items.length === 0 ? (
-        <Empty
-          title={scope === "following" ? "Quiet so far" : "Nothing public yet"}
-          body={
-            scope === "following"
-              ? "Follow some explorers from search, and their wanders show up here."
-              : "Be the first — finish a yonder, publish a map, or post a ways report."
-          }
-        />
+        scope === "following" ? (
+          <Empty
+            title="Quiet so far"
+            body="Follow some explorers and their wanders show up here. Meanwhile, see where everyone's been."
+            cta={{ label: "Browse everyone", onClick: onBrowseEveryone }}
+          />
+        ) : (
+          <Empty
+            title="Nothing public yet"
+            body="Be the first — finish a yonder, publish a map, or post a ways report."
+          />
+        )
       ) : (
         items.map((it) => <FeedItemCard key={it.id} item={it} a={a} />)
       )}
