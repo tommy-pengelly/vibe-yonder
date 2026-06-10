@@ -640,6 +640,14 @@ export default function WalkScreen({
             <span>±{Math.round(position.acc)} m</span>
           )}
         </div>
+
+        {ambient && (
+          // Discovery POIs come from OpenStreetMap (ODbL) — attribution is
+          // required wherever they're shown.
+          <p className="text-center text-[9px] text-[var(--muted)]/60 pointer-events-auto">
+            Nearby places · © OpenStreetMap contributors
+          </p>
+        )}
       </div>
 
       <AddPlaceSheet
