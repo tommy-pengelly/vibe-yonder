@@ -1,9 +1,10 @@
 "use client";
-import { Compass, Globe, Map as MapIcon, Plus, Ruler, X } from "lucide-react";
+import { Compass, Globe, Map as MapIcon, Navigation, Plus, Ruler, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
 import BottomSheet from "@/components/ui/BottomSheet";
+import PlaceDetailSheet, { type PlaceLite } from "@/components/PlaceDetailSheet";
 import { loadFavourites, loadMaps } from "@/lib/data";
 import { fmtDist } from "@/lib/geo";
 import type {
@@ -41,6 +42,7 @@ export default function CreateHub({
   const [maps, setMaps] = useState<StoredMap[]>([]);
   const [favourites, setFavourites] = useState<FavouritePlace[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [detail, setDetail] = useState<(PlaceLite & RankedResult) | null>(null);
 
   const building = picks.length > 0;
   const idle = q.trim().length < 3;
@@ -62,7 +64,7 @@ export default function CreateHub({
 
   const onResultTap = (r: RankedResult) => {
     if (building) addPick(r);
-    else onStart([toTarget(r)], "single");
+    else setDetail({ ...r, dist: r.dist });
   };
 
   const start = () => {
@@ -241,6 +243,37 @@ export default function CreateHub({
           })}
         </ul>
       </BottomSheet>
+
+      {/* Place detail — photo + actions, from a search result */}
+      <PlaceDetailSheet
+        open={!!detail}
+        onClose={() => setDetail(null)}
+        place={detail}
+        actions={
+          detail
+            ? [
+                {
+                  icon: Navigation,
+                  label: "Yonder here now",
+                  primary: true,
+                  onClick: () => {
+                    const d = detail;
+                    setDetail(null);
+                    onStart([toTarget(d)], "single");
+                  },
+                },
+                {
+                  icon: Plus,
+                  label: "Add to a yonder",
+                  onClick: () => {
+                    addPick(detail);
+                    setDetail(null);
+                  },
+                },
+              ]
+            : []
+        }
+      />
     </div>
   );
 }

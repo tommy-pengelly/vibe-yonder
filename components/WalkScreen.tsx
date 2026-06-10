@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSidequest } from "@/hooks/useSidequest";
+import PlaceDetailSheet, { type PlaceLite } from "@/components/PlaceDetailSheet";
 import { getFavourite, pushFavourite, removeFavourite } from "@/lib/data";
 import {
   ARRIVAL_RADIUS_M,
@@ -86,6 +87,7 @@ export default function WalkScreen({
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [sidequestsOn, setSidequestsOn] = useState(true);
+  const [detailPlace, setDetailPlace] = useState<PlaceLite | null>(null);
 
   // A gentle nudge toward something nearby worth a detour. Paused while a
   // sheet is open (don't interrupt) and while the walk itself is paused.
@@ -411,9 +413,13 @@ export default function WalkScreen({
                 strokeWidth={1.75}
               />
               <span>
-                <span className="font-display text-[var(--accent)]">
+                <button
+                  type="button"
+                  onClick={() => setDetailPlace(offer.place)}
+                  className="font-display text-[var(--accent)] underline decoration-[var(--accent)]/30 underline-offset-2"
+                >
                   {offer.place.name}
-                </span>
+                </button>
                 {offer.place.dist != null && !hideNumbers && (
                   <span className="text-[var(--muted)]">
                     {" "}
@@ -600,6 +606,36 @@ export default function WalkScreen({
           setAddSheetOpen(true);
         }}
         onClose={() => setPanelOpen(false)}
+      />
+
+      <PlaceDetailSheet
+        open={!!detailPlace}
+        onClose={() => setDetailPlace(null)}
+        place={detailPlace}
+        actions={
+          detailPlace
+            ? [
+                {
+                  icon: Plus,
+                  label: "Go see it",
+                  primary: true,
+                  onClick: () => {
+                    const p = detailPlace;
+                    setDetailPlace(null);
+                    accept();
+                    onAddPlace({
+                      id: crypto.randomUUID(),
+                      name: p.name,
+                      label: p.label ?? "",
+                      lat: p.lat,
+                      lon: p.lon,
+                      visited: false,
+                    });
+                  },
+                },
+              ]
+            : []
+        }
       />
     </div>
   );
