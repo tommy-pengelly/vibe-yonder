@@ -1,7 +1,7 @@
 "use client";
 import { Bell, ChevronRight, Heart, Map as MapIcon, Settings as SettingsIcon } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AuthModal from "@/components/AuthModal";
 import FollowRequests from "@/components/FollowRequests";
 import { useAuthUser, signOut } from "@/lib/auth";
@@ -16,6 +16,19 @@ export default function YouHub() {
   const [mapsCount, setMapsCount] = useState(0);
   const [unread, setUnread] = useState(0);
   const [authOpen, setAuthOpen] = useState(false);
+
+  // Lifetime exploration story — places seen is the headline number.
+  const stats = useMemo(() => {
+    const places = new Set<string>();
+    let metres = 0;
+    for (const y of yonders) {
+      metres += y.walked;
+      for (const d of y.destinations) {
+        places.add(`${d.name}|${d.lat.toFixed(4)},${d.lon.toFixed(4)}`);
+      }
+    }
+    return { placesSeen: places.size, yonders: yonders.length, km: metres / 1000 };
+  }, [yonders]);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,6 +82,19 @@ export default function YouHub() {
             >
               Sign in
             </button>
+          </div>
+        )}
+
+        {stats.yonders > 0 && (
+          <div className="grid grid-cols-3 gap-2">
+            <Stat label="Places seen" value={stats.placesSeen.toString()} hero />
+            <Stat label="Yonders" value={stats.yonders.toString()} />
+            <Stat
+              label="Wandered"
+              value={
+                stats.km >= 10 ? `${Math.round(stats.km)}km` : `${stats.km.toFixed(1)}km`
+              }
+            />
           </div>
         )}
 
@@ -170,6 +196,33 @@ function ProfileHeader({
     </Link>
   ) : (
     <div className="flex items-center gap-3 min-w-0 flex-1">{inner}</div>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  hero,
+}: {
+  label: string;
+  value: string;
+  hero?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-2xl border border-[var(--border)] px-3 py-3 flex flex-col ${
+        hero ? "bg-[var(--surface)]" : ""
+      }`}
+    >
+      <div
+        className={`font-display tabular-nums ${hero ? "text-3xl text-[var(--accent)]" : "text-2xl"}`}
+      >
+        {value}
+      </div>
+      <div className="text-[10px] uppercase tracking-widest text-[var(--muted)] mt-0.5">
+        {label}
+      </div>
+    </div>
   );
 }
 
