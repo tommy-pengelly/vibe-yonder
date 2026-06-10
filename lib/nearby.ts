@@ -15,6 +15,11 @@ export type NearbyPlace = {
   /** Which ambient ring the place surfaced from (Doc 7 Part B). Drives the
    * "far must be notable" gate; absent on the plain single-category path. */
   klass?: "any" | "interesting" | "notable";
+  /** Part of a brand/chain (has a `brand` / `brand:wikidata` tag). We send
+   * people to locally-run places, so chains are deprioritised — but never on a
+   * *notable* place (`wiki` trumps this: the Emirates is a chain by tag, a
+   * landmark by visit). See `score()`. */
+  chain?: boolean;
 };
 
 // Ambient discovery rings (Doc 7 Part B): near = anything in the active

@@ -54,6 +54,8 @@ type OverpassEl = {
     waterway?: string;
     /** Settlement/locality label (city/town/suburb) — not a wander destination. */
     place?: string;
+    brand?: string;
+    "brand:wikidata"?: string;
   };
   lat?: number;
   lon?: number;
@@ -95,8 +97,9 @@ function toPlace(
   const dist = Math.round(haversine(originLat, originLon, plat, plon));
   const wiki = el.tags?.wikipedia ?? el.tags?.wikidata;
   const id = el.type && el.id != null ? `${el.type}/${el.id}` : undefined;
+  const chain = !!(el.tags?.brand || el.tags?.["brand:wikidata"]);
   if (!ambient) {
-    return { name, lat: plat, lon: plon, category: fallbackCat, dist, wiki, id };
+    return { name, lat: plat, lon: plon, category: fallbackCat, dist, wiki, id, chain };
   }
   const { klass, category } = classify(el.tags ?? {}, fallbackCat);
   return {
@@ -107,6 +110,7 @@ function toPlace(
     dist,
     wiki,
     id,
+    chain,
     // A place with a wiki entry beyond the interesting ring is "notable"; close
     // in it keeps its tag-derived class (wiki still lifts its score either way).
     klass: wiki && dist > NEARBY_RINGS.interesting ? "notable" : klass,

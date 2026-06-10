@@ -55,10 +55,18 @@ export const TUNING = {
   REFERENCE_M: 3500,
   DIR_WEIGHT: 1.2, // max turn-around penalty (at confidence 1, directly behind)
   GUIDE_BOOST: 0.5, // draw added to a guide-matching category (modest — leans)
+  // Chain penalty: enough to rank a chain outlet below any independent, but
+  // small enough that a *near* chain still surfaces in a leftover slot when
+  // nothing local is around — "deprioritise, don't hide".
+  CHAIN_PENALTY: 0.12,
   // Notability tier cutoffs (on the 0–1 notability scale).
   TIER_NOTABLE: 0.75,
   TIER_NOTED: 0.5,
 } as const;
+
+// Everyday-amenity categories where "chain vs independent" is meaningful (a
+// café/restaurant/pub). We don't penalise a stadium or museum for a brand tag.
+const CHAINABLE = new Set(["cafe", "food", "pub"]);
 
 /** Interestingness, 0–1 — a "there's a story here" signal, never a rating. */
 export function notability(c: Candidate): number {
@@ -100,11 +108,17 @@ export function score(c: Candidate, ctx: ScoreCtx): Scored {
   const cost = costDist + costDir;
 
   // Draw: notability, lifted by an active guide (leans, never zeroes others),
-  // lowered by how familiar you already are with it.
+  // lowered by how familiar you already are with it, and by a chain penalty so
+  // we favour locally-run places. Notability TRUMPS the chain penalty: a place
+  // with a Wikipedia entry (the Emirates, a landmark brewery) is a notable visit
+  // not a chain to bury — so the penalty only bites generic, non-notable,
+  // branded everyday amenities.
   const guideBoost =
     ctx.activeGuide && c.category === ctx.activeGuide ? TUNING.GUIDE_BOOST : 0;
   const fam = ctx.familiarity?.(c.id) ?? 0;
-  const draw = notability(c) + guideBoost - fam;
+  const chainPenalty =
+    c.chain && !c.wiki && CHAINABLE.has(c.category) ? TUNING.CHAIN_PENALTY : 0;
+  const draw = notability(c) + guideBoost - fam - chainPenalty;
 
   const value = draw - cost;
   return { ...c, dist, draw, cost, value, surfaced: value >= 0 };

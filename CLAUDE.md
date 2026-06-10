@@ -4,6 +4,8 @@ The guide for building this app. Read it before adding anything. The build spec 
 
 (Name: **Vibe Yonder**. We considered "Travel Yonder" and rejected it — "travel" is generic and skews toward tourism; the magic is the everyday local wander.)
 
+> **Rebrand planned (pending): "Yonderful."** Same product, a warmer and more ownable name — the *wonderful local surprise* you stumble onto on foot (an independent coffee, a popup, a gig). Hold the sweep (metadata, splash, copy) until the name is finalised; the *Discovery & curation* direction below is decided.
+
 ---
 
 ## The point (read this first)
@@ -30,6 +32,18 @@ Optimising → reject it. This single question kills most feature-bleed.
 
 ### The numbers are optional
 Metrics serve the story; they are not the point. The app offers a **"hide the numbers"** setting that removes live distances, time, and distance-travelled, leaving just you, the directional marker, and the place name. Treat measurement as something the user can switch off entirely — that's the spirit. Never make a number feel mandatory or central.
+
+---
+
+## Discovery & curation (the engine's taste)
+
+The discovery engine has a **taste**, and it sends people to good, **locally-run** places to *stumble* on — never ranks by stars. (Decided 2026-06; implemented in `score()` / `lib/discovery.ts`.)
+
+- **No ratings — ever.** Off-brand *and* not licence-cleanly free (Google ToS-blocked/paid; Foursquare = popularity). Curate by **notability** (Wikipedia/Wikidata) and **independence**, never by a score shown to the user.
+- **Independent over chain — deprioritise, don't hide.** A branded/chain outlet (`brand` / `brand:wikidata`) ranks below any independent and only fills a leftover slot when nothing local is nearby. **Notability trumps the penalty:** a place with a Wikipedia entry (the Emirates, a landmark brewery) is a *notable visit*, not a chain to bury — so the penalty bites only generic, non-notable, branded everyday amenities (café/food/pub).
+- **Curiosity, not a directory.** We surface things to *stumble on while wandering*; we are **not** Time Out / Yelp. The moment it becomes a browsable what's-on you scroll *before* leaving the house, we've lost it.
+- **Obscure-gem flavour comes from Wikidata/Wikipedia**, not Atlas Obscura (no usable, licence-clean API). The `wikipedia` ring already surfaces the curios; lean on Wikidata typing for *weirder* picks if we want more.
+- **Happenings (popups, pub quizzes, gigs) are a deferred, _community-sourced_ direction** — a venue/local posts a place + time that surfaces mid-wander (rides the social/posts layer; free and fake-proof). The discovery candidate pool is **source-agnostic**, so they slot in later with no rework. **Never** scrape commercial event APIs into a listings feed.
 
 ---
 

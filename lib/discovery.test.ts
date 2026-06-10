@@ -55,6 +55,31 @@ describe("score / guides lean but never blind", () => {
   });
 });
 
+describe("score / independent over chain", () => {
+  const indie: Candidate = { ...base, id: "indie", lat: 51.5009 };
+  const chain: Candidate = { ...base, id: "chain", lat: 51.5009, chain: true };
+
+  it("ranks an independent café above a chain at the same spot", () => {
+    expect(score(indie, ctx()).value).toBeGreaterThan(score(chain, ctx()).value);
+  });
+
+  it("deprioritises but does not hide a near chain (still surfaces)", () => {
+    expect(score(chain, ctx()).surfaced).toBe(true);
+  });
+
+  it("does NOT penalise a notable place that happens to be a brand (the Emirates)", () => {
+    const landmark: Candidate = { ...base, id: "emirates", lat: 51.5009, chain: true, wiki: "Q", category: "history" };
+    const plainChain: Candidate = { ...base, id: "outlet", lat: 51.5009, chain: true };
+    expect(score(landmark, ctx()).value).toBeGreaterThan(score(plainChain, ctx()).value);
+  });
+
+  it("only penalises everyday amenities, not e.g. a branded viewpoint", () => {
+    const brandedView: Candidate = { ...base, id: "v", lat: 51.5009, chain: true, category: "viewpoint" };
+    const plainView: Candidate = { ...base, id: "v2", lat: 51.5009, category: "viewpoint" };
+    expect(score(brandedView, ctx()).value).toBe(score(plainView, ctx()).value);
+  });
+});
+
 describe("score / familiarity", () => {
   it("lowers draw for a familiar place", () => {
     const famCtx = ctx({ familiarity: (id) => (id === "near" ? 1 : 0) });
