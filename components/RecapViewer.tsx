@@ -101,7 +101,6 @@ export default function RecapViewer({ id }: { id: string }) {
       </Link>
       <Recap
         saved={yonder}
-        savedLocally={true}
         savedForLater={savedForLater}
         onRenameTitle={renameTitle}
         onDoAgain={doAgain}

@@ -12,11 +12,9 @@ import ShareControl from "./ShareControl";
 
 type Props = {
   saved: SavedYonder;
-  savedLocally: boolean;
   savedForLater?: boolean;
   onRenameTitle?: (next: string) => void;
   onNewWalk?: () => void;
-  onSave?: () => void;
   onDoAgain?: () => void;
   onSaveForLater?: () => void;
   /** Persist a note about the wander (written here in the recap). */
@@ -32,11 +30,9 @@ const H = 320;
 
 export default function Recap({
   saved,
-  savedLocally,
   savedForLater,
   onRenameTitle,
   onNewWalk,
-  onSave,
   onDoAgain,
   onSaveForLater,
   onSaveCaption,
@@ -272,6 +268,7 @@ export default function Recap({
       </div>
 
       <div className="flex flex-col gap-2 mt-auto">
+        {/* Yonder is auto-kept; this is just who can see it. */}
         <ShareControl saved={saved} />
         {(onDoAgain || onSaveForLater) && (
           <div className="flex items-center gap-2">
@@ -290,23 +287,14 @@ export default function Recap({
                 type="button"
                 onClick={onSaveForLater}
                 disabled={savedForLater}
+                title="Keep these places as a map to wander again"
                 className="flex-1 rounded-full border border-[var(--border)] text-[var(--foreground)] py-2.5 flex items-center justify-center gap-2 hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--foreground)]"
               >
                 <Bookmark className="w-4 h-4" strokeWidth={1.75} />
-                {savedForLater ? "Saved" : "Save for later"}
+                {savedForLater ? "Saved ✓" : "Save places"}
               </button>
             )}
           </div>
-        )}
-        {onSave && (
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={savedLocally}
-            className="rounded-full border border-[var(--accent)]/60 text-[var(--accent)] font-semibold py-3 hover:bg-[var(--accent)] hover:text-black disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-[var(--accent)]"
-          >
-            {savedLocally ? "Saved ✓" : "Save"}
-          </button>
         )}
         {signedInHint && (
           <p className="text-[11px] text-[var(--muted)] text-center">

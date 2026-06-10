@@ -396,8 +396,12 @@ export default function App() {
       mapId: sourceMapIdRef.current ?? undefined,
     };
 
+    // Auto-save: a finished yonder is kept by default (cloud if signed in,
+    // localStorage otherwise). No "Save" button — the recap is just for the
+    // story (caption, places, visibility, do-again).
     setSavedYonder(y);
-    setSavedLocally(false);
+    setSavedLocally(true);
+    void pushYonder(y);
 
     void keepAwake(false);
     setPhase("recap");
@@ -453,16 +457,6 @@ export default function App() {
     },
     [savedLocally],
   );
-
-  const saveYonderAction = useCallback(() => {
-    if (!savedYonder) return;
-    void pushYonder(savedYonder);
-    setSavedLocally(true);
-    // Cloud sync is wired but optional; offer it only when actually available.
-    if (!user && authConfigured) {
-      setAuthOpen(true);
-    }
-  }, [savedYonder, user, authConfigured]);
 
   const saveForLater = useCallback(() => {
     if (!savedYonder || savedForLater) return;
@@ -546,11 +540,9 @@ export default function App() {
         </button>
         <Recap
           saved={savedYonder}
-          savedLocally={savedLocally}
           savedForLater={savedForLater}
           onRenameTitle={renameRecap}
           onNewWalk={newWalk}
-          onSave={saveYonderAction}
           onDoAgain={doAgain}
           onSaveForLater={saveForLater}
           onSaveCaption={editCaption}
