@@ -4,6 +4,15 @@ You are picking up Vibe Yonder mid-build. Read this first, then CLAUDE.md, then 
 
 ---
 
+## Migrations 0011–0013 are APPLIED to the live project (2026-06-10)
+`0011` (yonders.caption), `0012` (places.alias, maps.area), `0013` (posts table + RLS + backfill) are all live and verified (columns present; security advisor clean — only a pre-existing "leaked password protection" auth warning). So caption/alias persist to cloud now, and the **posts** table exists (currently empty — no public content yet).
+
+## Unified posts — status
+- **Built + live:** `posts(kind yonder|map|ways, ref_id, caption, visibility, area, payload)`; `lib/data/posts.ts` (createYonderPost/deleteYonderPost/setMapPost/createWaysPost); **dual-write** from publishYonder/unpublishYonder + setMapVisibility (so posts populate going forward); **ways reports** fully working (post from /ways → feed WaysCard).
+- **NOT yet done (deliberately):** switching the **yonder/map** feed reads from the legacy path (shared_yonders + public maps, still written) onto `posts`. It's id-mapping-sensitive — feed card id currently doubles as the grub key, the Duplicate/Load-map key, and the `/yonder/[id]` (getSharedYonder) key. The community slate is empty (0 posts/grubs), so it can be done cleanly, BUT it should be done with a **signed-in test pass** (magic-link can't be automated here) to confirm grubs/duplicate/shared-yonder-detail still work. Plan: key everything on post.id, update getSharedYonder to read a post, keep FeedMap ref to the map id for Duplicate/Load.
+
+---
+
 ## Latest session (2026-06-09) — rework Docs 4–6 kicked off
 
 Specs `docs/spec/04-foundations-ia.md`, `05-yonder-engine.md`, `06-discovery-completion.md` written. Shipped to `main` and pushed:
