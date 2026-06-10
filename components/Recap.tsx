@@ -1,5 +1,5 @@
 "use client";
-import { Bookmark, Plus, RotateCcw, X } from "lucide-react";
+import { Bookmark, Pencil, Plus, RotateCcw, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
@@ -109,7 +109,7 @@ export default function Recap({
       <header className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1 min-w-0 flex-1">
           <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
-            Walk recap
+            {onRenameTitle ? "Name your wander" : "Walk recap"}
           </span>
           {editing && onRenameTitle ? (
             <input
@@ -131,10 +131,16 @@ export default function Recap({
               type="button"
               onClick={() => onRenameTitle && setEditing(true)}
               disabled={!onRenameTitle}
-              className="font-display text-3xl tracking-tight text-left truncate hover:text-[var(--accent)] disabled:hover:text-[var(--foreground)]"
-              title={onRenameTitle ? "Tap to rename" : undefined}
+              className="group font-display text-3xl tracking-tight text-left flex items-center gap-2 min-w-0 hover:text-[var(--accent)] disabled:hover:text-[var(--foreground)]"
+              title={onRenameTitle ? "Tap to name this wander" : undefined}
             >
-              {saved.name}
+              <span className="truncate">{saved.name}</span>
+              {onRenameTitle && (
+                <Pencil
+                  className="w-4 h-4 shrink-0 text-[var(--muted)] group-hover:text-[var(--accent)]"
+                  strokeWidth={1.75}
+                />
+              )}
             </button>
           )}
         </div>
