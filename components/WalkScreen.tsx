@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSidequest } from "@/hooks/useSidequest";
+import { usePlaceSearch } from "@/hooks/usePlaceSearch";
 import PlaceDetailSheet, { type PlaceLite } from "@/components/PlaceDetailSheet";
 import { getFavourite, pushFavourite, removeFavourite } from "@/lib/data";
 import {
@@ -22,14 +23,11 @@ import {
   RIM_FRACTION,
   SCALE_LEVELS_M,
 } from "@/lib/constants";
-import { rankResults } from "@/lib/rank";
 import { haversine, fmtDist } from "@/lib/geo";
 import { directionsOptions } from "@/lib/maps";
 import type {
   ActiveYonder,
   Fix,
-  GeocodeResult,
-  RankedResult,
   Target,
 } from "@/lib/types";
 import Scope from "./Scope";
@@ -845,43 +843,10 @@ function AddPlaceSheet({
   onAdd: (t: Target) => void;
   onClose: () => void;
 }) {
-  const [q, setQ] = useState("");
-  const [results, setResults] = useState<RankedResult[]>([]);
-  const [loading, setLoading] = useState(false);
-  const reqId = useRef(0);
-
-  useEffect(() => {
-    const term = q.trim();
-    if (term.length < 3) {
-      setResults([]);
-      setLoading(false);
-      return;
-    }
-    const myReq = ++reqId.current;
-    setLoading(true);
-    const handle = setTimeout(async () => {
-      try {
-        const near = position
-          ? `&lat=${position.lat}&lon=${position.lon}`
-          : "";
-        const res = await fetch(
-          `/api/geocode?q=${encodeURIComponent(term)}${near}`,
-        );
-        if (myReq !== reqId.current) return;
-        if (!res.ok) {
-          setResults([]);
-          return;
-        }
-        const data = (await res.json()) as GeocodeResult[];
-        setResults(rankResults(data, position));
-      } catch {
-        if (myReq === reqId.current) setResults([]);
-      } finally {
-        if (myReq === reqId.current) setLoading(false);
-      }
-    }, 550);
-    return () => clearTimeout(handle);
-  }, [q, position]);
+  // Shared debounced search — reads the live position via a ref, so a moving
+  // GPS fix doesn't re-fire the geocode on every tick (the old local copy here
+  // depended on `position` and over-queried during a walk).
+  const { q, setQ, results, loading } = usePlaceSearch(position);
 
   return (
     <BottomSheet open={open} onClose={onClose} title="Add a place" minHeightVh={60}>
