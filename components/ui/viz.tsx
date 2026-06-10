@@ -53,6 +53,48 @@ export function Trace({
   );
 }
 
+// Several traces overlaid in a shared box — every way you've moved around a
+// place/area. Pre-normalise with toUnitBoxMulti so they line up.
+export function Traces({
+  tracks,
+  height = 170,
+  scaleLabel,
+}: {
+  tracks: number[][][];
+  height?: number;
+  scaleLabel?: string;
+}) {
+  return (
+    <div className="recap-mask w-full relative" style={{ height }}>
+      <svg
+        viewBox="0 0 100 100"
+        preserveAspectRatio="xMidYMid meet"
+        className="w-full h-full block"
+        aria-hidden="true"
+      >
+        {tracks.map((pts, i) =>
+          pts.length < 2 ? null : (
+            <path
+              key={i}
+              d={pts
+                .map((p, j) => `${j === 0 ? "M" : "L"}${p[0]},${p[1]}`)
+                .join(" ")}
+              fill="none"
+              stroke="var(--accent)"
+              strokeWidth={1.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.35}
+              vectorEffect="non-scaling-stroke"
+            />
+          ),
+        )}
+      </svg>
+      <ScaleTag label={scaleLabel} />
+    </div>
+  );
+}
+
 export function DotMap({
   points,
   height = 110,

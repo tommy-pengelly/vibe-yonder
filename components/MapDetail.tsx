@@ -5,22 +5,26 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import MapShareControl from "@/components/MapShareControl";
 import PlacePhoto from "@/components/PlacePhoto";
-import { DotMap } from "@/components/ui/viz";
+import { DotMap, Traces } from "@/components/ui/viz";
 import { useAuthUser } from "@/lib/auth";
-import { deleteMap, getMap, saveMap } from "@/lib/data";
-import { fmtDist, spanMeters, toUnitBox } from "@/lib/geo";
-import type { StoredMap, Target } from "@/lib/types";
+import { deleteMap, getMap, loadYonders, saveMap } from "@/lib/data";
+import { fmtDist, spanMeters, toUnitBox, toUnitBoxMulti } from "@/lib/geo";
+import type { SavedYonder, StoredMap, Target } from "@/lib/types";
 
 export default function MapDetail({ id }: { id: string }) {
   const router = useRouter();
   const { user } = useAuthUser();
   const [map, setMap] = useState<StoredMap | null>(null);
+  const [yonders, setYonders] = useState<SavedYonder[]>([]);
   const [seenOpen, setSeenOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     void getMap(id).then((m) => {
       if (!cancelled) setMap(m);
+    });
+    void loadYonders().then((ys) => {
+      if (!cancelled) setYonders(ys.filter((y) => y.mapId === id));
     });
     return () => {
       cancelled = true;
@@ -52,10 +56,12 @@ export default function MapDetail({ id }: { id: string }) {
     void saveMap(next);
   };
 
-  const startYonder = () => {
+  const startYonder = (fresh = false) => {
     if (typeof window === "undefined") return;
-    // Resume: only the still-unvisited items become active targets.
-    const active = map.items.filter((i) => !i.visited);
+    // Resume: only the still-unvisited items. "Yonder again" (fresh) takes the
+    // whole map for another go, leaving the completion record intact.
+    const active =
+      fresh || remaining.length === 0 ? map.items : map.items.filter((i) => !i.visited);
     const targets: Target[] = active.map((i) => ({
       id: crypto.randomUUID(),
       name: i.name,
@@ -124,6 +130,45 @@ export default function MapDetail({ id }: { id: string }) {
               }
             />
           </div>
+        )}
+
+        {yonders.length > 0 && (
+          <section className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
+                The ways you&apos;ve wandered here
+              </span>
+              <span className="text-[10px] text-[var(--muted)] tabular-nums">
+                {yonders.length}
+              </span>
+            </div>
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
+              <Traces
+                tracks={toUnitBoxMulti(yonders.map((y) => y.track))}
+                height={170}
+              />
+            </div>
+            <ul className="flex flex-col divide-y divide-[var(--border)]">
+              {yonders.map((y) => (
+                <li key={y.id}>
+                  <Link
+                    href={`/recap/${y.id}`}
+                    className="flex items-center justify-between py-2.5 hover:text-[var(--accent)]"
+                  >
+                    <span className="text-sm">
+                      {new Date(y.endedAt).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                    <span className="text-xs font-mono text-[var(--muted)] tabular-nums">
+                      {fmtDist(y.walked)} · {y.yondered.toFixed(1)}×
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
 
         <ul className="flex flex-col">
@@ -202,11 +247,15 @@ export default function MapDetail({ id }: { id: string }) {
         <div className="mt-auto flex flex-col gap-2">
           <button
             type="button"
-            onClick={startYonder}
-            disabled={allDone}
+            onClick={() => startYonder(allDone)}
+            disabled={map.items.length === 0}
             className="rounded-full bg-[var(--accent)] text-black font-semibold py-3 active:opacity-80 disabled:opacity-30"
           >
-            {allDone ? "All seen" : "Yonder this map"}
+            {allDone
+              ? "Yonder again"
+              : remaining.length < map.items.length
+                ? "Continue this map"
+                : "Yonder this map"}
           </button>
           <div className="flex items-center gap-2">
             <Link

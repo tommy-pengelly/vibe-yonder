@@ -41,6 +41,33 @@ export function haversine(
 export const fmtDist = (m: number) =>
   m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(2)} km`;
 
+/**
+ * Normalise several tracks into a *shared* 0–100 box (one combined bounding
+ * box), so overlaid traces line up — "all the ways you moved around here".
+ */
+export function toUnitBoxMulti(
+  tracks: { lat: number; lon: number }[][],
+  pad = 12,
+): number[][][] {
+  const all = tracks.flat();
+  if (all.length === 0) return tracks.map(() => []);
+  const lats = all.map((p) => p.lat);
+  const lons = all.map((p) => p.lon);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLon = Math.min(...lons);
+  const maxLon = Math.max(...lons);
+  const kx = Math.cos((((minLat + maxLat) / 2) * Math.PI) / 180);
+  const span = Math.max((maxLon - minLon) * kx, maxLat - minLat, 1e-7);
+  const range = 100 - 2 * pad;
+  return tracks.map((tr) =>
+    tr.map((p) => [
+      pad + (((p.lon - minLon) * kx) / span) * range,
+      100 - pad - ((p.lat - minLat) / span) * range,
+    ]),
+  );
+}
+
 /** Rough real-world extent of a set of points: the bounding-box diagonal. */
 export function spanMeters(pts: { lat: number; lon: number }[]): number {
   if (pts.length < 2) return 0;
