@@ -151,7 +151,7 @@ export async function getSharedYonder(id: string): Promise<FeedYonder | null> {
 type FeedPostRow = {
   id: string;
   user_id: string;
-  kind: "yonder" | "map" | "ways";
+  kind: "yonder" | "map" | "ways" | "mission";
   ref_id: string | null;
   caption: string | null;
   area: string | null;
@@ -281,6 +281,23 @@ export async function loadFeed(
           km: (pl.km as number) ?? 0,
           placesSeen: (pl.placesSeen as number) ?? 0,
           traces: (pl.traces as number[][][]) ?? [],
+        },
+      };
+    }
+    if (r.kind === "mission") {
+      return {
+        kind: "mission",
+        id: r.id,
+        when,
+        mi: {
+          id: r.id,
+          missionId: r.ref_id ?? r.id,
+          who,
+          handle,
+          avatarUrl: p.avatarUrl,
+          when,
+          name: (pl.name as string) ?? "Straight-line mission",
+          distanceM: (pl.distance_m as number) ?? 0,
         },
       };
     }

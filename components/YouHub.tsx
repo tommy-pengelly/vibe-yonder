@@ -1,5 +1,5 @@
 "use client";
-import { Bell, ChevronRight, Footprints, Heart, Map as MapIcon, Settings as SettingsIcon } from "lucide-react";
+import { Bell, ChevronRight, Footprints, Heart, Map as MapIcon, Ruler, Settings as SettingsIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import AuthModal from "@/components/AuthModal";
@@ -110,6 +110,7 @@ export default function YouHub() {
           />
         )}
         <Row href="/maps" Icon={MapIcon} label="Maps" count={mapsCount} />
+        <Row href="/missions" Icon={Ruler} label="Missions" count={0} />
         <Row href="/favourites" Icon={Heart} label="Favourites" count={favourites.length} />
         {user && <Row href="/you/notifications" Icon={Bell} label="Notifications" count={unread} />}
 

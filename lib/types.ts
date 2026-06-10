@@ -206,11 +206,24 @@ export type FeedWays = {
   traces: number[][][]; // overlaid normalised 0–100 traces
 };
 
+/** A "mission set" post — someone created a straight-line challenge. */
+export type FeedMission = {
+  id: string; // post id
+  missionId: string; // the mission to open
+  who: string;
+  handle: string;
+  avatarUrl?: string;
+  when: string;
+  name: string;
+  distanceM: number;
+};
+
 /** One item in the unified feed — a community post of any kind. */
 export type FeedItem =
   | { kind: "yonder"; id: string; when: string; y: FeedYonder }
   | { kind: "map"; id: string; when: string; m: FeedMap }
-  | { kind: "ways"; id: string; when: string; w: FeedWays };
+  | { kind: "ways"; id: string; when: string; w: FeedWays }
+  | { kind: "mission"; id: string; when: string; mi: FeedMission };
 
 /** A public map (collection) as the Community cards consume it. */
 export type FeedMap = {

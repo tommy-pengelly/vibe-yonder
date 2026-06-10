@@ -3,7 +3,7 @@ import { Search, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
-import { Empty, Loading, MapCard, WaysCard, YonderCard } from "@/components/feed/Cards";
+import { Empty, Loading, MapCard, MissionCard, WaysCard, YonderCard } from "@/components/feed/Cards";
 import { useFeedActions } from "@/components/feed/useFeedActions";
 import {
   BottomSheet,
@@ -143,6 +143,7 @@ function FeedItemCard({
   a: ReturnType<typeof useFeedActions>;
 }) {
   if (item.kind === "ways") return <WaysCard w={item.w} />;
+  if (item.kind === "mission") return <MissionCard mi={item.mi} />;
   if (item.kind === "map") {
     const m = item.m;
     return (

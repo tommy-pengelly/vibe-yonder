@@ -89,6 +89,15 @@ export async function createMission(opts: {
     console.warn("createMission:", error.message);
     return null;
   }
+  // Post it flat to the community feed (kind 'mission' → ref_id = mission id).
+  const { error: postErr } = await c.sb.from("posts").insert({
+    user_id: c.uid,
+    kind: "mission",
+    ref_id: id,
+    visibility: "public",
+    payload: { name: opts.name ?? null, distance_m: opts.distanceM },
+  });
+  if (postErr) console.warn("createMission post:", postErr.message);
   return id;
 }
 

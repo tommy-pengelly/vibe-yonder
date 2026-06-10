@@ -4,9 +4,10 @@
 // useFeedActions.
 import { Bookmark, Copy, Navigation, Sprout } from "lucide-react";
 import Link from "next/link";
+import { Ruler } from "lucide-react";
 import { DotMap, Trace, Traces } from "@/components/ui/viz";
 import { fmtDist } from "@/lib/geo";
-import type { FeedMap, FeedWays, FeedYonder } from "@/lib/types";
+import type { FeedMap, FeedMission, FeedWays, FeedYonder } from "@/lib/types";
 
 export { DotMap, Trace } from "@/components/ui/viz";
 
@@ -211,6 +212,23 @@ export function WaysCard({ w }: { w: FeedWays }) {
         {w.placesSeen} places seen · {w.count} ways · {fmtDist(w.km * 1000)} wandered
       </div>
     </div>
+  );
+}
+
+export function MissionCard({ mi }: { mi: FeedMission }) {
+  return (
+    <Link
+      href={`/missions/${mi.missionId}`}
+      className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3.5 hover:border-[var(--accent)]/50"
+    >
+      <Ruler className="w-5 h-5 text-[var(--accent)] shrink-0" strokeWidth={1.75} />
+      <div className="min-w-0 flex-1">
+        <div className="font-display text-base truncate">{mi.name}</div>
+        <div className="text-[11px] text-[var(--muted)]">
+          {mi.handle} · {mi.when} · set a {fmtDist(mi.distanceM)} line · see who&apos;s winning
+        </div>
+      </div>
+    </Link>
   );
 }
 
