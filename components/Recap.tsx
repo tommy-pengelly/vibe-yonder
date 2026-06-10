@@ -1,8 +1,11 @@
 "use client";
 import { Bookmark, Pencil, Plus, RotateCcw, X } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
+import { useAuthUser } from "@/lib/auth";
+import { createMission } from "@/lib/data";
 import { fmtDist, fmtDuration } from "@/lib/geo";
 import { projectTrack, summarize } from "@/lib/stats";
 import { MEDAL_LABEL } from "@/lib/straightline";
@@ -106,6 +109,24 @@ export default function Recap({
       : summary.yondered.toFixed(summary.yondered >= 2 ? 1 : 2);
 
   const sl = saved.play === "straightline" ? saved.straightLine : undefined;
+
+  const router = useRouter();
+  const { user } = useAuthUser();
+  const [missionBusy, setMissionBusy] = useState(false);
+
+  const makeMission = async () => {
+    const b = saved.destinations[0];
+    if (!saved.origin || !b || missionBusy) return;
+    setMissionBusy(true);
+    const id = await createMission({
+      name: saved.name,
+      a: saved.origin,
+      b: { lat: b.lat, lon: b.lon },
+      distanceM: saved.direct,
+    });
+    if (id) router.push(`/missions/${id}`);
+    else setMissionBusy(false);
+  };
 
   return (
     <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-6 pb-10 gap-6">
@@ -223,6 +244,25 @@ export default function Recap({
           <Tile label="Yondered" value={`${yonderedDisplay}×`} hero />
         </div>
       )}
+
+      {sl &&
+        (saved.missionId ? (
+          <Link
+            href={`/missions/${saved.missionId}`}
+            className="rounded-full border border-[var(--accent)]/60 text-[var(--accent)] font-semibold py-2.5 text-center hover:bg-[var(--accent)] hover:text-black"
+          >
+            View the scoreboard
+          </Link>
+        ) : user && saved.origin && saved.destinations[0] ? (
+          <button
+            type="button"
+            onClick={makeMission}
+            disabled={missionBusy}
+            className="rounded-full border border-[var(--accent)]/60 text-[var(--accent)] font-semibold py-2.5 hover:bg-[var(--accent)] hover:text-black disabled:opacity-40"
+          >
+            {missionBusy ? "Creating…" : "Make this a mission"}
+          </button>
+        ) : null)}
 
       {(saved.destinations.length > 0 || onSavePlaces) && (
         <section className="flex flex-col gap-3">

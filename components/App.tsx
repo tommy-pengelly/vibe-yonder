@@ -15,6 +15,7 @@ import { summarize } from "@/lib/stats";
 import {
   getMap,
   pushYonder,
+  recordAttempt,
   saveMap,
   saveYonderPlaces,
   updateYonder,
@@ -115,6 +116,7 @@ export default function App() {
         name?: string;
         play?: PlayMode;
         missionId?: string;
+        origin?: { lat: number; lon: number };
       };
       if (payload?.targets?.length || payload?.play === "ambient") {
         void beginYonder(payload.targets ?? [], payload.mode, {
@@ -123,6 +125,7 @@ export default function App() {
           name: payload.name,
           play: payload.play,
           missionId: payload.missionId,
+          origin: payload.origin,
         });
       }
     } catch {
@@ -212,6 +215,7 @@ export default function App() {
         name?: string;
         play?: PlayMode;
         missionId?: string;
+        origin?: { lat: number; lon: number };
       } = {},
     ) => {
       await requestAccess();
@@ -226,6 +230,9 @@ export default function App() {
         name: opts.name,
         play: opts.play,
         missionId: opts.missionId,
+        // Mission attempts pin A to the mission's start so everyone walks the
+        // same line; a free straight-line captures A on the first fix instead.
+        origin: opts.origin,
       };
       setYonder(newYonder);
       setTrack([]);
@@ -433,6 +440,11 @@ export default function App() {
     setSavedYonder(y);
     setSavedLocally(true);
     void pushYonder(y);
+
+    // A mission attempt → record it on the scoreboard (keeps your best).
+    if (y.missionId && straightLine) {
+      void recordAttempt(y.missionId, straightLine);
+    }
 
     void keepAwake(false);
     setPhase("recap");

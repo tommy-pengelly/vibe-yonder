@@ -139,8 +139,18 @@ export default function CreateHub({
           <span>Pick a far point, then hold the line to it.</span>
           <button
             type="button"
+            onClick={() => {
+              onClose();
+              router.push("/missions");
+            }}
+            className="ml-auto text-[var(--accent)] hover:opacity-80"
+          >
+            Missions
+          </button>
+          <button
+            type="button"
             onClick={() => setLineMode(false)}
-            className="ml-auto text-[var(--muted)] hover:text-[var(--foreground)]"
+            className="text-[var(--muted)] hover:text-[var(--foreground)]"
           >
             Cancel
           </button>
