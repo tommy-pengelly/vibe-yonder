@@ -136,23 +136,13 @@ export default function CreateHub({
       {lineMode && (
         <div className="flex items-center gap-2 -mt-2 text-xs text-[var(--muted)]">
           <Ruler className="w-3.5 h-3.5 text-[var(--accent)]" strokeWidth={1.75} />
-          <span>Pick a far point, then hold the line to it.</span>
-          <button
-            type="button"
-            onClick={() => {
-              onClose();
-              router.push("/missions");
-            }}
-            className="ml-auto text-[var(--accent)] hover:opacity-80"
-          >
-            Missions
-          </button>
+          <span>Pick the far point you&apos;ll hold a line to.</span>
           <button
             type="button"
             onClick={() => setLineMode(false)}
-            className="text-[var(--muted)] hover:text-[var(--foreground)]"
+            className="ml-auto text-[var(--muted)] hover:text-[var(--foreground)]"
           >
-            Cancel
+            Back
           </button>
         </div>
       )}
