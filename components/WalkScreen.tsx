@@ -24,7 +24,7 @@ import {
 } from "@/lib/constants";
 import { rankResults } from "@/lib/rank";
 import { haversine, fmtDist } from "@/lib/geo";
-import { externalDirectionsUrl } from "@/lib/maps";
+import { directionsOptions } from "@/lib/maps";
 import type {
   ActiveYonder,
   Fix,
@@ -88,6 +88,7 @@ export default function WalkScreen({
   const [panelOpen, setPanelOpen] = useState(false);
   const [sidequestsOn, setSidequestsOn] = useState(true);
   const [detailPlace, setDetailPlace] = useState<PlaceLite | null>(null);
+  const [directionsOpen, setDirectionsOpen] = useState(false);
 
   // A gentle nudge toward something nearby worth a detour. Paused while a
   // sheet is open (don't interrupt) and while the walk itself is paused.
@@ -554,15 +555,14 @@ export default function WalkScreen({
                   <Pause className="w-4 h-4" strokeWidth={1.75} />
                 </button>
                 {activeTarget && (
-                  <a
-                    href={externalDirectionsUrl(activeTarget)}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => setDirectionsOpen(true)}
                     className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] inline-flex items-center gap-1"
                   >
                     Just take me there
                     <ExternalLink className="w-3 h-3" strokeWidth={1.75} />
-                  </a>
+                  </button>
                 )}
                 <button
                   type="button"
@@ -652,6 +652,34 @@ export default function WalkScreen({
             : []
         }
       />
+
+      <BottomSheet
+        open={directionsOpen}
+        onClose={() => setDirectionsOpen(false)}
+        title="Open in maps"
+      >
+        <p className="text-xs text-[var(--muted)] -mt-1">
+          Hand off to a maps app for walking directions — then come back and
+          keep wandering.
+        </p>
+        <ul className="flex flex-col divide-y divide-[var(--border)]">
+          {activeTarget &&
+            directionsOptions(activeTarget).map((o) => (
+              <li key={o.id}>
+                <a
+                  href={o.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setDirectionsOpen(false)}
+                  className="flex items-center justify-between py-3 hover:text-[var(--accent)]"
+                >
+                  <span className="font-display text-lg">{o.label}</span>
+                  <ExternalLink className="w-4 h-4 text-[var(--muted)]" strokeWidth={1.75} />
+                </a>
+              </li>
+            ))}
+        </ul>
+      </BottomSheet>
 
       <BottomSheet
         open={missedOpen}
