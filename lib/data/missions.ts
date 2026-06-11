@@ -101,6 +101,22 @@ export async function createMission(opts: {
   return id;
 }
 
+/** Missions the current user created. */
+export async function loadMyMissions(): Promise<Mission[]> {
+  const c = await ctx();
+  if (!c) return [];
+  const { data } = await c.sb
+    .from("missions")
+    .select("*")
+    .eq("user_id", c.uid)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  const rows = (data as MissionRow[]) ?? [];
+  if (rows.length === 0) return [];
+  const handles = await handlesFor(rows.map((r) => r.user_id));
+  return rows.map((r) => rowToMission(r, `@${handles[r.user_id] ?? "wanderer"}`));
+}
+
 export async function loadMissions(): Promise<Mission[]> {
   const sb = getSupabase();
   if (!sb) return [];

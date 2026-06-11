@@ -15,7 +15,7 @@ import {
 } from "@/lib/data";
 import type { FavouritePlace, RankedResult } from "@/lib/types";
 
-export default function FavouritesView() {
+export default function FavouritesView({ embedded = false }: { embedded?: boolean } = {}) {
   const [favourites, setFavourites] = useState<FavouritePlace[] | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -91,25 +91,8 @@ export default function FavouritesView() {
     });
   };
 
-  return (
-    <PageScaffold>
-      <PageHeader
-        kicker="Favourites"
-        title="Places you love"
-        backHref="/you"
-        action={
-          <button
-            type="button"
-            onClick={() => setAddOpen(true)}
-            aria-label="Add a favourite"
-            className="size-9 rounded-full bg-[var(--accent)] text-black flex items-center justify-center active:opacity-80"
-          >
-            <Plus className="w-4 h-4" strokeWidth={2} />
-          </button>
-        }
-      />
-
-      {favourites === null ? null : favourites.length === 0 ? (
+  const grid =
+    favourites === null ? null : favourites.length === 0 ? (
         <EmptyState
           icon={Heart}
           title="No favourites yet"
@@ -187,13 +170,51 @@ export default function FavouritesView() {
             </div>
           ))}
         </div>
-      )}
+      );
 
-      <AddFavouriteSheet
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
-        onAdd={addFavourite}
+  const addSheet = (
+    <AddFavouriteSheet
+      open={addOpen}
+      onClose={() => setAddOpen(false)}
+      onAdd={addFavourite}
+    />
+  );
+
+  if (embedded) {
+    return (
+      <div className="flex flex-col gap-3">
+        <button
+          type="button"
+          onClick={() => setAddOpen(true)}
+          className="self-end inline-flex items-center gap-1.5 text-sm text-[var(--accent)] hover:opacity-80"
+        >
+          <Plus className="w-4 h-4" strokeWidth={1.75} /> Add a favourite
+        </button>
+        {grid}
+        {addSheet}
+      </div>
+    );
+  }
+
+  return (
+    <PageScaffold>
+      <PageHeader
+        kicker="Favourites"
+        title="Places you love"
+        backHref="/you"
+        action={
+          <button
+            type="button"
+            onClick={() => setAddOpen(true)}
+            aria-label="Add a favourite"
+            className="size-9 rounded-full bg-[var(--accent)] text-black flex items-center justify-center active:opacity-80"
+          >
+            <Plus className="w-4 h-4" strokeWidth={2} />
+          </button>
+        }
       />
+      {grid}
+      {addSheet}
     </PageScaffold>
   );
 }

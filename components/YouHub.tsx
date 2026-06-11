@@ -1,32 +1,43 @@
 "use client";
-import { Bell, ChevronRight, Footprints, Heart, Map as MapIcon, Ruler, Settings as SettingsIcon } from "lucide-react";
+import {
+  Bell,
+  Footprints,
+  Ruler,
+  Settings as SettingsIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import AuthModal from "@/components/AuthModal";
+import FavouritesView from "@/components/FavouritesView";
 import FollowRequests from "@/components/FollowRequests";
+import { SegmentedTabs } from "@/components/ui";
+import { DotMap, Trace } from "@/components/ui/viz";
 import { useAuthUser, signOut } from "@/lib/auth";
-import { Trace } from "@/components/ui/viz";
-import { loadFavourites, loadMaps, loadYonders, unreadNotificationCount } from "@/lib/data";
-import { fmtDist, toUnitBox } from "@/lib/geo";
+import {
+  loadMaps,
+  loadMyMissions,
+  loadYonders,
+  type Mission,
+  unreadNotificationCount,
+} from "@/lib/data";
+import { fmtDist, spanMeters, toUnitBox } from "@/lib/geo";
 import { MEDAL_LABEL } from "@/lib/straightline";
-import type { FavouritePlace, SavedYonder } from "@/lib/types";
+import type { SavedYonder, StoredMap } from "@/lib/types";
+
+type Tab = "yonders" | "maps" | "missions" | "favourites";
 
 export default function YouHub() {
   const { user } = useAuthUser();
   const [yonders, setYonders] = useState<SavedYonder[]>([]);
-  const [favourites, setFavourites] = useState<FavouritePlace[]>([]);
-  const [mapsCount, setMapsCount] = useState(0);
   const [unread, setUnread] = useState(0);
   const [authOpen, setAuthOpen] = useState(false);
+  const [tab, setTab] = useState<Tab>("yonders");
 
-  // Lifetime exploration story, places seen is the headline number.
   const stats = useMemo(() => {
     const places = new Set<string>();
     let metres = 0;
     for (const y of yonders) {
       metres += y.walked ?? 0;
-      // Free-wander / ambient yonders can have no destinations; guard against
-      // any partial record so the whole page never crashes on one bad entry.
       for (const d of y.destinations ?? []) {
         if (d?.lat == null || d?.lon == null) continue;
         places.add(`${d.name}|${d.lat.toFixed(4)},${d.lon.toFixed(4)}`);
@@ -37,18 +48,13 @@ export default function YouHub() {
 
   useEffect(() => {
     let cancelled = false;
-    void Promise.all([
-      loadYonders(),
-      loadFavourites(),
-      loadMaps(),
-      unreadNotificationCount(),
-    ]).then(([y, f, m, n]) => {
-      if (cancelled) return;
-      setYonders(y);
-      setFavourites(f);
-      setMapsCount(m.length);
-      setUnread(n);
-    });
+    void Promise.all([loadYonders(), unreadNotificationCount()]).then(
+      ([y, n]) => {
+        if (cancelled) return;
+        setYonders(y);
+        setUnread(n);
+      },
+    );
     return () => {
       cancelled = true;
     };
@@ -56,39 +62,50 @@ export default function YouHub() {
 
   return (
     <>
-      <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-12 pb-8 gap-7">
+      <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-12 pb-8 gap-6">
+        {/* Profile summary */}
         <header className="flex items-center justify-between gap-3">
-          <ProfileHeader
-            username={user?.username}
-            displayName={user?.displayName}
-            email={user?.email}
-          />
-          <Link
-            href="/you/settings"
-            aria-label="Settings"
-            className="size-9 shrink-0 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]"
-          >
-            <SettingsIcon className="w-4 h-4" strokeWidth={1.75} />
-          </Link>
-        </header>
-
-        {!user && (
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/40 px-4 py-4 flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-sm">
-                Sign in to keep your yonders, favourites and lists across
-                devices.
-              </p>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="size-14 shrink-0 rounded-full bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center font-display text-xl text-[var(--warm)]">
+              {(user?.displayName ?? user?.username ?? user?.email ?? "G")
+                .replace(/[@.]/g, "")
+                .slice(0, 2)
+                .toUpperCase()}
             </div>
-            <button
-              type="button"
-              onClick={() => setAuthOpen(true)}
-              className="rounded-full bg-[var(--accent)] text-black text-sm font-semibold px-4 py-2 active:opacity-80 shrink-0"
-            >
-              Sign in
-            </button>
+            <div className="min-w-0">
+              <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
+                You
+              </span>
+              <div className="font-display text-2xl tracking-tight leading-tight truncate">
+                {user?.displayName ?? user?.email ?? "Guest"}
+              </div>
+              {user?.username && (
+                <div className="text-xs text-[var(--accent)]">@{user.username}</div>
+              )}
+            </div>
           </div>
-        )}
+          <div className="flex items-center gap-2 shrink-0">
+            {user && (
+              <Link
+                href="/you/notifications"
+                aria-label="Notifications"
+                className="relative size-9 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]"
+              >
+                <Bell className="w-4 h-4" strokeWidth={1.75} />
+                {unread > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-[var(--accent)]" />
+                )}
+              </Link>
+            )}
+            <Link
+              href="/you/settings"
+              aria-label="Settings"
+              className="size-9 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]"
+            >
+              <SettingsIcon className="w-4 h-4" strokeWidth={1.75} />
+            </Link>
+          </div>
+        </header>
 
         {stats.yonders > 0 && (
           <div className="grid grid-cols-3 gap-2">
@@ -103,45 +120,41 @@ export default function YouHub() {
           </div>
         )}
 
-        {stats.yonders > 0 && (
-          <Row
-            href="/ways"
-            Icon={Footprints}
-            label="Your yonders"
-            count={stats.yonders}
-          />
-        )}
-        <Row href="/maps" Icon={MapIcon} label="Maps" count={mapsCount} />
-        <Row href="/missions" Icon={Ruler} label="Missions" count={0} />
-        <Row href="/favourites" Icon={Heart} label="Favourites" count={favourites.length} />
-        {user && <Row href="/you/notifications" Icon={Bell} label="Notifications" count={unread} />}
+        {user?.username ? (
+          <Link
+            href={`/u/${user.username}`}
+            className="rounded-full border border-[var(--border)] text-[var(--foreground)] py-2.5 text-center text-sm font-medium hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          >
+            See your public profile
+          </Link>
+        ) : !user ? (
+          <button
+            type="button"
+            onClick={() => setAuthOpen(true)}
+            className="rounded-full bg-[var(--accent)] text-black py-2.5 text-center text-sm font-semibold active:opacity-80"
+          >
+            Sign in to keep your yonders across devices
+          </button>
+        ) : null}
 
         {user && <FollowRequests />}
 
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
-              History
-            </h2>
-            {yonders.length > 0 && (
-              <span className="text-[10px] text-[var(--muted)] tabular-nums">
-                {yonders.length}
-              </span>
-            )}
-          </div>
+        <SegmentedTabs<Tab>
+          variant="underline"
+          value={tab}
+          onChange={setTab}
+          tabs={[
+            { value: "yonders", label: "Yonders" },
+            { value: "maps", label: "Maps" },
+            { value: "missions", label: "Missions" },
+            { value: "favourites", label: "Favourites" },
+          ]}
+        />
 
-          {yonders.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">
-              No yonders yet, go wander.
-            </p>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {yonders.slice(0, 12).map((y) => (
-                <HistoryCard key={y.id} y={y} />
-              ))}
-            </div>
-          )}
-        </section>
+        {tab === "yonders" && <YondersTab yonders={yonders} />}
+        {tab === "maps" && <MapsTab />}
+        {tab === "missions" && <MissionsTab />}
+        {tab === "favourites" && <FavouritesView embedded />}
 
         {user && (
           <div className="mt-auto flex items-center justify-center pt-4">
@@ -160,35 +173,134 @@ export default function YouHub() {
   );
 }
 
-function ProfileHeader({
-  username,
-  displayName,
-  email,
-}: {
-  username?: string;
-  displayName?: string;
-  email?: string;
-}) {
-  const name = displayName ?? email ?? "Guest";
-  const initials = (displayName ?? username ?? email ?? "G").replace(/[@.]/g, "").slice(0, 2).toUpperCase();
-  const inner = (
-    <>
-      <div className="size-14 shrink-0 rounded-full bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center font-display text-xl text-[var(--warm)]">
-        {initials}
-      </div>
-      <div className="min-w-0">
-        <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">You</span>
-        <div className="font-display text-2xl tracking-tight leading-tight truncate">{name}</div>
-        {username && <div className="text-xs text-[var(--accent)]">@{username} · View profile</div>}
-      </div>
-    </>
+// ----- Tabs -----
+
+function YondersTab({ yonders }: { yonders: SavedYonder[] }) {
+  const [shown, setShown] = useState(8);
+  if (yonders.length === 0) {
+    return <p className="text-sm text-[var(--muted)] py-6">No yonders yet, go wander.</p>;
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      <Link
+        href="/ways"
+        className="self-end inline-flex items-center gap-1.5 text-sm text-[var(--accent)] hover:opacity-80"
+      >
+        <Footprints className="w-4 h-4" strokeWidth={1.75} /> All your ways
+      </Link>
+      {yonders.slice(0, shown).map((y) => (
+        <HistoryCard key={y.id} y={y} />
+      ))}
+      {shown < yonders.length && (
+        <button
+          type="button"
+          onClick={() => setShown((s) => s + 8)}
+          className="rounded-full border border-[var(--border)] py-2.5 text-sm text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--muted)]"
+        >
+          Load more ({yonders.length - shown})
+        </button>
+      )}
+    </div>
   );
-  return username ? (
-    <Link href={`/u/${username}`} className="flex items-center gap-3 min-w-0 flex-1">
-      {inner}
-    </Link>
-  ) : (
-    <div className="flex items-center gap-3 min-w-0 flex-1">{inner}</div>
+}
+
+function MapsTab() {
+  const [maps, setMaps] = useState<StoredMap[] | null>(null);
+  useEffect(() => {
+    let c = false;
+    void loadMaps().then((m) => !c && setMaps(m));
+    return () => {
+      c = true;
+    };
+  }, []);
+  if (maps === null) return null;
+  return (
+    <div className="flex flex-col gap-3">
+      <Link
+        href="/maps/new"
+        className="self-end inline-flex items-center gap-1.5 text-sm text-[var(--accent)] hover:opacity-80"
+      >
+        + New map
+      </Link>
+      {maps.length === 0 ? (
+        <p className="text-sm text-[var(--muted)] py-2">
+          No maps yet. Build a set of places to wander between.
+        </p>
+      ) : (
+        maps.map((m) => {
+          const remaining = m.items.filter((i) => !i.visited).length;
+          return (
+            <Link
+              key={m.id}
+              href={`/maps/${m.id}`}
+              className="block rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden hover:border-[var(--accent)]/50"
+            >
+              <div className="px-4 pt-4 pb-1">
+                <div className="font-display text-xl tracking-tight truncate">
+                  {m.name}
+                </div>
+                <div className="text-xs text-[var(--warm)] mt-0.5">
+                  {m.mode === "ordered" ? "Step through" : "Wander between"} ·{" "}
+                  {remaining === 0 ? "all seen" : `${remaining} left`}
+                </div>
+              </div>
+              {m.items.length > 0 && (
+                <DotMap
+                  points={toUnitBox(m.items)}
+                  height={120}
+                  scaleLabel={
+                    m.items.length > 1
+                      ? `${fmtDist(spanMeters(m.items))} across`
+                      : undefined
+                  }
+                />
+              )}
+            </Link>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+function MissionsTab() {
+  const [missions, setMissions] = useState<Mission[] | null>(null);
+  useEffect(() => {
+    let c = false;
+    void loadMyMissions().then((m) => !c && setMissions(m));
+    return () => {
+      c = true;
+    };
+  }, []);
+  if (missions === null) return null;
+  if (missions.length === 0) {
+    return (
+      <p className="text-sm text-[var(--muted)] py-2">
+        No missions yet. Finish a straight-line yonder, then make it a mission.
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {missions.map((m) => (
+        <Link
+          key={m.id}
+          href={`/missions/${m.id}`}
+          className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3.5 hover:border-[var(--accent)]/50"
+        >
+          <Ruler className="w-5 h-5 text-[var(--accent)] shrink-0" strokeWidth={1.75} />
+          <div className="min-w-0 flex-1">
+            <div className="font-display text-lg truncate">
+              {m.name ?? "Straight-line mission"}
+            </div>
+            <div className="text-xs text-[var(--muted)]">
+              {fmtDist(m.distanceM)} · {m.attempts ?? 0}{" "}
+              {m.attempts === 1 ? "attempt" : "attempts"}
+            </div>
+          </div>
+        </Link>
+      ))}
+    </div>
   );
 }
 
@@ -246,52 +358,5 @@ function Stat({
         {label}
       </div>
     </div>
-  );
-}
-
-function Row({
-  href,
-  Icon,
-  label,
-  count,
-  disabled,
-}: {
-  href: string;
-  Icon: typeof Heart;
-  label: string;
-  count: number;
-  disabled?: boolean;
-}) {
-  const content = (
-    <>
-      <Icon className="w-5 h-5 text-[var(--muted)]" strokeWidth={1.75} />
-      <div className="flex-1 font-display text-lg">{label}</div>
-      {count > 0 && (
-        <div className="text-xs font-mono text-[var(--muted)] tabular-nums">
-          {count}
-        </div>
-      )}
-      <ChevronRight className="w-4 h-4 text-[var(--muted)]" strokeWidth={1.75} />
-    </>
-  );
-  const className =
-    "w-full flex items-center gap-3 py-3 border-b border-[var(--border)]";
-  if (disabled) {
-    return (
-      <div
-        aria-disabled="true"
-        className={`${className} opacity-50 cursor-not-allowed`}
-      >
-        {content}
-      </div>
-    );
-  }
-  return (
-    <Link
-      href={href}
-      className={`${className} hover:text-[var(--accent)] [&_svg]:hover:text-[var(--accent)]`}
-    >
-      {content}
-    </Link>
   );
 }
