@@ -15,7 +15,13 @@ import {
 } from "@/lib/data";
 import type { FavouritePlace, RankedResult } from "@/lib/types";
 
-export default function FavouritesView({ embedded = false }: { embedded?: boolean } = {}) {
+export default function FavouritesView({
+  embedded = false,
+  query = "",
+}: {
+  embedded?: boolean;
+  query?: string;
+} = {}) {
   const [favourites, setFavourites] = useState<FavouritePlace[] | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -91,16 +97,31 @@ export default function FavouritesView({ embedded = false }: { embedded?: boolea
     });
   };
 
+  const q = query.trim().toLowerCase();
+  const shown = (favourites ?? []).filter(
+    (f) => !q || (f.alias ?? "").toLowerCase().includes(q) || f.name.toLowerCase().includes(q),
+  );
+
   const grid =
     favourites === null ? null : favourites.length === 0 ? (
-        <EmptyState
-          icon={Heart}
-          title="No places yet"
-          body="Heart a place on a yonder to keep it here, then nickname it, Home, Work, the best café, for one-tap wandering."
-        />
+        // Embedded (the Me > Places tab), the visited list sits below, so keep
+        // the empty prompt light rather than a full-page EmptyState.
+        embedded ? (
+          <p className="text-sm text-[var(--muted)]">
+            No saved places yet. Heart a place to keep it here.
+          </p>
+        ) : (
+          <EmptyState
+            icon={Heart}
+            title="No places yet"
+            body="Heart a place on a yonder to keep it here, then nickname it, Home, Work, the best café, for one-tap wandering."
+          />
+        )
+      ) : shown.length === 0 ? (
+        <p className="text-sm text-[var(--muted)]">No saved places match.</p>
       ) : (
         <div className="flex flex-col gap-2">
-          {favourites.map((f) => (
+          {shown.map((f) => (
             <div
               key={f.id}
               className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5"
