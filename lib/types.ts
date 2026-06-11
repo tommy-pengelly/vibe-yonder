@@ -194,6 +194,9 @@ export type FeedYonder = {
   destinations: Destination[]; // the shared places (to "Yonder this")
   grubs: number;
   grubbed: boolean;
+  /** Straight-line yonders carry their medal + mission, shown on the card. */
+  medal?: Medal;
+  missionId?: string;
 };
 
 /** A "ways report" post — someone's exploration overview — in the feed. */

@@ -49,6 +49,10 @@ export async function createYonderPost(
       yondered: y.yondered,
       trace_public: obfuscateTrace(y.track, opts.zone),
       destinations: y.destinations,
+      // Straight-line: the medal is the card's highlight, with a link to the
+      // mission's board where the live ranking lives.
+      medal: y.straightLine?.medal,
+      missionId: y.missionId,
     },
   });
   if (error) console.warn(`createYonderPost: ${TABLE_MISSING} (${error.message})`);

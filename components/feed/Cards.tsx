@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Ruler } from "lucide-react";
 import { DotMap, Trace, Traces } from "@/components/ui/viz";
 import { fmtDist } from "@/lib/geo";
+import { MEDAL_LABEL } from "@/lib/straightline";
 import type { FeedMap, FeedMission, FeedWays, FeedYonder } from "@/lib/types";
 
 export { DotMap, Trace } from "@/components/ui/viz";
@@ -76,14 +77,36 @@ export function YonderCard({
         <Trace points={y.trace} height={150} scaleLabel={fmtDist(y.walked)} />
         <div className="absolute left-4 bottom-2.5 font-mono text-[11px] text-[var(--muted)]">{y.area}</div>
         <div className="absolute right-4 top-3 text-right">
-          <div className="font-display text-[26px] leading-none text-[var(--accent)] tabular-nums tracking-tight">
-            {fmtYondered(y.yondered)}×
-          </div>
-          <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--muted)] mt-0.5">Yondered</div>
+          {y.medal ? (
+            <>
+              <div className="font-display text-[22px] leading-none text-[var(--accent)] tracking-tight">
+                {MEDAL_LABEL[y.medal]}
+              </div>
+              <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--muted)] mt-0.5">
+                Straight line
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="font-display text-[26px] leading-none text-[var(--accent)] tabular-nums tracking-tight">
+                {fmtYondered(y.yondered)}×
+              </div>
+              <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--muted)] mt-0.5">Yondered</div>
+            </>
+          )}
         </div>
       </Link>
       <div className="font-mono text-[11px] text-[var(--muted)] px-3.5 pt-3 tabular-nums">
-        {fmtDist(y.walked)} · {y.mins} min · {y.places} {y.places === 1 ? "place" : "places"} seen
+        {y.medal && y.missionId ? (
+          <Link href={`/missions/${y.missionId}`} className="hover:text-[var(--accent)]">
+            On a mission · see the board
+          </Link>
+        ) : (
+          <>
+            {fmtDist(y.walked)} · {y.mins} min · {y.places}{" "}
+            {y.places === 1 ? "place" : "places"} seen
+          </>
+        )}
       </div>
       <div className="flex items-center gap-2 px-3.5 pt-2 pb-3.5">
         <GrubButton count={grub.count} active={grub.active} onToggle={onGrub} />

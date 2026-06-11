@@ -6,6 +6,7 @@ import type {
   FeedMap,
   FeedWays,
   FeedYonder,
+  Medal,
 } from "../types";
 import { ctx } from "./ctx";
 import { grubCountsFor } from "./social";
@@ -188,6 +189,8 @@ async function shapeFeedYonders(rows: FeedPostRow[]): Promise<FeedYonder[]> {
       destinations: dests,
       grubs: g.count,
       grubbed: g.grubbed,
+      medal: (pl.medal as Medal) ?? undefined,
+      missionId: (pl.missionId as string) ?? undefined,
     };
   });
 }
@@ -330,6 +333,8 @@ export async function loadFeed(
         destinations: dests,
         grubs: g.count,
         grubbed: g.grubbed,
+        medal: (pl.medal as Medal) ?? undefined,
+        missionId: (pl.missionId as string) ?? undefined,
       },
     };
   });
