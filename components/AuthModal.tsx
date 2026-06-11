@@ -1,7 +1,7 @@
 "use client";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useEffect, useState } from "react";
-import { signInWithMagicLink } from "@/lib/auth";
+import { signInWithMagicLink, verifyEmailOtp } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 
 type Props = {
@@ -12,7 +12,9 @@ type Props = {
 
 export default function AuthModal({ open, reason, onClose }: Props) {
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
   const [sending, setSending] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const configured = isSupabaseConfigured();
@@ -20,8 +22,10 @@ export default function AuthModal({ open, reason, onClose }: Props) {
   useEffect(() => {
     if (!open) {
       setSending(false);
+      setVerifying(false);
       setSent(false);
       setError(null);
+      setCode("");
     }
   }, [open]);
 
@@ -34,9 +38,24 @@ export default function AuthModal({ open, reason, onClose }: Props) {
       await signInWithMagicLink(email.trim());
       setSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not send link.");
+      setError(err instanceof Error ? err.message : "Could not send the code.");
     } finally {
       setSending(false);
+    }
+  };
+
+  const onVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (code.trim().length < 6 || verifying) return;
+    setVerifying(true);
+    setError(null);
+    try {
+      await verifyEmailOtp(email.trim(), code);
+      onClose(); // signed in; auth state updates via onAuthStateChange
+    } catch {
+      setError("That code didn't work. Check it, or send a new one.");
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -67,9 +86,45 @@ export default function AuthModal({ open, reason, onClose }: Props) {
               to enable accounts. Until then, your walks stay on this device.
             </p>
           ) : sent ? (
-            <p className="text-sm">
-              Magic link sent. Check {email} and tap the link to sign in.
-            </p>
+            <form onSubmit={onVerify} className="flex flex-col gap-3">
+              <p className="text-sm text-[var(--muted)]">
+                We sent a code to {email}. Enter it below (or tap the link in the
+                email).
+              </p>
+              <label className="flex flex-col gap-2">
+                <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
+                  6-digit code
+                </span>
+                <input
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  autoFocus
+                  placeholder="123456"
+                  className="w-full rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-4 py-3 text-2xl tracking-[0.4em] tabular-nums text-center outline-none focus:border-[var(--accent)]"
+                />
+              </label>
+              {error && <p className="text-sm text-red-400">{error}</p>}
+              <button
+                type="submit"
+                disabled={verifying || code.length < 6}
+                className="rounded-xl bg-[var(--accent)] text-black font-semibold py-3 active:opacity-80 disabled:opacity-30"
+              >
+                {verifying ? "Verifying…" : "Verify & sign in"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSent(false);
+                  setCode("");
+                  setError(null);
+                }}
+                className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] self-center"
+              >
+                Use a different email
+              </button>
+            </form>
           ) : (
             <form onSubmit={onSubmit} className="flex flex-col gap-3">
               <label className="flex flex-col gap-2">
@@ -91,7 +146,7 @@ export default function AuthModal({ open, reason, onClose }: Props) {
                 disabled={sending || !email.includes("@")}
                 className="rounded-xl bg-[var(--accent)] text-black font-semibold py-3 active:opacity-80 disabled:opacity-30"
               >
-                {sending ? "Sending…" : "Send magic link"}
+                {sending ? "Sending…" : "Email me a code"}
               </button>
             </form>
           )}

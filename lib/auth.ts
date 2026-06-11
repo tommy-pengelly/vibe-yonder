@@ -58,6 +58,8 @@ export function useAuthUser(): {
   return { user, loading, configured: isSupabaseConfigured() };
 }
 
+/** Send the sign-in email. It carries both a 6-digit code (enter it in the app)
+ * and a magic link (tap it) - either signs you in. */
 export async function signInWithMagicLink(email: string) {
   const sb = getSupabase();
   if (!sb) throw new Error("Auth is not configured.");
@@ -66,6 +68,18 @@ export async function signInWithMagicLink(email: string) {
   const { error } = await sb.auth.signInWithOtp({
     email,
     options: { emailRedirectTo: redirectTo },
+  });
+  if (error) throw error;
+}
+
+/** Verify the 6-digit code from the email (the no-redirect path). */
+export async function verifyEmailOtp(email: string, token: string) {
+  const sb = getSupabase();
+  if (!sb) throw new Error("Auth is not configured.");
+  const { error } = await sb.auth.verifyOtp({
+    email,
+    token: token.trim(),
+    type: "email",
   });
   if (error) throw error;
 }

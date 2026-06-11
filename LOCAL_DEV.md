@@ -34,11 +34,21 @@ follows Bob + Cara), and some grubs. Re-run `npm run db:reset` to wipe back to
 this.
 
 ## Signing in as a seed user
-The app uses magic links. Locally they don't email out, they land in
-**Inbucket**: http://127.0.0.1:54324. Enter e.g. `alice@example.com` in the
-app's sign-in sheet, then open Inbucket and click the link in Alice's inbox.
+Sign-in emails carry a **6-digit code** (and a magic link). Locally they don't
+send out, they land in the mail viewer (Mailpit, which the CLI labels
+"Inbucket"): http://127.0.0.1:54324.
+
+1. Enter e.g. `alice@example.com` in the app's sign-in sheet, tap "Email me a
+   code".
+2. Open the mail viewer, copy the 6-digit code from Alice's email.
+3. Type it into the app. (No link click / redirect needed, so the dev port
+   doesn't matter.)
 
 ## Handy URLs
-- App: http://localhost:3000
+- App: http://localhost:3000 (or :3001 - the code flow doesn't care)
 - Studio (browse/edit tables): http://127.0.0.1:54323
-- Inbucket (magic-link inbox): http://127.0.0.1:54324
+- Mail viewer (the sign-in codes): http://127.0.0.1:54324
+
+> Prod note: the code only shows because of `supabase/templates/magic_link.html`
+> (`{{ .Token }}`). Mirror it in the dashboard: Auth > Email Templates > Magic
+> Link, include `{{ .Token }}`.
