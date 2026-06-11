@@ -183,13 +183,15 @@ export default function FavouritesView({ embedded = false }: { embedded?: boolea
   if (embedded) {
     return (
       <div className="flex flex-col gap-3">
-        <button
-          type="button"
-          onClick={() => setAddOpen(true)}
-          className="self-end inline-flex items-center gap-1.5 text-sm text-[var(--accent)] hover:opacity-80"
-        >
-          <Plus className="w-4 h-4" strokeWidth={1.75} /> Add a favourite
-        </button>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setAddOpen(true)}
+            className="inline-flex items-center gap-1.5 text-sm text-[var(--accent)] hover:opacity-80"
+          >
+            <Plus className="w-4 h-4" strokeWidth={1.75} /> Add a favourite
+          </button>
+        </div>
         {grid}
         {addSheet}
       </div>

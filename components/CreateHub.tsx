@@ -53,14 +53,17 @@ export default function CreateHub({
   const [mapsTab, setMapsTab] = useState<MapsTab>("mine");
   const [communityMaps, setCommunityMaps] = useState<FeedMap[] | null>(null);
   const [detail, setDetail] = useState<(PlaceLite & RankedResult) | null>(null);
-  // Open straight in line mode when launched via "New mission" (sessionStorage
-  // hint set just before navigating here), then clear it.
-  const [lineMode, setLineMode] = useState(() => {
-    if (typeof window === "undefined") return false;
-    const wants = window.sessionStorage.getItem("vibe-yonder.createMode") === "line";
-    if (wants) window.sessionStorage.removeItem("vibe-yonder.createMode");
-    return wants;
-  });
+  const [lineMode, setLineMode] = useState(false);
+  // Open straight in line mode when launched via "New mission" (a sessionStorage
+  // hint set just before navigating here). Read it in an effect, not a useState
+  // initializer, so React 18 StrictMode's double-invoke can't clear the flag.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.sessionStorage.getItem("vibe-yonder.createMode") === "line") {
+      window.sessionStorage.removeItem("vibe-yonder.createMode");
+      setLineMode(true);
+    }
+  }, []);
   // The straight line's start (A); once set, the next pick is the end (B).
   const [lineStart, setLineStart] = useState<{ name: string; lat: number; lon: number } | null>(null);
 
@@ -275,8 +278,8 @@ export default function CreateHub({
           />
           <ModeRow
             icon={Ruler}
-            title="Straight line"
-            sub="Pick a far point, hold the line, earn a medal"
+            title="Mission"
+            sub="Hold a straight line A to B, earn a medal, race the board"
             onClick={() => setLineMode(true)}
           />
 

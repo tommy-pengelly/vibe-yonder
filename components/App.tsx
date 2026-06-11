@@ -47,6 +47,13 @@ type Phase = "search" | "walking" | "recap";
 
 export default function App() {
   const router = useRouter();
+  // Leaving /walk: pop it off history (back to wherever you launched from)
+  // rather than pushing a new route, which would leave the launcher in the
+  // back stack and trap you bouncing onto it.
+  const leaveWalk = useCallback(() => {
+    if (typeof window !== "undefined" && window.history.length > 1) router.back();
+    else router.push("/");
+  }, [router]);
   const [phase, setPhase] = useState<Phase>("search");
   const [yonder, setYonder] = useState<ActiveYonder | null>(null);
 
@@ -541,7 +548,7 @@ export default function App() {
       <CreateHub
         position={fix}
         onStart={(targets, mode, opts) => void beginYonder(targets, mode, opts)}
-        onClose={() => router.push("/")}
+        onClose={leaveWalk}
       />
     );
   }
@@ -582,7 +589,7 @@ export default function App() {
       <div className="relative flex-1 flex flex-col">
         <button
           type="button"
-          onClick={() => router.push("/")}
+          onClick={leaveWalk}
           aria-label="Done"
           className="absolute top-6 left-4 z-10 size-9 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]"
         >
