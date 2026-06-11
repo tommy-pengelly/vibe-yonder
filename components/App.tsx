@@ -230,9 +230,10 @@ export default function App() {
         name: opts.name,
         play: opts.play,
         missionId: opts.missionId,
-        // Mission attempts pin A to the mission's start so everyone walks the
-        // same line; a free straight-line captures A on the first fix instead.
+        // The line runs from origin (A) to the target (B). You walk to A first;
+        // the line is armed (scoring starts) once you're there and tap begin.
         origin: opts.origin,
+        lineArmed: opts.play === "straightline" ? false : undefined,
       };
       setYonder(newYonder);
       setTrack([]);
@@ -307,6 +308,15 @@ export default function App() {
   // "Go next": focus a specific destination, any mode.
   const onSetActive = useCallback((targetId: string) => {
     setYonder((y) => (y ? { ...y, activeIndex: y.targets.findIndex((t) => t.id === targetId) } : y));
+  }, []);
+
+  // Arm the straight line: you've reached the start (A), scoring begins now.
+  const armLine = useCallback(() => {
+    setYonder((y) =>
+      y && y.play === "straightline" && !y.lineArmed
+        ? { ...y, lineArmed: true, lineArmedAt: Date.now() }
+        : y,
+    );
   }, []);
 
   // Remove a destination. Removing the last one drops you into a pure wander
@@ -403,12 +413,16 @@ export default function App() {
         ? `${seen.length} places`
         : (primaryTarget?.name ?? "Yonder").split(",")[0].trim());
 
-    // Straight-line: score the track against the line A(origin)→B(target).
+    // Straight-line: score the track against the line A(origin)→B(target),
+    // only the portion walked after the line was armed (i.e. from the start A,
+    // not the approach to it).
     const slOrigin = yonder?.origin;
     const slTarget = yonder?.targets[0];
+    const armedAt = yonder?.lineArmedAt ?? 0;
+    const scoredTrack = track.filter((p) => p.t >= armedAt);
     const straightLine =
-      yonder?.play === "straightline" && slOrigin && slTarget
-        ? scoreStraightLine(track, slOrigin, {
+      yonder?.play === "straightline" && yonder?.lineArmed && slOrigin && slTarget
+        ? scoreStraightLine(scoredTrack, slOrigin, {
             lat: slTarget.lat,
             lon: slTarget.lon,
           })
@@ -556,6 +570,7 @@ export default function App() {
         onResume={resume}
         onFinish={finish}
         onDiscard={discard}
+        onArmLine={armLine}
         onSetVisited={onSetVisited}
         onSetActive={onSetActive}
         onRemoveTarget={onRemoveTarget}

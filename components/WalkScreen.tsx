@@ -49,6 +49,7 @@ type Props = {
   onResume: () => void;
   onFinish: () => void;
   onDiscard: () => void;
+  onArmLine: () => void;
   onSetVisited: (targetId: string, visited: boolean) => void;
   onSetActive: (targetId: string) => void;
   onRemoveTarget: (targetId: string) => void;
@@ -71,6 +72,7 @@ export default function WalkScreen({
   onResume,
   onFinish,
   onDiscard,
+  onArmLine,
   onClearTargets,
   onSetVisited,
   onSetActive,
@@ -151,22 +153,42 @@ export default function WalkScreen({
 
   const activeTarget = focusIndex != null ? yonder.targets[focusIndex] : null;
 
-  // Straight-line live feedback: how far off the line right now, and the worst
-  // so far (which sets the medal you're on track for).
+  // Straight-line has two phases: walk to the start A, then hold the line A→B.
+  const isLine = yonder.play === "straightline";
+  const goToStart = isLine && !yonder.lineArmed && !!yonder.origin;
+  const distToStart =
+    goToStart && position && yonder.origin
+      ? haversine(position.lat, position.lon, yonder.origin.lat, yonder.origin.lon)
+      : null;
+  const atStart = distToStart != null && distToStart < ARRIVAL_RADIUS_M;
+
+  // Live deviation feedback, only once the line is armed. Worst so far sets the
+  // medal you're on track for; only the post-arm track counts.
   const lineStats = useMemo(() => {
-    if (yonder.play !== "straightline" || !yonder.origin || !yonder.targets[0]) {
+    if (!isLine || !yonder.lineArmed || !yonder.origin || !yonder.targets[0]) {
       return null;
     }
     const a = yonder.origin;
     const b = yonder.targets[0];
+    const armedAt = yonder.lineArmedAt ?? 0;
     const current = position ? Math.abs(crossTrack(position, a, b)) : 0;
     let worst = 0;
     for (const p of track) {
+      if (p.t < armedAt) continue;
       const d = Math.abs(crossTrack(p, a, b));
       if (d > worst) worst = d;
     }
     return { current, worst, medal: medalFor(worst) };
-  }, [yonder.play, yonder.origin, yonder.targets, position, track]);
+  }, [isLine, yonder.lineArmed, yonder.lineArmedAt, yonder.origin, yonder.targets, position, track]);
+
+  // During "go to the start", the active marker points at A (with B faint);
+  // once armed it's the destination B as usual.
+  const startTarget: Target | null =
+    goToStart && yonder.origin
+      ? { id: "__start", name: "Start", lat: yonder.origin.lat, lon: yonder.origin.lon, visited: false }
+      : null;
+  const scopeTargets = startTarget ? [startTarget, ...yonder.targets] : yonder.targets;
+  const scopeActiveIndex = startTarget ? 0 : focusIndex;
 
   // Favourite the active destination (the only walk-screen way to create a
   // favourite). Tracks the stored record's id so it can be un-favourited.
@@ -304,6 +326,9 @@ export default function WalkScreen({
   const zoomed = Math.abs(mpp - DEFAULT_MPP) > 0.01;
 
   const headerLabel = useMemo(() => {
+    if (goToStart) {
+      return { kicker: "Straight line", title: "Walk to the start" };
+    }
     if (yonder.targets.length === 0) {
       return { kicker: "No destination", title: "Wandering free" };
     }
@@ -329,7 +354,7 @@ export default function WalkScreen({
       kicker: null,
       title: activeTarget?.name ?? yonder.name ?? "Yonder",
     };
-  }, [yonder, activeTarget, unvisited]);
+  }, [yonder, activeTarget, unvisited, goToStart]);
 
   const needsCalibration = position != null && heading == null;
   const currentArrivalId = arrivalQueue[0];
@@ -360,14 +385,14 @@ export default function WalkScreen({
           position={position}
           heading={heading}
           track={track}
-          targets={yonder.targets}
-          activeIndex={focusIndex}
+          targets={scopeTargets}
+          activeIndex={scopeActiveIndex}
           mpp={mpp}
           hideNumbers={hideNumbers}
-          onPickTarget={onSetActive}
+          onPickTarget={goToStart ? undefined : onSetActive}
           candidates={suggestionsOn ? candidates : undefined}
           onPickCandidate={suggestionsOn ? () => setSuggestionsOpen(true) : undefined}
-          lineOrigin={yonder.play === "straightline" ? (yonder.origin ?? null) : null}
+          lineOrigin={isLine && yonder.lineArmed ? (yonder.origin ?? null) : null}
         />
       </div>
 
@@ -435,6 +460,29 @@ export default function WalkScreen({
           </button>
         </div>
       </header>
+
+      {goToStart && (
+        <div className="relative z-10 -mt-1 flex justify-center pointer-events-auto">
+          {atStart ? (
+            <button
+              type="button"
+              onClick={onArmLine}
+              className="rounded-full bg-[var(--accent)] text-black font-semibold px-5 py-2 active:opacity-80"
+            >
+              Begin the line
+            </button>
+          ) : (
+            <div className="rounded-full bg-black/40 backdrop-blur-sm border border-[var(--border)] px-3 py-1.5 text-xs flex items-center gap-2">
+              <span className="text-[var(--accent)]">Go to the start</span>
+              {!hideNumbers && distToStart != null && (
+                <span className="font-mono text-[var(--muted)] tabular-nums">
+                  {fmtDist(distToStart)}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {lineStats && (
         <div className="relative z-10 -mt-1 flex justify-center pointer-events-none">

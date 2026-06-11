@@ -64,8 +64,12 @@ export type ActiveYonder = {
    * "straightline" = hold the line from `origin` to the single target.
    */
   play?: PlayMode;
-  /** Straight-line start point (A), captured when the yonder begins. */
+  /** Straight-line start point (A). The line runs origin→targets[0]. */
   origin?: LatLon;
+  /** Straight line: false while walking to A; true once the line has begun. */
+  lineArmed?: boolean;
+  /** When the line was armed (scoring starts here). */
+  lineArmedAt?: number;
   /** Optional shared mission this straight-line attempt is against. */
   missionId?: string;
 };
