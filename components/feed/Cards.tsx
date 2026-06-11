@@ -6,6 +6,7 @@ import { Bookmark, Ruler, Sprout } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import MissionLineViz from "@/components/MissionLineViz";
 import { DotMap, Trace, Traces } from "@/components/ui/viz";
 import { fmtDist } from "@/lib/geo";
 import { MEDAL_LABEL } from "@/lib/straightline";
@@ -276,17 +277,15 @@ export function MissionCard({ mi }: { mi: FeedMission }) {
   return (
     <CardShell href={`/missions/${mi.missionId}`}>
       <CardHeader who={mi.who} handle={mi.handle} when={mi.when} tag="Mission" />
-      <div className="flex items-center gap-3 px-3.5 py-3.5">
-        <div className="size-10 shrink-0 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center text-[var(--accent)]">
-          <Ruler className="w-5 h-5" strokeWidth={1.75} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="font-display text-[17px] truncate leading-tight">{mi.name}</div>
-          <div className="text-[11px] text-[var(--muted)] mt-0.5">
-            A {fmtDist(mi.distanceM)} line to hold · see who&apos;s winning
-          </div>
-        </div>
+      <div className="flex items-center gap-2 px-3.5 pt-2.5">
+        <Ruler className="w-4 h-4 text-[var(--accent)] shrink-0" strokeWidth={1.75} />
+        <div className="font-display text-[17px] truncate leading-tight">{mi.name}</div>
       </div>
+      <div className="mt-2.5">
+        <MissionLineViz attempts={[]} highlight={null} height={96} />
+      </div>
+      <Stats>A {fmtDist(mi.distanceM)} line to hold · see who&apos;s winning</Stats>
+      <div className="pb-3.5" />
     </CardShell>
   );
 }

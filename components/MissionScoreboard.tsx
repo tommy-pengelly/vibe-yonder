@@ -15,6 +15,15 @@ export default function MissionScoreboard({ id }: { id: string }) {
   const [mission, setMission] = useState<Mission | null>(null);
   const [board, setBoard] = useState<LeaderRow[] | null>(null);
   const [highlight, setHighlight] = useState<number | null>(null);
+  const [comparing, setComparing] = useState(false);
+
+  // You-vs-the-leader is offered only when you're on the board but not #1, and
+  // both runs have a traced path to overlay.
+  const myIndex = board?.findIndex((r) => r.isMe) ?? -1;
+  const canCompare =
+    myIndex > 0 &&
+    !!board?.[myIndex]?.path?.length &&
+    !!board?.[0]?.path?.length;
 
   useEffect(() => {
     let c = false;
@@ -65,11 +74,38 @@ export default function MissionScoreboard({ id }: { id: string }) {
       )}
 
       {board && board.some((r) => r.path && r.path.length > 1) && (
-        <div className="flex flex-col gap-1.5">
-          <MissionLineViz attempts={board} highlight={highlight} />
+        <div className="flex flex-col gap-2">
+          <MissionLineViz
+            attempts={board}
+            highlight={comparing && myIndex >= 0 ? myIndex : highlight}
+            compare={comparing ? 0 : null}
+          />
           <p className="text-[10px] uppercase tracking-widest text-[var(--muted)] text-center">
             Every run, held against the line · tap a name to trace it
           </p>
+          {canCompare && (
+            <button
+              type="button"
+              onClick={() => {
+                setComparing((c) => !c);
+                setHighlight(null);
+              }}
+              className="self-center rounded-full border border-[var(--border)] px-4 py-1.5 text-xs text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--muted)]"
+            >
+              {comparing ? "Hide compare" : "Compare your run with the leader"}
+            </button>
+          )}
+          {comparing && myIndex >= 0 && (
+            <p className="text-xs text-center font-mono tabular-nums">
+              <span className="text-[var(--accent)]">
+                you {fmtDist(board[myIndex].maxDeviation)}
+              </span>
+              <span className="text-[var(--muted)]"> vs </span>
+              <span className="text-[var(--warm)]">
+                {board[0].handle} {fmtDist(board[0].maxDeviation)}
+              </span>
+            </p>
+          )}
         </div>
       )}
 
