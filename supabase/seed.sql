@@ -66,10 +66,12 @@ values
 on conflict (id) do nothing;
 
 insert into public.mission_attempts
-  (mission_id, user_id, max_deviation, avg_deviation, in_corridor_pct, medal)
+  (mission_id, user_id, max_deviation, avg_deviation, in_corridor_pct, medal, path)
 values
-  ('11111111-1111-1111-1111-111111111111', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 9.4, 4.1, 98, 'platinum'),
-  ('11111111-1111-1111-1111-111111111111', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 21.8, 12.7, 86, 'gold')
+  ('11111111-1111-1111-1111-111111111111', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 9.4, 4.1, 98, 'platinum',
+   '[[0,0],[0.2,4],[0.4,-3],[0.6,6],[0.8,-5],[1,2]]'),
+  ('11111111-1111-1111-1111-111111111111', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 21.8, 12.7, 86, 'gold',
+   '[[0,0],[0.2,-12],[0.4,18],[0.6,-15],[0.8,10],[1,-4]]')
 on conflict (mission_id, user_id) do nothing;
 
 -- ---- A public map (for the Discover tab) -----------------------------------

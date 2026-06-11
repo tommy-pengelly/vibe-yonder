@@ -55,6 +55,20 @@ export function crossTrack(p: LatLon, a: LatLon, b: LatLon): number {
 }
 
 /**
+ * How far along A→B point P projects, as a fraction 0..1 of the line length
+ * (clamped). Pairs with crossTrack to place a point in the line's own frame.
+ */
+export function alongFraction(p: LatLon, a: LatLon, b: LatLon): number {
+  const R = 6371000;
+  const total = haversine(a.lat, a.lon, b.lat, b.lon);
+  if (total === 0) return 0;
+  const d13 = haversine(a.lat, a.lon, p.lat, p.lon) / R; // angular A→P
+  const xt = crossTrack(p, a, b) / R; // angular cross-track
+  const along = Math.acos(Math.cos(d13) / Math.cos(xt)) * R;
+  return Math.max(0, Math.min(1, along / total));
+}
+
+/**
  * Normalise several tracks into a *shared* 0–100 box (one combined bounding
  * box), so overlaid traces line up, "all the ways you moved around here".
  */

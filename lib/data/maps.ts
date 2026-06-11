@@ -108,6 +108,26 @@ export async function loadMaps(): Promise<StoredMap[]> {
   return rows.map((m) => rowToMap(m, byMap.get(m.id) ?? []));
 }
 
+/** Record that the current user yondered this (someone else's) public map. */
+export async function recordMapTake(mapId: string): Promise<void> {
+  const c = await ctx();
+  if (!c) return;
+  await c.sb
+    .from("map_takes")
+    .upsert({ map_id: mapId, user_id: c.uid }, { onConflict: "map_id,user_id" });
+}
+
+/** How many distinct people have yondered a public map. */
+export async function mapTakeCount(mapId: string): Promise<number> {
+  const sb = getSupabase();
+  if (!sb) return 0;
+  const { count } = await sb
+    .from("map_takes")
+    .select("*", { count: "exact", head: true })
+    .eq("map_id", mapId);
+  return count ?? 0;
+}
+
 export async function getMap(id: string): Promise<StoredMap | null> {
   // Cloud-first so anyone (guest included) can open a public map; RLS returns
   // your own or any public one. Fall back to local for a guest's own maps.

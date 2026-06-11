@@ -2,6 +2,7 @@
 import { Ruler } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import MissionLineViz from "@/components/MissionLineViz";
 import { EmptyState, PageHeader, PageScaffold } from "@/components/ui";
 import { useAuthUser } from "@/lib/auth";
 import { getMission, loadLeaderboard, type LeaderRow, type Mission } from "@/lib/data";
@@ -13,6 +14,7 @@ export default function MissionScoreboard({ id }: { id: string }) {
   const { user } = useAuthUser();
   const [mission, setMission] = useState<Mission | null>(null);
   const [board, setBoard] = useState<LeaderRow[] | null>(null);
+  const [highlight, setHighlight] = useState<number | null>(null);
 
   useEffect(() => {
     let c = false;
@@ -62,6 +64,15 @@ export default function MissionScoreboard({ id }: { id: string }) {
         </p>
       )}
 
+      {board && board.some((r) => r.path && r.path.length > 1) && (
+        <div className="flex flex-col gap-1.5">
+          <MissionLineViz attempts={board} highlight={highlight} />
+          <p className="text-[10px] uppercase tracking-widest text-[var(--muted)] text-center">
+            Every run, held against the line · tap a name to trace it
+          </p>
+        </div>
+      )}
+
       <button
         type="button"
         onClick={attempt}
@@ -80,25 +91,34 @@ export default function MissionScoreboard({ id }: { id: string }) {
       ) : (
         <ul className="flex flex-col divide-y divide-[var(--border)]">
           {board.map((r, i) => (
-            <li
-              key={r.userId}
-              className={`flex items-center gap-3 py-3 ${r.isMe ? "text-[var(--accent)]" : ""}`}
-            >
-              <span className="font-mono text-sm text-[var(--muted)] w-6 tabular-nums shrink-0">
-                {i + 1}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="font-display text-base truncate">
-                  {r.handle}
-                  {r.isMe && " · you"}
+            <li key={r.userId}>
+              <button
+                type="button"
+                onClick={() => setHighlight((h) => (h === i ? null : i))}
+                className={`w-full text-left flex items-center gap-3 py-3 ${
+                  highlight === i
+                    ? "text-[var(--accent)]"
+                    : r.isMe
+                      ? "text-[var(--warm)]"
+                      : ""
+                }`}
+              >
+                <span className="font-mono text-sm text-[var(--muted)] w-6 tabular-nums shrink-0">
+                  {i + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-display text-base truncate">
+                    {r.handle}
+                    {r.isMe && " · you"}
+                  </div>
+                  <div className="text-[11px] text-[var(--muted)] font-mono">
+                    {MEDAL_LABEL[r.medal]} · avg {fmtDist(r.avgDeviation)} off
+                  </div>
                 </div>
-                <div className="text-[11px] text-[var(--muted)] font-mono">
-                  {MEDAL_LABEL[r.medal]} · avg {fmtDist(r.avgDeviation)} off
+                <div className="font-mono text-sm tabular-nums shrink-0">
+                  {fmtDist(r.maxDeviation)}
                 </div>
-              </div>
-              <div className="font-mono text-sm tabular-nums shrink-0">
-                {fmtDist(r.maxDeviation)}
-              </div>
+              </button>
             </li>
           ))}
         </ul>

@@ -29,7 +29,7 @@ import type {
   Target,
   YonderMode,
 } from "@/lib/types";
-import { scoreStraightLine } from "@/lib/straightline";
+import { linePath, scoreStraightLine } from "@/lib/straightline";
 import {
   clearActiveSession,
   loadActiveSession,
@@ -448,9 +448,14 @@ export default function App() {
     setSavedLocally(!tooShort);
     if (!tooShort) {
       void pushYonder(y);
-      // A mission attempt → record it on the scoreboard (keeps your best).
-      if (y.missionId && straightLine) {
-        void recordAttempt(y.missionId, straightLine);
+      // A mission attempt → record it on the scoreboard (keeps your best),
+      // with the line-frame path so the board can overlay everyone's run.
+      if (y.missionId && straightLine && slOrigin && slTarget) {
+        const path = linePath(scoredTrack, slOrigin, {
+          lat: slTarget.lat,
+          lon: slTarget.lon,
+        });
+        void recordAttempt(y.missionId, straightLine, path);
       }
     }
 

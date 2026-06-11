@@ -1,5 +1,29 @@
-import { crossTrack } from "./geo";
+import { alongFraction, crossTrack } from "./geo";
 import type { LatLon, Medal } from "./types";
+
+/** A point of an attempt in the line's own frame: [alongFraction 0..1,
+ * signed deviation metres]. No absolute coordinates. */
+export type LinePoint = [number, number];
+
+/** The attempt's shape relative to the line A→B, downsampled to ~maxPoints so
+ * the stored path stays small. Drives the scoreboard overlay. */
+export function linePath(
+  track: LatLon[],
+  a: LatLon,
+  b: LatLon,
+  maxPoints = 60,
+): LinePoint[] {
+  if (track.length === 0) return [];
+  const step = Math.max(1, Math.ceil(track.length / maxPoints));
+  const out: LinePoint[] = [];
+  for (let i = 0; i < track.length; i += step) {
+    const p = track[i];
+    out.push([alongFraction(p, a, b), crossTrack(p, a, b)]);
+  }
+  const last = track[track.length - 1];
+  out.push([alongFraction(last, a, b), crossTrack(last, a, b)]);
+  return out;
+}
 
 // The straight-line mode: walk the line from A to B as straight as you can.
 // Scored by deviation (never time). Medal = your *worst* moment off the line;

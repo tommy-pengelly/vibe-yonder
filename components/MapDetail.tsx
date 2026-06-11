@@ -8,7 +8,14 @@ import PlacePhoto from "@/components/PlacePhoto";
 import { useGoBack } from "@/components/ui";
 import { DotMap, Traces } from "@/components/ui/viz";
 import { useAuthUser } from "@/lib/auth";
-import { deleteMap, getMap, loadYonders, saveMap } from "@/lib/data";
+import {
+  deleteMap,
+  getMap,
+  loadYonders,
+  mapTakeCount,
+  recordMapTake,
+  saveMap,
+} from "@/lib/data";
 import { fmtDist, spanMeters, toUnitBox, toUnitBoxMulti } from "@/lib/geo";
 import type { SavedYonder, StoredMap, Target } from "@/lib/types";
 
@@ -18,6 +25,7 @@ export default function MapDetail({ id }: { id: string }) {
   const { user } = useAuthUser();
   const [map, setMap] = useState<StoredMap | null>(null);
   const [yonders, setYonders] = useState<SavedYonder[]>([]);
+  const [takes, setTakes] = useState(0);
   const [seenOpen, setSeenOpen] = useState(false);
 
   useEffect(() => {
@@ -27,6 +35,9 @@ export default function MapDetail({ id }: { id: string }) {
     });
     void loadYonders().then((ys) => {
       if (!cancelled) setYonders(ys.filter((y) => y.mapId === id));
+    });
+    void mapTakeCount(id).then((n) => {
+      if (!cancelled) setTakes(n);
     });
     return () => {
       cancelled = true;
@@ -64,6 +75,8 @@ export default function MapDetail({ id }: { id: string }) {
 
   const startYonder = (fresh = false) => {
     if (typeof window === "undefined") return;
+    // Yondering someone else's public map counts as a "take" (social proof).
+    if (!isOwner) void recordMapTake(map.id);
     // Resume: only the still-unvisited items. "Yonder again" (fresh) takes the
     // whole map for another go, leaving the completion record intact.
     const active =
@@ -139,6 +152,12 @@ export default function MapDetail({ id }: { id: string }) {
               }
             />
           </div>
+        )}
+
+        {takes >= 10 && (
+          <p className="text-sm text-[var(--warm)] -mt-2">
+            {takes} people have yondered this map.
+          </p>
         )}
 
         {isOwner && yonders.length > 0 && (

@@ -1,5 +1,6 @@
 "use client";
 import { getSupabase } from "../supabase/client";
+import type { LinePoint } from "../straightline";
 import type { LatLon, Medal } from "../types";
 import { ctx } from "./ctx";
 
@@ -24,6 +25,7 @@ export type LeaderRow = {
   avgDeviation: number;
   medal: Medal;
   isMe: boolean;
+  path?: LinePoint[];
 };
 
 type MissionRow = {
@@ -189,6 +191,7 @@ export async function getMission(id: string): Promise<Mission | null> {
 export async function recordAttempt(
   missionId: string,
   s: { maxDeviation: number; avgDeviation: number; inCorridorPct: number; medal: Medal },
+  path?: LinePoint[],
 ): Promise<void> {
   const c = await ctx();
   if (!c) return;
@@ -212,6 +215,7 @@ export async function recordAttempt(
       avg_deviation: s.avgDeviation,
       in_corridor_pct: s.inCorridorPct,
       medal: s.medal,
+      path: path ?? null,
     },
     { onConflict: "mission_id,user_id" },
   );
@@ -223,7 +227,7 @@ export async function loadLeaderboard(missionId: string): Promise<LeaderRow[]> {
   if (!sb) return [];
   const { data } = await sb
     .from("mission_attempts")
-    .select("user_id,max_deviation,avg_deviation,medal")
+    .select("user_id,max_deviation,avg_deviation,medal,path")
     .eq("mission_id", missionId)
     .order("max_deviation", { ascending: true })
     .order("avg_deviation", { ascending: true })
@@ -234,6 +238,7 @@ export async function loadLeaderboard(missionId: string): Promise<LeaderRow[]> {
       max_deviation: number;
       avg_deviation: number;
       medal: Medal | null;
+      path: LinePoint[] | null;
     }[]) ?? [];
   if (rows.length === 0) return [];
   const handles = await handlesFor(rows.map((r) => r.user_id));
@@ -247,5 +252,6 @@ export async function loadLeaderboard(missionId: string): Promise<LeaderRow[]> {
     avgDeviation: r.avg_deviation,
     medal: r.medal ?? "none",
     isMe: !!me && me === r.user_id,
+    path: r.path ?? undefined,
   }));
 }
