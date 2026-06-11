@@ -1,6 +1,7 @@
 "use client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import * as local from "../storage";
+import { getSupabase } from "../supabase/client";
 import type { Destination, StoredMap, StoredMapItem, YonderMode } from "../types";
 import { ctx } from "./ctx";
 import { pushFavourite } from "./favourites";
@@ -11,6 +12,7 @@ export type MapRow = {
   name: string;
   mode: YonderMode;
   visibility: "private" | "public" | null;
+  user_id: string;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -48,6 +50,7 @@ export function rowToMap(m: MapRow, items: MapItemRow[]): StoredMap {
     createdAt: m.created_at ? new Date(m.created_at).getTime() : 0,
     updatedAt: m.updated_at ? new Date(m.updated_at).getTime() : 0,
     visibility: m.visibility ?? "private",
+    ownerId: m.user_id,
   };
 }
 
@@ -106,20 +109,21 @@ export async function loadMaps(): Promise<StoredMap[]> {
 }
 
 export async function getMap(id: string): Promise<StoredMap | null> {
-  const c = await ctx();
-  if (!c) return local.getMap(id);
-  const { data: map, error } = await c.sb
-    .from("maps")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-  if (error || !map) return null;
-  const { data: items } = await c.sb
-    .from("map_items")
-    .select("*")
-    .eq("map_id", id)
-    .order("position", { ascending: true });
-  return rowToMap(map as MapRow, (items as MapItemRow[]) ?? []);
+  // Cloud-first so anyone (guest included) can open a public map; RLS returns
+  // your own or any public one. Fall back to local for a guest's own maps.
+  const sb = getSupabase();
+  if (sb) {
+    const { data: map } = await sb.from("maps").select("*").eq("id", id).maybeSingle();
+    if (map) {
+      const { data: items } = await sb
+        .from("map_items")
+        .select("*")
+        .eq("map_id", id)
+        .order("position", { ascending: true });
+      return rowToMap(map as MapRow, (items as MapItemRow[]) ?? []);
+    }
+  }
+  return local.getMap(id);
 }
 
 export async function saveMap(map: StoredMap): Promise<void> {

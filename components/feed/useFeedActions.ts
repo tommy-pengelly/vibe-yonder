@@ -1,20 +1,18 @@
 "use client";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuthUser } from "@/lib/auth";
-import { duplicateMap, saveYonderPlaces, setGrub } from "@/lib/data";
-import type { FeedMap, FeedYonder, Target } from "@/lib/types";
+import { saveYonderPlaces, setGrub } from "@/lib/data";
+import type { Destination } from "@/lib/types";
 
 type GrubMap = Record<string, { count: number; active: boolean }>;
 
 /** Social interactions shared by the Following + Community feeds: grub, save,
- * duplicate, "Yonder this", and the sign-in gate. Optimistic local state. */
+ * and the sign-in gate. The primary actions (Yonder this / Attempt) live on the
+ * detail pages the cards open. Optimistic local state. */
 export function useFeedActions() {
-  const router = useRouter();
   const { user } = useAuthUser();
   const [grubs, setGrubs] = useState<GrubMap>({});
   const [saved, setSaved] = useState<Record<string, boolean>>({});
-  const [duped, setDuped] = useState<Record<string, boolean>>({});
   const [authOpen, setAuthOpen] = useState(false);
   const [authReason, setAuthReason] = useState<string | undefined>();
 
@@ -45,52 +43,16 @@ export function useFeedActions() {
     });
   };
 
-  const save = (y: FeedYonder) => {
+  const save = (item: { id: string; name: string; destinations: Destination[] }) => {
     if (!requireAuth("Sign in to keep this for later.")) return;
-    if (saved[y.id]) return;
-    setSaved((s) => ({ ...s, [y.id]: true }));
-    void saveYonderPlaces(y.caption ?? y.area, y.destinations);
-  };
-
-  const startWalk = (
-    dests: { name: string; label?: string; lat: number; lon: number }[],
-    name: string,
-    mapId?: string,
-  ) => {
-    if (typeof window === "undefined" || dests.length === 0) return;
-    const targets: Target[] = dests.map((d) => ({
-      id: crypto.randomUUID(),
-      name: d.name,
-      label: d.label,
-      lat: d.lat,
-      lon: d.lon,
-      visited: false,
-    }));
-    // Link to the source map (e.g. a community map you loaded), so your ways
-    // show on it and it can be counted, your traces stay private to you.
-    window.sessionStorage.setItem(
-      "vibe-yonder.start",
-      JSON.stringify({
-        mode: targets.length > 1 ? "collection" : "single",
-        targets,
-        name,
-        mapId,
-      }),
-    );
-    router.push("/walk");
-  };
-
-  const duplicate = (m: FeedMap) => {
-    if (!requireAuth("Sign in to duplicate this into your maps.")) return;
-    if (duped[m.id]) return;
-    setDuped((d) => ({ ...d, [m.id]: true }));
-    void duplicateMap(m.mapId ?? m.id);
+    if (saved[item.id]) return;
+    setSaved((s) => ({ ...s, [item.id]: true }));
+    void saveYonderPlaces(item.name, item.destinations);
   };
 
   return {
     user,
     saved,
-    duped,
     authOpen,
     authReason,
     setAuthOpen,
@@ -99,7 +61,5 @@ export function useFeedActions() {
     gstate,
     grub,
     save,
-    startWalk,
-    duplicate,
   };
 }

@@ -105,6 +105,9 @@ export type StoredMap = {
   updatedAt: number;
   /** Community sharing. Cloud-only; guests' maps are always private. */
   visibility?: "private" | "public";
+  /** Cloud owner id, set when read from the cloud. Lets a viewer tell whether
+   * a public map is theirs (owner controls) or someone else's (read-only). */
+  ownerId?: string;
 };
 
 /**

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import MapShareControl from "@/components/MapShareControl";
 import PlacePhoto from "@/components/PlacePhoto";
+import { useGoBack } from "@/components/ui";
 import { DotMap, Traces } from "@/components/ui/viz";
 import { useAuthUser } from "@/lib/auth";
 import { deleteMap, getMap, loadYonders, saveMap } from "@/lib/data";
@@ -13,6 +14,7 @@ import type { SavedYonder, StoredMap, Target } from "@/lib/types";
 
 export default function MapDetail({ id }: { id: string }) {
   const router = useRouter();
+  const goBack = useGoBack("/maps");
   const { user } = useAuthUser();
   const [map, setMap] = useState<StoredMap | null>(null);
   const [yonders, setYonders] = useState<SavedYonder[]>([]);
@@ -39,6 +41,10 @@ export default function MapDetail({ id }: { id: string }) {
     );
   }
 
+  // Owner of this map? Guests own their local maps (no ownerId); signed-in
+  // users own maps whose ownerId matches. Non-owners get a read-only view of a
+  // public map (no visited toggles, edit, delete or share).
+  const isOwner = user ? map.ownerId === user.id : !map.ownerId;
   const remaining = map.items.filter((i) => !i.visited);
   const seen = map.items.filter((i) => i.visited);
   const allDone = map.items.length > 0 && remaining.length === 0;
@@ -97,13 +103,14 @@ export default function MapDetail({ id }: { id: string }) {
       <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-8 pb-10 gap-6">
         <header className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <Link
-              href="/maps"
+            <button
+              type="button"
+              onClick={goBack}
               aria-label="Back"
               className="size-9 -ml-2 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)] shrink-0"
             >
               <ArrowLeft className="w-4 h-4" strokeWidth={1.75} />
-            </Link>
+            </button>
             <div className="min-w-0">
               <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
                 {map.mode === "ordered" ? "Step through" : "Wander between"}
@@ -112,7 +119,9 @@ export default function MapDetail({ id }: { id: string }) {
                 {map.name}
               </h1>
               <p className="text-sm text-[var(--warm)] mt-1">
-                {remaining.length} of {map.items.length} left
+                {isOwner
+                  ? `${remaining.length} of ${map.items.length} left`
+                  : `${map.items.length} ${map.items.length === 1 ? "place" : "places"} to wander`}
               </p>
             </div>
           </div>
@@ -132,7 +141,7 @@ export default function MapDetail({ id }: { id: string }) {
           </div>
         )}
 
-        {yonders.length > 0 && (
+        {isOwner && yonders.length > 0 && (
           <section className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
@@ -172,17 +181,19 @@ export default function MapDetail({ id }: { id: string }) {
         )}
 
         <ul className="flex flex-col">
-          {remaining.map((it) => (
+          {(isOwner ? remaining : map.items).map((it) => (
             <li
               key={it.id}
               className="flex items-center gap-3 py-3 border-b border-[var(--border)]"
             >
-              <button
-                type="button"
-                onClick={() => markVisited(it.id, true)}
-                aria-label="Mark visited"
-                className="size-5 rounded-full border border-[var(--muted)] hover:border-[var(--accent)] shrink-0"
-              />
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={() => markVisited(it.id, true)}
+                  aria-label="Mark visited"
+                  className="size-5 rounded-full border border-[var(--muted)] hover:border-[var(--accent)] shrink-0"
+                />
+              )}
               <PlacePhoto
                 lat={it.lat}
                 lon={it.lon}
@@ -199,14 +210,14 @@ export default function MapDetail({ id }: { id: string }) {
               </div>
             </li>
           ))}
-          {remaining.length === 0 && (
+          {isOwner && remaining.length === 0 && (
             <li className="text-sm text-[var(--muted)] py-3">
               All seen, visit one again?
             </li>
           )}
         </ul>
 
-        {seen.length > 0 && (
+        {isOwner && seen.length > 0 && (
           <section className="flex flex-col">
             <button
               type="button"
@@ -247,39 +258,45 @@ export default function MapDetail({ id }: { id: string }) {
         <div className="mt-auto flex flex-col gap-2">
           <button
             type="button"
-            onClick={() => startYonder(allDone)}
+            onClick={() => startYonder(!isOwner || allDone)}
             disabled={map.items.length === 0}
             className="rounded-full bg-[var(--accent)] text-black font-semibold py-3 active:opacity-80 disabled:opacity-30"
           >
-            {allDone
-              ? "Yonder again"
-              : remaining.length < map.items.length
-                ? "Continue this map"
-                : "Yonder this map"}
+            {!isOwner
+              ? "Yonder this map"
+              : allDone
+                ? "Yonder again"
+                : remaining.length < map.items.length
+                  ? "Continue this map"
+                  : "Yonder this map"}
           </button>
-          <div className="flex items-center gap-2">
-            <Link
-              href={`/maps/${map.id}/edit`}
-              className="flex-1 rounded-full border border-[var(--border)] text-[var(--foreground)] py-2.5 flex items-center justify-center gap-2 hover:border-[var(--accent)] hover:text-[var(--accent)]"
-            >
-              <Pencil className="w-4 h-4" strokeWidth={1.75} />
-              Edit
-            </Link>
-            <div className="flex-1">
-              <MapShareControl
-                map={map}
-                onChange={(v) => setMap({ ...map, visibility: v })}
-              />
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => void onDelete()}
-            className="self-center text-xs text-[var(--muted)] hover:text-red-400 inline-flex items-center gap-1.5 pt-1"
-          >
-            <Trash2 className="w-3 h-3" strokeWidth={1.75} />
-            Delete map
-          </button>
+          {isOwner && (
+            <>
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/maps/${map.id}/edit`}
+                  className="flex-1 rounded-full border border-[var(--border)] text-[var(--foreground)] py-2.5 flex items-center justify-center gap-2 hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                >
+                  <Pencil className="w-4 h-4" strokeWidth={1.75} />
+                  Edit
+                </Link>
+                <div className="flex-1">
+                  <MapShareControl
+                    map={map}
+                    onChange={(v) => setMap({ ...map, visibility: v })}
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => void onDelete()}
+                className="self-center text-xs text-[var(--muted)] hover:text-red-400 inline-flex items-center gap-1.5 pt-1"
+              >
+                <Trash2 className="w-3 h-3" strokeWidth={1.75} />
+                Delete map
+              </button>
+            </>
+          )}
         </div>
       </div>
     </>

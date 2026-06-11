@@ -1,10 +1,11 @@
 "use client";
-// Shared presentational feed cards, used by Feed (Following) and Explore
-// (Community). Pure UI driven by props; interaction state lives in
-// useFeedActions.
-import { Bookmark, Copy, Navigation, Sprout } from "lucide-react";
+// Shared presentational feed cards. One skeleton for every item: a tappable
+// card (the whole thing opens its detail) with a social footer (grub + Save).
+// The primary action (Yonder this / Attempt) lives on the detail you open.
+import { Bookmark, Ruler, Sprout } from "lucide-react";
 import Link from "next/link";
-import { Ruler } from "lucide-react";
+import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
 import { DotMap, Trace, Traces } from "@/components/ui/viz";
 import { fmtDist } from "@/lib/geo";
 import { MEDAL_LABEL } from "@/lib/straightline";
@@ -46,36 +47,167 @@ export function Empty({
   );
 }
 
+// ---- Shared skeleton --------------------------------------------------------
+
+// The whole card opens its detail. Inner links/buttons stopPropagation so they
+// act on their own without triggering the card navigation.
+function CardShell({ href, children }: { href: string; children: ReactNode }) {
+  const router = useRouter();
+  return (
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={() => router.push(href)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") router.push(href);
+      }}
+      className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden cursor-pointer hover:border-[var(--accent)]/40 transition-colors"
+    >
+      {children}
+    </div>
+  );
+}
+
+function CardHeader({
+  who,
+  handle,
+  when,
+  tag,
+}: {
+  who: string;
+  handle: string;
+  when: string;
+  tag?: string;
+}) {
+  return (
+    <div className="flex items-center gap-2.5 px-3.5 pt-3.5">
+      <Link
+        href={`/u/${handle.slice(1)}`}
+        onClick={(e) => e.stopPropagation()}
+        className="flex items-center gap-2.5 min-w-0 flex-1"
+      >
+        <Avatar name={who} />
+        <div className="min-w-0 flex-1">
+          <div className="font-display text-base leading-tight truncate hover:text-[var(--accent)]">
+            {who}
+          </div>
+          {when && (
+            <div className="text-[11px] text-[var(--muted)]">
+              {handle} · {when}
+            </div>
+          )}
+        </div>
+      </Link>
+      {tag && (
+        <span className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)] shrink-0">
+          {tag}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function Caption({ text }: { text: string | null }) {
+  if (!text) return null;
+  return <p className="text-sm leading-relaxed mx-3.5 mt-2.5 text-pretty">{text}</p>;
+}
+
+function Stats({ children }: { children: ReactNode }) {
+  return (
+    <div className="font-mono text-[11px] text-[var(--muted)] px-3.5 pt-3 tabular-nums">
+      {children}
+    </div>
+  );
+}
+
+// Social footer: grub bottom-left (kudos position), Save bottom-right.
+function SocialFooter({
+  grub,
+  onGrub,
+  saved,
+  onSave,
+}: {
+  grub: { count: number; active: boolean };
+  onGrub: () => void;
+  saved: boolean;
+  onSave: () => void;
+}) {
+  return (
+    <div
+      className="flex items-center px-3.5 pt-2 pb-3.5"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <GrubButton count={grub.count} active={grub.active} onToggle={onGrub} />
+      <div className="flex-1" />
+      <button
+        type="button"
+        onClick={onSave}
+        disabled={saved}
+        className={`inline-flex items-center gap-1.5 text-[13px] py-1.5 px-1 ${
+          saved ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
+        }`}
+      >
+        <Bookmark className="w-4 h-4" strokeWidth={1.75} />
+        {saved ? "Saved" : "Save"}
+      </button>
+    </div>
+  );
+}
+
+export function GrubButton({
+  count,
+  active,
+  onToggle,
+}: {
+  count: number;
+  active: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={active}
+      aria-label="Grub"
+      className={`inline-flex items-center gap-1.5 py-1.5 font-mono text-[13px] tabular-nums transition-colors ${
+        active ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
+      }`}
+    >
+      <Sprout className="w-[17px] h-[17px]" strokeWidth={1.75} />
+      {count}
+    </button>
+  );
+}
+
+// ---- Activity: a yonder someone did ----------------------------------------
+
 export function YonderCard({
   y,
   grub,
   saved,
   onGrub,
   onSave,
-  onLoad,
 }: {
   y: FeedYonder;
   grub: { count: number; active: boolean };
   saved: boolean;
   onGrub: () => void;
   onSave: () => void;
-  onLoad: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
-      <Link href={`/u/${y.handle.slice(1)}`} className="flex items-center gap-2.5 px-3.5 pt-3.5">
-        <Avatar name={y.who} />
-        <div className="min-w-0 flex-1">
-          <div className="font-display text-base leading-tight truncate hover:text-[var(--accent)]">{y.who}</div>
-          <div className="text-[11px] text-[var(--muted)]">
-            {y.handle} · {y.when}
-          </div>
+    <CardShell href={`/yonder/${y.id}`}>
+      <CardHeader
+        who={y.who}
+        handle={y.handle}
+        when={y.when}
+        tag={y.medal ? "Straight line" : undefined}
+      />
+      <Caption text={y.caption} />
+      <div className="relative mt-3">
+        <Trace points={y.trace} height={150} />
+        <div className="absolute left-4 bottom-2.5 font-mono text-[11px] text-[var(--muted)]">
+          {y.area}
         </div>
-      </Link>
-      {y.caption && <p className="text-sm leading-relaxed mx-3.5 mt-2.5 text-pretty">{y.caption}</p>}
-      <Link href={`/yonder/${y.id}`} className="relative mt-3 block">
-        <Trace points={y.trace} height={150} scaleLabel={fmtDist(y.walked)} />
-        <div className="absolute left-4 bottom-2.5 font-mono text-[11px] text-[var(--muted)]">{y.area}</div>
         <div className="absolute right-4 top-3 text-right">
           {y.medal ? (
             <>
@@ -91,167 +223,89 @@ export function YonderCard({
               <div className="font-display text-[26px] leading-none text-[var(--accent)] tabular-nums tracking-tight">
                 {fmtYondered(y.yondered)}×
               </div>
-              <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--muted)] mt-0.5">Yondered</div>
+              <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--muted)] mt-0.5">
+                Yondered
+              </div>
             </>
           )}
         </div>
-      </Link>
-      <div className="font-mono text-[11px] text-[var(--muted)] px-3.5 pt-3 tabular-nums">
-        {y.medal && y.missionId ? (
-          <Link href={`/missions/${y.missionId}`} className="hover:text-[var(--accent)]">
-            On a mission · see the board
-          </Link>
-        ) : (
-          <>
-            {fmtDist(y.walked)} · {y.mins} min · {y.places}{" "}
-            {y.places === 1 ? "place" : "places"} seen
-          </>
-        )}
       </div>
-      <div className="flex items-center gap-2 px-3.5 pt-2 pb-3.5">
-        <GrubButton count={grub.count} active={grub.active} onToggle={onGrub} />
-        <div className="flex-1" />
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={saved}
-          className={`inline-flex items-center gap-1.5 text-[13px] py-1.5 px-1 ${
-            saved ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
-          }`}
-        >
-          <Bookmark className="w-4 h-4" strokeWidth={1.75} />
-          {saved ? "Saved" : "Save"}
-        </button>
-        <LoadButton onClick={onLoad} label="Yonder this" />
-      </div>
-    </div>
+      <Stats>
+        {y.medal
+          ? `${MEDAL_LABEL[y.medal]} · held the line`
+          : `${fmtDist(y.walked)} · ${y.mins} min · ${y.places} ${y.places === 1 ? "place" : "places"} seen`}
+      </Stats>
+      <SocialFooter grub={grub} onGrub={onGrub} saved={saved} onSave={onSave} />
+    </CardShell>
   );
 }
+
+// ---- Plan: a shared map ----------------------------------------------------
 
 export function MapCard({
   m,
   grub,
-  duped,
+  saved,
   onGrub,
-  onLoad,
-  onDuplicate,
+  onSave,
 }: {
   m: FeedMap;
   grub: { count: number; active: boolean };
-  duped: boolean;
+  saved: boolean;
   onGrub: () => void;
-  onLoad: () => void;
-  onDuplicate: () => void;
+  onSave: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
-      <div className="flex items-start justify-between gap-2.5 px-3.5 pt-3.5">
-        <div className="min-w-0">
-          <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--muted)]">Collection</span>
-          <div className="font-display text-[19px] mt-1 leading-tight">{m.name}</div>
-          <Link href={`/u/${m.who.slice(1)}`} className="text-[11px] text-[var(--muted)] mt-0.5 hover:text-[var(--accent)]">
-            {m.who}
-          </Link>
-        </div>
-        <GrubButton count={grub.count} active={grub.active} onToggle={onGrub} />
-      </div>
-      <div className="mt-3">
+    <CardShell href={`/maps/${m.mapId ?? m.id}`}>
+      <CardHeader who={m.who} handle={m.who} when="" tag="Map" />
+      <div className="font-display text-[19px] px-3.5 mt-2 leading-tight">{m.name}</div>
+      <div className="mt-2.5">
         <DotMap points={m.previewDots} height={110} />
       </div>
-      <div className="font-mono text-[11px] text-[var(--muted)] px-3.5 pt-2.5 tabular-nums">
+      <Stats>
         {m.places} {m.places === 1 ? "place" : "places"}
-      </div>
-      <div className="flex items-center gap-2 px-3.5 pt-2.5 pb-3.5">
-        <LoadButton onClick={onLoad} label="Yonder this map" />
-        <button
-          type="button"
-          onClick={onDuplicate}
-          disabled={duped}
-          className="inline-flex items-center gap-1.5 text-[13px] text-[var(--muted)] hover:text-[var(--foreground)] py-1.5 px-1 disabled:opacity-50"
-        >
-          <Copy className="w-[15px] h-[15px]" strokeWidth={1.75} />
-          {duped ? "Duplicated" : "Duplicate"}
-        </button>
-      </div>
-    </div>
+      </Stats>
+      <SocialFooter grub={grub} onGrub={onGrub} saved={saved} onSave={onSave} />
+    </CardShell>
   );
 }
 
-export function LoadButton({ onClick, label }: { onClick: () => void; label: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--accent)]/60 bg-black/30 backdrop-blur-sm text-[var(--accent)] text-xs font-semibold px-3 py-1.5 hover:bg-[var(--accent)] hover:text-black"
-    >
-      <Navigation className="w-3.5 h-3.5" strokeWidth={1.75} />
-      {label}
-    </button>
-  );
-}
-
-export function GrubButton({ count, active, onToggle }: { count: number; active: boolean; onToggle: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-pressed={active}
-      className={`inline-flex items-center gap-1.5 py-1.5 font-mono text-[13px] tabular-nums transition-colors ${
-        active ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
-      }`}
-    >
-      <Sprout className="w-[17px] h-[17px]" strokeWidth={1.75} />
-      {count}
-    </button>
-  );
-}
-
-export function WaysCard({ w }: { w: FeedWays }) {
-  return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
-      <Link
-        href={`/u/${w.handle.slice(1)}`}
-        className="flex items-center gap-2.5 px-3.5 pt-3.5"
-      >
-        <Avatar name={w.who} />
-        <div className="min-w-0 flex-1">
-          <div className="font-display text-base leading-tight truncate hover:text-[var(--accent)]">
-            {w.who}
-          </div>
-          <div className="text-[11px] text-[var(--muted)]">
-            {w.handle} · {w.when} · ways report
-          </div>
-        </div>
-      </Link>
-      {w.caption && (
-        <p className="text-sm leading-relaxed mx-3.5 mt-2.5 text-pretty">
-          {w.caption}
-        </p>
-      )}
-      <div className="mt-3">
-        <Traces tracks={w.traces} height={170} />
-      </div>
-      <div className="font-mono text-[11px] text-[var(--muted)] px-3.5 py-3 tabular-nums">
-        {w.placesSeen} places seen · {w.count} ways · {fmtDist(w.km * 1000)} wandered
-      </div>
-    </div>
-  );
-}
+// ---- Plan: a straight-line mission -----------------------------------------
 
 export function MissionCard({ mi }: { mi: FeedMission }) {
   return (
-    <Link
-      href={`/missions/${mi.missionId}`}
-      className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3.5 hover:border-[var(--accent)]/50"
-    >
-      <Ruler className="w-5 h-5 text-[var(--accent)] shrink-0" strokeWidth={1.75} />
-      <div className="min-w-0 flex-1">
-        <div className="font-display text-base truncate">{mi.name}</div>
-        <div className="text-[11px] text-[var(--muted)]">
-          {mi.handle} · {mi.when} · set a {fmtDist(mi.distanceM)} line · see who&apos;s winning
+    <CardShell href={`/missions/${mi.missionId}`}>
+      <CardHeader who={mi.who} handle={mi.handle} when={mi.when} tag="Mission" />
+      <div className="flex items-center gap-3 px-3.5 py-3.5">
+        <div className="size-10 shrink-0 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center text-[var(--accent)]">
+          <Ruler className="w-5 h-5" strokeWidth={1.75} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-display text-[17px] truncate leading-tight">{mi.name}</div>
+          <div className="text-[11px] text-[var(--muted)] mt-0.5">
+            A {fmtDist(mi.distanceM)} line to hold · see who&apos;s winning
+          </div>
         </div>
       </div>
-    </Link>
+    </CardShell>
+  );
+}
+
+// ---- A ways report ---------------------------------------------------------
+
+export function WaysCard({ w }: { w: FeedWays }) {
+  return (
+    <CardShell href={`/u/${w.handle.slice(1)}`}>
+      <CardHeader who={w.who} handle={w.handle} when={w.when} tag="Ways" />
+      <Caption text={w.caption} />
+      <div className="mt-3">
+        <Traces tracks={w.traces} height={170} />
+      </div>
+      <Stats>
+        {w.placesSeen} places seen · {w.count} ways · {fmtDist(w.km * 1000)} wandered
+      </Stats>
+      <div className="pb-3.5" />
+    </CardShell>
   );
 }
 
@@ -263,4 +317,3 @@ export function Avatar({ name }: { name: string }) {
     </div>
   );
 }
-

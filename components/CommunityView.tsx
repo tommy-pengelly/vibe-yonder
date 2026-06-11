@@ -181,10 +181,9 @@ function FeedItemCard({
       <MapCard
         m={m}
         grub={a.gstate(m.id, m)}
-        duped={!!a.duped[m.id]}
+        saved={!!a.saved[m.id]}
         onGrub={() => a.grub("post", m.id)}
-        onLoad={() => a.startWalk(m.destinations, m.name, m.mapId)}
-        onDuplicate={() => a.duplicate(m)}
+        onSave={() => a.save({ id: m.id, name: m.name, destinations: m.destinations })}
       />
     );
   }
@@ -195,8 +194,7 @@ function FeedItemCard({
       grub={a.gstate(y.id, y)}
       saved={!!a.saved[y.id]}
       onGrub={() => a.grub("post", y.id)}
-      onSave={() => a.save(y)}
-      onLoad={() => a.startWalk(y.destinations, y.caption ?? y.area)}
+      onSave={() => a.save({ id: y.id, name: y.caption ?? y.area, destinations: y.destinations })}
     />
   );
 }
@@ -244,10 +242,9 @@ function DiscoverTab({ a }: { a: ReturnType<typeof useFeedActions> }) {
             key={m.id}
             m={m}
             grub={a.gstate(m.id, m)}
-            duped={!!a.duped[m.id]}
+            saved={!!a.saved[m.id]}
             onGrub={() => a.grub("map", m.id)}
-            onLoad={() => a.startWalk(m.destinations, m.name, m.id)}
-            onDuplicate={() => a.duplicate(m)}
+            onSave={() => a.save({ id: m.id, name: m.name, destinations: m.destinations })}
           />
         ))
       )}
@@ -387,10 +384,9 @@ function SearchSheet({
               key={m.id}
               m={m}
               grub={a.gstate(m.id, m)}
-              duped={!!a.duped[m.id]}
+              saved={!!a.saved[m.id]}
               onGrub={() => a.grub("map", m.id)}
-              onLoad={() => a.startWalk(m.destinations, m.name, m.id)}
-              onDuplicate={() => a.duplicate(m)}
+              onSave={() => a.save({ id: m.id, name: m.name, destinations: m.destinations })}
             />
           ))}
           {results?.yonders.map((y) => (
@@ -400,8 +396,7 @@ function SearchSheet({
               grub={a.gstate(y.id, y)}
               saved={!!a.saved[y.id]}
               onGrub={() => a.grub("yonder", y.id)}
-              onSave={() => a.save(y)}
-              onLoad={() => a.startWalk(y.destinations, y.caption ?? y.area)}
+              onSave={() => a.save({ id: y.id, name: y.caption ?? y.area, destinations: y.destinations })}
             />
           ))}
           {results &&
