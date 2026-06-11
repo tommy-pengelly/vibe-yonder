@@ -13,7 +13,7 @@ import { useEffect, useMemo, useState } from "react";
 import AuthModal from "@/components/AuthModal";
 import FavouritesView from "@/components/FavouritesView";
 import FollowRequests from "@/components/FollowRequests";
-import { EmptyState, InfiniteScroll, SegmentedTabs } from "@/components/ui";
+import { EmptyState, InfiniteScroll, SegmentedTabs, StickyBar } from "@/components/ui";
 import { DotMap, Trace } from "@/components/ui/viz";
 import { useAuthUser, signOut } from "@/lib/auth";
 import {
@@ -142,17 +142,19 @@ export default function YouHub() {
 
         {user && <FollowRequests />}
 
-        <SegmentedTabs<Tab>
-          variant="underline"
-          value={tab}
-          onChange={setTab}
-          tabs={[
-            { value: "yonders", label: "Yonders" },
-            { value: "maps", label: "Maps" },
-            { value: "missions", label: "Missions" },
-            { value: "favourites", label: "Places" },
-          ]}
-        />
+        <StickyBar>
+          <SegmentedTabs<Tab>
+            variant="underline"
+            value={tab}
+            onChange={setTab}
+            tabs={[
+              { value: "yonders", label: "Yonders" },
+              { value: "maps", label: "Maps" },
+              { value: "missions", label: "Missions" },
+              { value: "favourites", label: "Places" },
+            ]}
+          />
+        </StickyBar>
 
         {tab === "yonders" && <YondersTab yonders={yonders} />}
         {tab === "maps" && <MapsTab />}

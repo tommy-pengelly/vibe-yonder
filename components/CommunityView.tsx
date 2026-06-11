@@ -8,9 +8,9 @@ import { useFeedActions } from "@/components/feed/useFeedActions";
 import {
   BottomSheet,
   InfiniteScroll,
-  PageHeader,
   PageScaffold,
   SegmentedTabs,
+  StickyBar,
 } from "@/components/ui";
 import { FEED_PAGE, loadCommunity, loadFeed, searchProfiles } from "@/lib/data";
 import type { FeedItem, FeedMap, FeedYonder, Profile } from "@/lib/types";
@@ -28,31 +28,37 @@ export default function CommunityView() {
   return (
     <>
       <PageScaffold>
-        <PageHeader
-          kicker="Community"
-          title="Roam"
-          action={
+        <div>
+          <span className="text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">
+            Community
+          </span>
+          <h1 className="font-display text-3xl tracking-tight leading-none">Roam</h1>
+        </div>
+
+        <StickyBar>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <SegmentedTabs<Tab>
+                variant="underline"
+                value={tab}
+                onChange={setTab}
+                tabs={[
+                  { value: "following", label: "Following" },
+                  { value: "everyone", label: "Everyone" },
+                  { value: "discover", label: "Maps" },
+                ]}
+              />
+            </div>
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
               aria-label="Search the community"
-              className="size-9 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]"
+              className="size-9 shrink-0 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]"
             >
               <Search className="w-4 h-4" strokeWidth={1.75} />
             </button>
-          }
-        />
-
-        <SegmentedTabs<Tab>
-          variant="underline"
-          value={tab}
-          onChange={setTab}
-          tabs={[
-            { value: "following", label: "Following" },
-            { value: "everyone", label: "Everyone" },
-            { value: "discover", label: "Maps" },
-          ]}
-        />
+          </div>
+        </StickyBar>
 
         {tab === "discover" ? (
           <DiscoverTab a={a} />
