@@ -221,7 +221,7 @@ function YondersTab({ yonders }: { yonders: SavedYonder[] }) {
         ) : (
           <span />
         )}
-        <TabCreate label="Wander" href="/walk" />
+        <TabCreate label="New yonder" href="/walk" />
       </div>
       {yonders.length === 0 ? (
         <EmptyState
