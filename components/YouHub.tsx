@@ -349,6 +349,9 @@ function MissionsTab() {
                 {m.attempts === 1 ? "attempt" : "attempts"}
               </div>
             </div>
+            <span className="text-[10px] uppercase tracking-widest text-[var(--muted)] shrink-0">
+              {m.mine ? "Yours" : "Racing"}
+            </span>
           </Link>
         ))
       )}

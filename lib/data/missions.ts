@@ -13,6 +13,7 @@ export type Mission = {
   createdAt: number;
   who?: string; // @handle of creator
   attempts?: number;
+  mine?: boolean; // created by the current user (vs one they're racing on)
 };
 
 export type LeaderRow = {
@@ -101,20 +102,53 @@ export async function createMission(opts: {
   return id;
 }
 
-/** Missions the current user created. */
+/** Missions in the user's world: ones they made, plus ones they're racing on
+ * (have an attempt against). `mine` flags the ones they created. */
 export async function loadMyMissions(): Promise<Mission[]> {
   const c = await ctx();
   if (!c) return [];
-  const { data } = await c.sb
-    .from("missions")
-    .select("*")
-    .eq("user_id", c.uid)
-    .order("created_at", { ascending: false })
-    .limit(50);
-  const rows = (data as MissionRow[]) ?? [];
+  const [createdRes, attRes] = await Promise.all([
+    c.sb
+      .from("missions")
+      .select("*")
+      .eq("user_id", c.uid)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    c.sb.from("mission_attempts").select("mission_id").eq("user_id", c.uid),
+  ]);
+  const createdRows = (createdRes.data as MissionRow[]) ?? [];
+  const mineIds = new Set(createdRows.map((r) => r.id));
+  const attIds = [
+    ...new Set(((attRes.data as { mission_id: string }[]) ?? []).map((a) => a.mission_id)),
+  ].filter((id) => !mineIds.has(id));
+
+  let attemptedRows: MissionRow[] = [];
+  if (attIds.length > 0) {
+    const { data } = await c.sb.from("missions").select("*").in("id", attIds).limit(50);
+    attemptedRows = (data as MissionRow[]) ?? [];
+  }
+
+  const rows = [...createdRows, ...attemptedRows];
   if (rows.length === 0) return [];
+
   const handles = await handlesFor(rows.map((r) => r.user_id));
-  return rows.map((r) => rowToMission(r, `@${handles[r.user_id] ?? "wanderer"}`));
+  const { data: counts } = await c.sb
+    .from("mission_attempts")
+    .select("mission_id")
+    .in(
+      "mission_id",
+      rows.map((r) => r.id),
+    );
+  const tally: Record<string, number> = {};
+  for (const a of (counts as { mission_id: string }[]) ?? [])
+    tally[a.mission_id] = (tally[a.mission_id] ?? 0) + 1;
+
+  return rows
+    .map((r) => ({
+      ...rowToMission(r, `@${handles[r.user_id] ?? "wanderer"}`, tally[r.id] ?? 0),
+      mine: mineIds.has(r.id),
+    }))
+    .sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export async function loadMissions(): Promise<Mission[]> {
