@@ -47,6 +47,7 @@ export default function PlaceDetailSheet({
   const snapPoints = ["440px", 1];
   const [snap, setSnap] = useState<number | string | null>(snapPoints[0]);
   const [favId, setFavId] = useState<string | null>(null);
+  const [blurb, setBlurb] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) setSnap(snapPoints[0]);
@@ -61,6 +62,29 @@ export default function PlaceDetailSheet({
     });
     return () => {
       c = true;
+    };
+  }, [open, place]);
+
+  // A short Wikipedia blurb, when there is one. Curiosity, never navigation.
+  useEffect(() => {
+    if (!open || !place) {
+      setBlurb(null);
+      return;
+    }
+    let c = false;
+    const ctrl = new AbortController();
+    void fetch(
+      `/api/place-blurb?lat=${place.lat}&lon=${place.lon}&name=${encodeURIComponent(place.name)}`,
+      { signal: ctrl.signal },
+    )
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { extract?: string } | null) => {
+        if (!c) setBlurb(d?.extract ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      c = true;
+      ctrl.abort();
     };
   }, [open, place]);
 
@@ -133,6 +157,12 @@ export default function PlaceDetailSheet({
                       </Drawer.Description>
                     )}
                   </div>
+
+                  {blurb && (
+                    <p className="text-sm leading-relaxed text-pretty text-[var(--warm)]">
+                      {blurb}
+                    </p>
+                  )}
 
                   <div className="flex flex-col gap-2">
                     {actions.map((a) => (
