@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
+import PlacePhoto from "@/components/PlacePhoto";
 import { BottomSheet, EmptyState, PageHeader, PageScaffold } from "@/components/ui";
 import { useAuthUser } from "@/lib/auth";
 import {
@@ -115,9 +116,19 @@ export default function FavouritesView() {
           body="Heart a place on a yonder to keep it here, then nickname it, Home, Work, the best café, for one-tap wandering."
         />
       ) : (
-        <ul className="flex flex-col divide-y divide-[var(--border)]">
+        <div className="flex flex-col gap-2">
           {favourites.map((f) => (
-            <li key={f.id} className="flex items-center gap-2 py-3">
+            <div
+              key={f.id}
+              className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5"
+            >
+              <PlacePhoto
+                lat={f.lat}
+                lon={f.lon}
+                name={f.name}
+                keepPlaceholder
+                className="size-12 rounded-xl shrink-0"
+              />
               {editing === f.id ? (
                 <input
                   autoFocus
@@ -173,9 +184,9 @@ export default function FavouritesView() {
               >
                 <X className="w-4 h-4" strokeWidth={1.75} />
               </button>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
 
       <AddFavouriteSheet
