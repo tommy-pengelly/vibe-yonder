@@ -53,7 +53,14 @@ export default function CreateHub({
   const [mapsTab, setMapsTab] = useState<MapsTab>("mine");
   const [communityMaps, setCommunityMaps] = useState<FeedMap[] | null>(null);
   const [detail, setDetail] = useState<(PlaceLite & RankedResult) | null>(null);
-  const [lineMode, setLineMode] = useState(false);
+  // Open straight in line mode when launched via "New mission" (sessionStorage
+  // hint set just before navigating here), then clear it.
+  const [lineMode, setLineMode] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const wants = window.sessionStorage.getItem("vibe-yonder.createMode") === "line";
+    if (wants) window.sessionStorage.removeItem("vibe-yonder.createMode");
+    return wants;
+  });
   // The straight line's start (A); once set, the next pick is the end (B).
   const [lineStart, setLineStart] = useState<{ name: string; lat: number; lon: number } | null>(null);
 

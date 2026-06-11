@@ -2,15 +2,18 @@
 import {
   Bell,
   Footprints,
+  Map as MapIcon,
+  Plus,
   Ruler,
   Settings as SettingsIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import AuthModal from "@/components/AuthModal";
 import FavouritesView from "@/components/FavouritesView";
 import FollowRequests from "@/components/FollowRequests";
-import { InfiniteScroll, SegmentedTabs } from "@/components/ui";
+import { EmptyState, InfiniteScroll, SegmentedTabs } from "@/components/ui";
 import { DotMap, Trace } from "@/components/ui/viz";
 import { useAuthUser, signOut } from "@/lib/auth";
 import {
@@ -175,27 +178,69 @@ export default function YouHub() {
 
 // ----- Tabs -----
 
+// One consistent create affordance for every tab: a small "+ label" link.
+function TabCreate({
+  label,
+  href,
+  onClick,
+}: {
+  label: string;
+  href?: string;
+  onClick?: () => void;
+}) {
+  const cls =
+    "inline-flex items-center gap-1.5 text-sm text-[var(--accent)] hover:opacity-80";
+  const inner = (
+    <>
+      <Plus className="w-4 h-4" strokeWidth={1.75} /> {label}
+    </>
+  );
+  return href ? (
+    <Link href={href} className={cls}>
+      {inner}
+    </Link>
+  ) : (
+    <button type="button" onClick={onClick} className={cls}>
+      {inner}
+    </button>
+  );
+}
+
 function YondersTab({ yonders }: { yonders: SavedYonder[] }) {
   const [shown, setShown] = useState(8);
-  if (yonders.length === 0) {
-    return <p className="text-sm text-[var(--muted)] py-6">No yonders yet, go wander.</p>;
-  }
   return (
     <div className="flex flex-col gap-3">
-      <Link
-        href="/ways"
-        className="self-end inline-flex items-center gap-1.5 text-sm text-[var(--accent)] hover:opacity-80"
-      >
-        <Footprints className="w-4 h-4" strokeWidth={1.75} /> All your ways
-      </Link>
-      {yonders.slice(0, shown).map((y) => (
-        <HistoryCard key={y.id} y={y} />
-      ))}
-      <InfiniteScroll
-        hasMore={shown < yonders.length}
-        loading={false}
-        onMore={() => setShown((s) => s + 8)}
-      />
+      <div className="flex items-center justify-between">
+        {yonders.length > 0 ? (
+          <Link
+            href="/ways"
+            className="inline-flex items-center gap-1.5 text-sm text-[var(--muted)] hover:text-[var(--foreground)]"
+          >
+            <Footprints className="w-4 h-4" strokeWidth={1.75} /> All your ways
+          </Link>
+        ) : (
+          <span />
+        )}
+        <TabCreate label="Wander" href="/walk" />
+      </div>
+      {yonders.length === 0 ? (
+        <EmptyState
+          icon={Footprints}
+          title="No yonders yet"
+          body="Set off on a wander, and every walk you take lands here."
+        />
+      ) : (
+        <>
+          {yonders.slice(0, shown).map((y) => (
+            <HistoryCard key={y.id} y={y} />
+          ))}
+          <InfiniteScroll
+            hasMore={shown < yonders.length}
+            loading={false}
+            onMore={() => setShown((s) => s + 8)}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -212,16 +257,15 @@ function MapsTab() {
   if (maps === null) return null;
   return (
     <div className="flex flex-col gap-3">
-      <Link
-        href="/maps/new"
-        className="self-end inline-flex items-center gap-1.5 text-sm text-[var(--accent)] hover:opacity-80"
-      >
-        + New map
-      </Link>
+      <div className="flex justify-end">
+        <TabCreate label="New map" href="/maps/new" />
+      </div>
       {maps.length === 0 ? (
-        <p className="text-sm text-[var(--muted)] py-2">
-          No maps yet. Build a set of places to wander between.
-        </p>
+        <EmptyState
+          icon={MapIcon}
+          title="No maps yet"
+          body="Build a set of places to wander between, ready to set off any time."
+        />
       ) : (
         maps.map((m) => {
           const remaining = m.items.filter((i) => !i.visited).length;
@@ -260,6 +304,7 @@ function MapsTab() {
 }
 
 function MissionsTab() {
+  const router = useRouter();
   const [missions, setMissions] = useState<Mission[] | null>(null);
   useEffect(() => {
     let c = false;
@@ -268,34 +313,45 @@ function MissionsTab() {
       c = true;
     };
   }, []);
+  // Missions are made from a straight line: open the launcher in line mode.
+  const newMission = () => {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem("vibe-yonder.createMode", "line");
+    }
+    router.push("/walk");
+  };
   if (missions === null) return null;
-  if (missions.length === 0) {
-    return (
-      <p className="text-sm text-[var(--muted)] py-2">
-        No missions yet. Finish a straight-line yonder, then make it a mission.
-      </p>
-    );
-  }
   return (
     <div className="flex flex-col gap-2">
-      {missions.map((m) => (
-        <Link
-          key={m.id}
-          href={`/missions/${m.id}`}
-          className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3.5 hover:border-[var(--accent)]/50"
-        >
-          <Ruler className="w-5 h-5 text-[var(--accent)] shrink-0" strokeWidth={1.75} />
-          <div className="min-w-0 flex-1">
-            <div className="font-display text-lg truncate">
-              {m.name ?? "Straight-line mission"}
+      <div className="flex justify-end pb-1">
+        <TabCreate label="New mission" onClick={newMission} />
+      </div>
+      {missions.length === 0 ? (
+        <EmptyState
+          icon={Ruler}
+          title="No missions yet"
+          body="Walk a straight line from A to B, then turn it into a mission others can race."
+        />
+      ) : (
+        missions.map((m) => (
+          <Link
+            key={m.id}
+            href={`/missions/${m.id}`}
+            className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3.5 hover:border-[var(--accent)]/50"
+          >
+            <Ruler className="w-5 h-5 text-[var(--accent)] shrink-0" strokeWidth={1.75} />
+            <div className="min-w-0 flex-1">
+              <div className="font-display text-lg truncate">
+                {m.name ?? "Straight-line mission"}
+              </div>
+              <div className="text-xs text-[var(--muted)]">
+                {fmtDist(m.distanceM)} · {m.attempts ?? 0}{" "}
+                {m.attempts === 1 ? "attempt" : "attempts"}
+              </div>
             </div>
-            <div className="text-xs text-[var(--muted)]">
-              {fmtDist(m.distanceM)} · {m.attempts ?? 0}{" "}
-              {m.attempts === 1 ? "attempt" : "attempts"}
-            </div>
-          </div>
-        </Link>
-      ))}
+          </Link>
+        ))
+      )}
     </div>
   );
 }
