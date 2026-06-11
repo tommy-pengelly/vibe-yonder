@@ -10,7 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 import AuthModal from "@/components/AuthModal";
 import FavouritesView from "@/components/FavouritesView";
 import FollowRequests from "@/components/FollowRequests";
-import { SegmentedTabs } from "@/components/ui";
+import { InfiniteScroll, SegmentedTabs } from "@/components/ui";
 import { DotMap, Trace } from "@/components/ui/viz";
 import { useAuthUser, signOut } from "@/lib/auth";
 import {
@@ -191,15 +191,11 @@ function YondersTab({ yonders }: { yonders: SavedYonder[] }) {
       {yonders.slice(0, shown).map((y) => (
         <HistoryCard key={y.id} y={y} />
       ))}
-      {shown < yonders.length && (
-        <button
-          type="button"
-          onClick={() => setShown((s) => s + 8)}
-          className="rounded-full border border-[var(--border)] py-2.5 text-sm text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--muted)]"
-        >
-          Load more ({yonders.length - shown})
-        </button>
-      )}
+      <InfiniteScroll
+        hasMore={shown < yonders.length}
+        loading={false}
+        onMore={() => setShown((s) => s + 8)}
+      />
     </div>
   );
 }

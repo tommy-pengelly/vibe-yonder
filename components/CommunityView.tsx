@@ -7,11 +7,12 @@ import { Empty, Loading, MapCard, MissionCard, WaysCard, YonderCard } from "@/co
 import { useFeedActions } from "@/components/feed/useFeedActions";
 import {
   BottomSheet,
+  InfiniteScroll,
   PageHeader,
   PageScaffold,
   SegmentedTabs,
 } from "@/components/ui";
-import { loadCommunity, loadFeed, searchProfiles } from "@/lib/data";
+import { FEED_PAGE, loadCommunity, loadFeed, searchProfiles } from "@/lib/data";
 import type { FeedItem, FeedMap, FeedYonder, Profile } from "@/lib/types";
 
 type Tab = "following" | "everyone" | "discover";
@@ -86,29 +87,54 @@ function FeedTab({
   onBrowseEveryone: () => void;
 }) {
   const [items, setItems] = useState<FeedItem[] | null>(null);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const seed = (its: FeedItem[]) =>
+    a.seedGrubs(
+      its
+        .filter((i) => i.kind === "yonder" || i.kind === "map")
+        .map((i) =>
+          i.kind === "yonder"
+            ? { id: i.id, grubs: i.y.grubs, grubbed: i.y.grubbed }
+            : { id: i.id, grubs: i.m.grubs, grubbed: i.m.grubbed },
+        ),
+    );
 
   useEffect(() => {
     let c = false;
     setItems(null);
-    void loadFeed(scope === "following" ? "following" : "community").then((it) => {
-      if (c) return;
-      setItems(it);
-      // seed grub state for grubbable items
-      a.seedGrubs(
-        it
-          .filter((i) => i.kind === "yonder" || i.kind === "map")
-          .map((i) =>
-            i.kind === "yonder"
-              ? { id: i.id, grubs: i.y.grubs, grubbed: i.y.grubbed }
-              : { id: i.id, grubs: i.m.grubs, grubbed: i.m.grubbed },
-          ),
-      );
-    });
+    setPage(0);
+    setHasMore(true);
+    void loadFeed(scope === "following" ? "following" : "community", 0).then(
+      (it) => {
+        if (c) return;
+        setItems(it);
+        setHasMore(it.length === FEED_PAGE);
+        seed(it);
+      },
+    );
     return () => {
       c = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope]);
+
+  const loadMore = () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    const next = page + 1;
+    void loadFeed(scope === "following" ? "following" : "community", next).then(
+      (it) => {
+        setItems((prev) => [...(prev ?? []), ...it]);
+        setPage(next);
+        setHasMore(it.length === FEED_PAGE);
+        seed(it);
+        setLoadingMore(false);
+      },
+    );
+  };
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -128,7 +154,12 @@ function FeedTab({
           />
         )
       ) : (
-        items.map((it) => <FeedItemCard key={it.id} item={it} a={a} />)
+        <>
+          {items.map((it) => (
+            <FeedItemCard key={it.id} item={it} a={a} />
+          ))}
+          <InfiniteScroll hasMore={hasMore} loading={loadingMore} onMore={loadMore} />
+        </>
       )}
     </div>
   );

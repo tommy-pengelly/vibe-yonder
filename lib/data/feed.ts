@@ -192,13 +192,19 @@ async function shapeFeedYonders(rows: FeedPostRow[]): Promise<FeedYonder[]> {
   });
 }
 
-/** The whole feed in one read: posts of any kind → typed feed items. Community
- * = everything public; following = posts by people you follow. */
+export const FEED_PAGE = 20;
+
+/** A page of the feed: posts of any kind → typed feed items. Community =
+ * everything public; following = posts by people you follow. `page` is 0-based;
+ * a full page (length === FEED_PAGE) means there may be more. */
 export async function loadFeed(
   scope: "community" | "following",
+  page = 0,
 ): Promise<FeedItem[]> {
   const sb = getSupabase();
   if (!sb) return [];
+  const from = page * FEED_PAGE;
+  const to = from + FEED_PAGE - 1;
 
   let rows: FeedPostRow[] = [];
   if (scope === "following") {
@@ -217,7 +223,7 @@ export async function loadFeed(
       .select(FEED_COLS)
       .in("user_id", ids)
       .order("created_at", { ascending: false })
-      .limit(60);
+      .range(from, to);
     if (error) return [];
     rows = (data as FeedPostRow[]) ?? [];
   } else {
@@ -226,7 +232,7 @@ export async function loadFeed(
       .select(FEED_COLS)
       .eq("visibility", "public")
       .order("created_at", { ascending: false })
-      .limit(60);
+      .range(from, to);
     if (error) return [];
     rows = (data as FeedPostRow[]) ?? [];
   }
