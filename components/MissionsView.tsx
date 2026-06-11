@@ -25,8 +25,8 @@ export default function MissionsView() {
         backHref="/"
       />
       <p className="text-sm text-[var(--muted)] -mt-2">
-        Walk a fixed line A→B as straight as you can. Closest to the line wins —
-        never the fastest.
+        Walk a fixed line from A to B as straight as you can. Closest to the
+        line wins, never the fastest.
       </p>
 
       {missions === null ? null : missions.length === 0 ? (

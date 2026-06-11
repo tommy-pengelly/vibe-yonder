@@ -1,10 +1,12 @@
+"use client";
 import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 
 // The standard member-screen header: an uppercase tracked kicker + a Fraunces
 // title, with an optional back chevron (left) and a single action slot (right).
-// Replaces every hand-rolled <header>.
+// Back returns to wherever you came from in-app (history), falling back to
+// `backHref` only when the page was opened directly.
 export default function PageHeader({
   kicker,
   title,
@@ -16,17 +18,26 @@ export default function PageHeader({
   backHref?: string;
   action?: ReactNode;
 }) {
+  const router = useRouter();
+  const goBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else if (backHref) {
+      router.push(backHref);
+    }
+  };
   return (
     <header className="flex items-start justify-between gap-3">
       <div className="flex items-center gap-3 min-w-0">
         {backHref && (
-          <Link
-            href={backHref}
+          <button
+            type="button"
+            onClick={goBack}
             aria-label="Back"
             className="size-9 -ml-2 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)] shrink-0"
           >
             <ArrowLeft className="w-4 h-4" strokeWidth={1.75} />
-          </Link>
+          </button>
         )}
         <div className="min-w-0">
           {kicker && (
