@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
+import { useGoBack } from "@/components/ui";
 import { useAuthUser } from "@/lib/auth";
 import { getSharedYonder, reportContent, saveYonderPlaces, setGrub } from "@/lib/data";
 import { fmtDist } from "@/lib/geo";
@@ -15,6 +16,7 @@ function fmtYondered(v: number): string {
 
 export default function SharedYonderView({ id }: { id: string }) {
   const router = useRouter();
+  const goBack = useGoBack("/");
   const { user } = useAuthUser();
   const [y, setY] = useState<FeedYonder | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -92,9 +94,9 @@ export default function SharedYonderView({ id }: { id: string }) {
 
   return (
     <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-6 pb-10 gap-5">
-      <Link href="/" aria-label="Back" className="size-9 -ml-2 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]">
+      <button type="button" onClick={goBack} aria-label="Back" className="size-9 -ml-2 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]">
         <ArrowLeft className="w-4 h-4" strokeWidth={1.75} />
-      </Link>
+      </button>
 
       <Link href={`/u/${y.handle.slice(1)}`} className="flex items-center gap-3">
         <div className="size-11 shrink-0 rounded-full bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center font-display text-base text-[var(--warm)]">

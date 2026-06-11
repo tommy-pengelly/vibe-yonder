@@ -5,3 +5,4 @@ export { default as SegmentedTabs } from "./SegmentedTabs";
 export { default as BottomSheet } from "./BottomSheet";
 export { default as ListRow } from "./ListRow";
 export { default as InfiniteScroll } from "./InfiniteScroll";
+export { useGoBack } from "./useGoBack";

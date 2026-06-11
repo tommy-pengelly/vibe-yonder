@@ -4,12 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Recap from "@/components/Recap";
+import { useGoBack } from "@/components/ui";
 import { useAuthUser } from "@/lib/auth";
 import { getYonder, saveYonderPlaces, updateYonder } from "@/lib/data";
 import type { Destination, SavedYonder, Target } from "@/lib/types";
 
 export default function RecapViewer({ id }: { id: string }) {
   const router = useRouter();
+  const goBack = useGoBack("/you");
   const { user } = useAuthUser();
   const [yonder, setYonder] = useState<SavedYonder | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -92,13 +94,14 @@ export default function RecapViewer({ id }: { id: string }) {
 
   return (
     <div className="relative">
-      <Link
-        href="/you"
+      <button
+        type="button"
+        onClick={goBack}
         aria-label="Back"
         className="absolute top-6 left-4 z-10 size-9 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]"
       >
         <ArrowLeft className="w-4 h-4" strokeWidth={1.75} />
-      </Link>
+      </button>
       <Recap
         saved={yonder}
         savedForLater={savedForLater}

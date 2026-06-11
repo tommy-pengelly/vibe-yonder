@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
+import { useGoBack } from "@/components/ui";
 import { useAuthUser } from "@/lib/auth";
 import {
   follow,
@@ -21,6 +22,7 @@ function fmtYondered(v: number): string {
 }
 
 export default function ProfileView({ username }: { username: string }) {
+  const goBack = useGoBack("/");
   const { user } = useAuthUser();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -89,9 +91,9 @@ export default function ProfileView({ username }: { username: string }) {
   return (
     <>
       <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-8 pb-10 gap-6">
-        <Link href="/" aria-label="Back" className="size-9 -ml-2 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]">
+        <button type="button" onClick={goBack} aria-label="Back" className="size-9 -ml-2 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]">
           <ArrowLeft className="w-4 h-4" strokeWidth={1.75} />
-        </Link>
+        </button>
 
         <header className="flex items-start gap-4">
           <div className="size-16 shrink-0 rounded-full bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center font-display text-2xl text-[var(--warm)]">

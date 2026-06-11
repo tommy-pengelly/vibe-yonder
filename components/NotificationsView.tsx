@@ -2,6 +2,7 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useGoBack } from "@/components/ui";
 import { useAuthUser } from "@/lib/auth";
 import { loadNotifications, markNotificationsRead } from "@/lib/data";
 import type { NotificationItem } from "@/lib/types";
@@ -20,6 +21,7 @@ function linkFor(n: NotificationItem): string | undefined {
 }
 
 export default function NotificationsView() {
+  const goBack = useGoBack("/you");
   const { user } = useAuthUser();
   const [items, setItems] = useState<NotificationItem[] | null>(null);
 
@@ -43,9 +45,9 @@ export default function NotificationsView() {
     <>
       <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-8 pb-10 gap-5">
         <header className="flex items-center gap-3">
-          <Link href="/you" aria-label="Back" className="size-9 -ml-2 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]">
+          <button type="button" onClick={goBack} aria-label="Back" className="size-9 -ml-2 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]">
             <ArrowLeft className="w-4 h-4" strokeWidth={1.75} />
-          </Link>
+          </button>
           <h1 className="font-display text-3xl tracking-tight leading-none">Notifications</h1>
         </header>
 
