@@ -27,6 +27,7 @@ type StartOpts = {
   name?: string;
   play?: PlayMode;
   missionId?: string;
+  origin?: { lat: number; lon: number };
 };
 
 function toTarget(r: { name: string; label?: string; lat: number; lon: number }): Target {
@@ -53,13 +54,28 @@ export default function CreateHub({
   const [communityMaps, setCommunityMaps] = useState<FeedMap[] | null>(null);
   const [detail, setDetail] = useState<(PlaceLite & RankedResult) | null>(null);
   const [lineMode, setLineMode] = useState(false);
+  // The straight line's start (A); once set, the next pick is the end (B).
+  const [lineStart, setLineStart] = useState<{ name: string; lat: number; lon: number } | null>(null);
 
   const building = picks.length > 0;
   const idle = q.trim().length < 3;
 
-  const startStraightLine = (r: { name: string; label?: string; lat: number; lon: number }) => {
+  const exitLine = () => {
     setLineMode(false);
-    onStart([toTarget(r)], "single", { play: "straightline", name: `Straight line to ${r.name}` });
+    setLineStart(null);
+    setQ("");
+  };
+
+  const beginLine = (
+    a: { name: string; lat: number; lon: number },
+    b: { name: string; label?: string; lat: number; lon: number },
+  ) => {
+    exitLine();
+    onStart([toTarget(b)], "single", {
+      play: "straightline",
+      origin: { lat: a.lat, lon: a.lon },
+      name: `${a.name} → ${b.name}`,
+    });
   };
 
   useEffect(() => {
@@ -78,8 +94,14 @@ export default function CreateHub({
   const removePick = (id: string) => setPicks((p) => p.filter((t) => t.id !== id));
 
   const onResultTap = (r: RankedResult) => {
-    if (lineMode) startStraightLine(r);
-    else if (building) addPick(r);
+    if (lineMode) {
+      if (!lineStart) {
+        setLineStart({ name: r.name, lat: r.lat, lon: r.lon });
+        setQ("");
+      } else {
+        beginLine(lineStart, r);
+      }
+    } else if (building) addPick(r);
     else setDetail({ ...r, dist: r.dist });
   };
 
@@ -130,20 +152,42 @@ export default function CreateHub({
       </header>
 
       <h1 className="font-display text-4xl tracking-tight leading-[0.95]">
-        {lineMode ? "Straight line to?" : "Where to?"}
+        {!lineMode ? "Where to?" : !lineStart ? "From where?" : "To where?"}
       </h1>
 
       {lineMode && (
-        <div className="flex items-center gap-2 -mt-2 text-xs text-[var(--muted)]">
-          <Ruler className="w-3.5 h-3.5 text-[var(--accent)]" strokeWidth={1.75} />
-          <span>Pick the far point you&apos;ll hold a line to.</span>
-          <button
-            type="button"
-            onClick={() => setLineMode(false)}
-            className="ml-auto text-[var(--muted)] hover:text-[var(--foreground)]"
-          >
-            Back
-          </button>
+        <div className="flex flex-col gap-2 -mt-2">
+          <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
+            <Ruler className="w-3.5 h-3.5 text-[var(--accent)]" strokeWidth={1.75} />
+            <span>
+              {!lineStart
+                ? "Where does the line start?"
+                : "The far point you'll hold the line to."}
+            </span>
+            <button
+              type="button"
+              onClick={() => (lineStart ? setLineStart(null) : exitLine())}
+              className="ml-auto text-[var(--muted)] hover:text-[var(--foreground)]"
+            >
+              Back
+            </button>
+          </div>
+          {!lineStart && position && (
+            <button
+              type="button"
+              onClick={() =>
+                setLineStart({ name: "Current location", lat: position.lat, lon: position.lon })
+              }
+              className="self-start rounded-full border border-[var(--accent)]/50 text-[var(--accent)] px-3 py-1.5 text-sm hover:border-[var(--accent)]"
+            >
+              Start at my current location
+            </button>
+          )}
+          {lineStart && (
+            <div className="text-xs text-[var(--muted)]">
+              From <span className="text-[var(--foreground)]">{lineStart.name}</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -151,7 +195,13 @@ export default function CreateHub({
         autoFocus
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder={lineMode ? "Search the far point…" : "Search a place to wander to…"}
+        placeholder={
+          !lineMode
+            ? "Search a place to wander to…"
+            : !lineStart
+              ? "Search the start…"
+              : "Search the far point…"
+        }
         className="w-full bg-transparent border-b border-[var(--border)] px-1 py-3 text-lg outline-none focus:border-[var(--accent)] placeholder:text-[var(--muted)]/60"
         inputMode="search"
         enterKeyHint="search"
