@@ -36,7 +36,7 @@ function write(key: string, value: unknown) {
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // quota / privacy mode — silently ignore
+    // quota / privacy mode, silently ignore
   }
 }
 

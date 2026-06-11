@@ -378,20 +378,7 @@ export default function App() {
 
     const summary = summarize(track, startTime, pausedMs, now);
 
-    if (summary.walked < TRIVIAL_WALK_M) {
-      // Trivial yonder, quietly return to search.
-      void keepAwake(false);
-      setYonder(null);
-      setTrack([]);
-      lastFix.current = null;
-      setStartTime(null);
-      setEndTime(null);
-      setPausedMs(0);
-      setSavedYonder(null);
-      setSavedLocally(false);
-      setPhase("search");
-      return;
-    }
+    const tooShort = summary.walked < TRIVIAL_WALK_M;
 
     const primaryTarget =
       yonder?.targets.find((_, i) => i === yonder.activeIndex) ??
@@ -448,16 +435,16 @@ export default function App() {
       missionId: yonder?.missionId,
     };
 
-    // Auto-save: a finished yonder is kept by default (cloud if signed in,
-    // localStorage otherwise). No "Save" button, the recap is just for the
-    // story (caption, places, visibility, do-again).
+    // Always show the recap (never a silent bounce). A too-short walk just
+    // isn't kept, so there's no junk yonder, but you still see a finish screen.
     setSavedYonder(y);
-    setSavedLocally(true);
-    void pushYonder(y);
-
-    // A mission attempt → record it on the scoreboard (keeps your best).
-    if (y.missionId && straightLine) {
-      void recordAttempt(y.missionId, straightLine);
+    setSavedLocally(!tooShort);
+    if (!tooShort) {
+      void pushYonder(y);
+      // A mission attempt → record it on the scoreboard (keeps your best).
+      if (y.missionId && straightLine) {
+        void recordAttempt(y.missionId, straightLine);
+      }
     }
 
     void keepAwake(false);
@@ -539,6 +526,11 @@ export default function App() {
     void beginYonder(targets, savedYonder.mode, {
       mapId: savedYonder.mapId,
       name: savedYonder.name,
+      // Preserve the mode so "Do again" on a straight line / mission re-runs the
+      // line (you'll walk to the start again), not a plain wander.
+      play: savedYonder.play,
+      origin: savedYonder.origin,
+      missionId: savedYonder.missionId,
     });
   }, [savedYonder, beginYonder]);
 

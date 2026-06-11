@@ -8,7 +8,7 @@ import {
   markSkipped,
 } from "./discovery-ledger";
 
-// The ledger reads window.localStorage at call time — shim it with a Map so
+// The ledger reads window.localStorage at call time, shim it with a Map so
 // these stay pure unit tests (no jsdom dependency).
 beforeEach(() => {
   const store = new Map<string, string>();
@@ -49,7 +49,7 @@ describe("ledger rules", () => {
     expect(familiarity("zzz", 0)).toBe(0);
   });
 
-  it("is bounded — oldest entries are evicted past the cap", () => {
+  it("is bounded, oldest entries are evicted past the cap", () => {
     for (let i = 0; i < 250; i++) markSeen("x" + i, i);
     expect(loadLedger()).toHaveLength(200);
     expect(familiarity("x249", 0)).toBe(0.85); // newest kept

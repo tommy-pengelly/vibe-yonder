@@ -5,7 +5,7 @@ export type PlacePhotoData = {
   url: string;
   width?: number;
   height?: number;
-  /** What the photo is of — page or file title. */
+  /** What the photo is of, page or file title. */
   title: string;
   /** Plain-text author, when known. */
   author?: string;
@@ -81,7 +81,7 @@ export type FavouritePlace = {
   lat: number;
   lon: number;
   createdAt: number;
-  /** A personal nickname — "Home", "Work", "Best café" — shown instead of name. */
+  /** A personal nickname, "Home", "Work", "Best café", shown instead of name. */
   alias?: string;
 };
 
@@ -199,7 +199,7 @@ export type FeedYonder = {
   missionId?: string;
 };
 
-/** A "ways report" post — someone's exploration overview — in the feed. */
+/** A "ways report" post, someone's exploration overview, in the feed. */
 export type FeedWays = {
   id: string;
   who: string;
@@ -213,7 +213,7 @@ export type FeedWays = {
   traces: number[][][]; // overlaid normalised 0–100 traces
 };
 
-/** A "mission set" post — someone created a straight-line challenge. */
+/** A "mission set" post, someone created a straight-line challenge. */
 export type FeedMission = {
   id: string; // post id
   missionId: string; // the mission to open
@@ -225,7 +225,7 @@ export type FeedMission = {
   distanceM: number;
 };
 
-/** One item in the unified feed — a community post of any kind. */
+/** One item in the unified feed, a community post of any kind. */
 export type FeedItem =
   | { kind: "yonder"; id: string; when: string; y: FeedYonder }
   | { kind: "map"; id: string; when: string; m: FeedMap }

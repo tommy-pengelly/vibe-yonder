@@ -16,7 +16,7 @@ export function usePlaceSearch(position: Fix | null) {
   const reqId = useRef(0);
 
   // Read position via a ref so a moving GPS fix doesn't re-fire the search on
-  // every tick — we only want a new request when the *query* changes (queries
+  // every tick, we only want a new request when the *query* changes (queries
   // still get proximity bias from the latest position).
   const posRef = useRef(position);
   posRef.current = position;

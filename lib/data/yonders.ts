@@ -103,7 +103,7 @@ export async function updateYonder(y: SavedYonder): Promise<void> {
   if (error) console.error("updateYonder:", error.message);
   // caption is the newer column (migration 0011). Persist it best-effort in a
   // separate update so the primary save never fails if the column isn't there
-  // yet — self-heals once 0011 is applied.
+  // yet, self-heals once 0011 is applied.
   if (y.caption !== undefined) {
     const { error: capErr } = await c.sb
       .from("yonders")

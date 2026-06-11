@@ -19,10 +19,10 @@ export type WaysPayload = {
   title?: string;
 };
 
-const TABLE_MISSING = "posts table not found — apply migration 0013";
+const TABLE_MISSING = "posts table not found, apply migration 0013";
 
 /** Publish (or re-publish) a post for a finished yonder. Carries only the
- * public-safe memento — never the precise track. */
+ * public-safe memento, never the precise track. */
 export async function createYonderPost(
   y: SavedYonder,
   opts: { visibility: Exclude<Visibility, "private">; caption?: string; zone?: PrivacyZone },
@@ -97,7 +97,7 @@ export async function setMapPost(
   if (error) console.warn(`setMapPost: ${TABLE_MISSING} (${error.message})`);
 }
 
-/** Post a "ways report" — your exploration overview. */
+/** Post a "ways report", your exploration overview. */
 export async function createWaysPost(opts: {
   caption?: string;
   visibility: Exclude<Visibility, "private">;

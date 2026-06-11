@@ -3,7 +3,7 @@ import type { LatLon, Medal } from "./types";
 
 // The straight-line mode: walk the line from A to B as straight as you can.
 // Scored by deviation (never time). Medal = your *worst* moment off the line;
-// the tiebreaker is average deviation — how tight you held the whole way.
+// the tiebreaker is average deviation, how tight you held the whole way.
 
 /** Corridor half-widths (m), tightest → loosest. "Either way" = ± this. */
 export const MEDAL_BANDS: { medal: Exclude<Medal, "none">; half: number }[] = [
@@ -27,9 +27,9 @@ export function medalFor(maxDeviation: number): Medal {
 }
 
 export type StraightLineScore = {
-  /** Worst distance off the line (m) — sets the medal. */
+  /** Worst distance off the line (m), sets the medal. */
   maxDeviation: number;
-  /** Average |deviation| (m) — the on-brand tiebreaker. */
+  /** Average |deviation| (m), the on-brand tiebreaker. */
   avgDeviation: number;
   /** Share of fixes within the bronze corridor (0–100). */
   inCorridorPct: number;

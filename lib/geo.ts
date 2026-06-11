@@ -43,7 +43,7 @@ export const fmtDist = (m: number) =>
 
 /**
  * Signed cross-track distance (metres) from point P to the great-circle line
- * through A→B — how far off the straight line you are. Sign = which side
+ * through A→B, how far off the straight line you are. Sign = which side
  * (positive ≈ to the right of A→B). The straight-line mode scores on |this|.
  */
 export function crossTrack(p: LatLon, a: LatLon, b: LatLon): number {
@@ -56,7 +56,7 @@ export function crossTrack(p: LatLon, a: LatLon, b: LatLon): number {
 
 /**
  * Normalise several tracks into a *shared* 0–100 box (one combined bounding
- * box), so overlaid traces line up — "all the ways you moved around here".
+ * box), so overlaid traces line up, "all the ways you moved around here".
  */
 export function toUnitBoxMulti(
   tracks: { lat: number; lon: number }[][],
@@ -96,7 +96,7 @@ export function spanMeters(pts: { lat: number; lon: number }[]): number {
 
 /**
  * Normalise lat/lon points into a padded 0–100 box (north-up) for tiny SVG
- * cards — trace shapes and POI scatters. Longitude is scaled by cos(lat) so the
+ * cards, trace shapes and POI scatters. Longitude is scaled by cos(lat) so the
  * shape isn't stretched. A single point (or degenerate span) sits centred.
  */
 export function toUnitBox(
@@ -188,7 +188,7 @@ export type BearingEstimate = {
  * `makeAngleSmoother` (that only unwraps an angle for CSS): this measures the
  * *trend* of where you're actually walking.
  *
- * Bearings wrap at 360°, so we can't average them as scalars — we keep a
+ * Bearings wrap at 360°, so we can't average them as scalars, we keep a
  * decaying, displacement-weighted mean of heading **unit-vectors**. One vector
  * yields both signals: its angle is the smoothed bearing, its length (0–1) is
  * the confidence (the circular resultant length). Standstill jitter (steps
@@ -212,7 +212,7 @@ export function makeTravelBearing(opts?: { halfLifeM?: number; minStepM?: number
       return last;
     }
     const d = haversine(prev.lat, prev.lon, fix.lat, fix.lon);
-    if (d < minStepM) return last; // jitter / standstill — keep prev anchor
+    if (d < minStepM) return last; // jitter / standstill, keep prev anchor
     const b = bearing(prev.lat, prev.lon, fix.lat, fix.lon);
     const rad = toRad(b);
     // Distance-window decay: older motion fades over ~halfLifeM of travel.

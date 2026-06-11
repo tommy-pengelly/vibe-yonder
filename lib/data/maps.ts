@@ -137,7 +137,7 @@ export async function deleteMap(id: string): Promise<void> {
 }
 
 /**
- * Publish/unpublish a map to the community. Cloud-only — a public map needs an
+ * Publish/unpublish a map to the community. Cloud-only, a public map needs an
  * account (guests' maps live only in localStorage and stay private). Setting
  * `public` makes the map + its items readable via the RLS policies in 0006.
  */

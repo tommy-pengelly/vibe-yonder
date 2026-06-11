@@ -29,7 +29,7 @@ export type ScopeCandidate = {
   lat: number;
   lon: number;
   dist: number;
-  /** Within REVEAL_M — show its name/category; otherwise a faint mystery dot. */
+  /** Within REVEAL_M, show its name/category; otherwise a faint mystery dot. */
   revealed: boolean;
   name?: string;
   category?: string;
@@ -104,8 +104,8 @@ export function useDiscovery({
         lon: s.lon,
         dist: s.dist,
         // `revealed` gates the on-scope label (mystery dots until you're close);
-        // the full name/category travel with it so the suggestions sheet — the
-        // deliberate "show me what's around" view — can display them.
+        // the full name/category travel with it so the suggestions sheet, the
+        // deliberate "show me what's around" view, can display them.
         revealed: s.dist < REVEAL_M,
         tier: notabilityTier(s),
         name: s.name,
@@ -116,7 +116,7 @@ export function useDiscovery({
   }, [position, activeGuide]);
 
   // Tile fetch: only when we cross into a new cell (or the guide changes), and
-  // never faster than the throttle. This is the whole cost story — see Part F.
+  // never faster than the throttle. This is the whole cost story, see Part F.
   useEffect(() => {
     if (!enabled || !position || busy.current) return;
     const key = `${cellKey(position.lat, position.lon, STEP)}|${activeGuide ?? ""}`;

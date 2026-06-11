@@ -1,18 +1,18 @@
 "use client";
 
 // The seen/skipped ledger for ambient discovery (Doc 7 Part E). One more term
-// subtracted from a candidate's *draw* — a familiarity penalty — so the engine
+// subtracted from a candidate's *draw*, a familiarity penalty, so the engine
 // doesn't re-offer what you've already done or just waved off.
 //
-//  - SEEN (you visited / revealed it): a long-lived penalty — you know what it
+//  - SEEN (you visited / revealed it): a long-lived penalty, you know what it
 //    is now, so it drops out of mystery surfacing.
 //  - SKIPPED (offered, declined / passed by): decays with **distance travelled
-//    since**, not time — so the café you just walked past won't nag, but it can
+//    since**, not time, so the café you just walked past won't nag, but it can
 //    resurface on a later wander or if you loop back. Detours are features, so
 //    we never hard-blacklist.
 //
-// On-device only. This is a trail of *what interested you and where* — sensitive
-// — so it never leaves localStorage and is never serialized into a yonder or a
+// On-device only. This is a trail of *what interested you and where*, sensitive
+//, so it never leaves localStorage and is never serialized into a yonder or a
 // shared object (Doc 3 privacy invariant).
 
 const KEY = "vibe-yonder.discovery.v1";
@@ -26,7 +26,7 @@ export type LedgerEntry = {
   status: "seen" | "skipped";
   /** Wall-clock stamp (debug / recency); decay is distance-based, not this. */
   at: number;
-  /** Cumulative metres walked when this was recorded — the decay anchor. */
+  /** Cumulative metres walked when this was recorded, the decay anchor. */
   distAt: number;
 };
 
@@ -45,7 +45,7 @@ function write(entries: LedgerEntry[]) {
   try {
     window.localStorage.setItem(KEY, JSON.stringify(entries));
   } catch {
-    // quota / privacy mode — silently ignore
+    // quota / privacy mode, silently ignore
   }
 }
 
@@ -85,7 +85,7 @@ export function familiarity(id: string, distTravelledNowM: number): number {
 }
 
 /**
- * Snapshot the ledger once and return a `(id) => penalty` lookup — the shape
+ * Snapshot the ledger once and return a `(id) => penalty` lookup, the shape
  * `score()`/`ScoreCtx.familiarity` wants, without hitting localStorage per
  * candidate. Rebuild it each scoring pass so the travel distance stays current.
  */

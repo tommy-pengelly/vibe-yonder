@@ -8,7 +8,7 @@ export type ShareVisibility = Exclude<Visibility, "private">;
 
 /**
  * Publish an OBFUSCATED copy of a finished yonder. The precise track never
- * leaves the private `yonders` table — we write only public-safe fields, the
+ * leaves the private `yonders` table, we write only public-safe fields, the
  * obfuscated memento (home zone removed, ends trimmed, coords stripped), and
  * the shared destinations. Re-publishing replaces the prior copy.
  */

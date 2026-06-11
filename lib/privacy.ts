@@ -1,5 +1,5 @@
 // Trace obfuscation. Sharing a yonder must NEVER expose where you physically
-// went — the precise track stays owner-only. What we publish is a decorative
+// went, the precise track stays owner-only. What we publish is a decorative
 // memento: a normalized squiggle with the home zone removed and the ends
 // trimmed, so it reads as "a wander" without being a path anyone can follow.
 import { haversine } from "./geo";
@@ -15,7 +15,7 @@ export type PrivacyZone = { lat: number; lon: number; radiusM: number } | null;
 /**
  * Turn a precise track into a publishable, normalized 0–100 memento. Drops
  * points inside the home privacy zone, trims ~TRIM_M off each end, downsamples,
- * and strips all real coordinates — the result is just shape, in a unit box.
+ * and strips all real coordinates, the result is just shape, in a unit box.
  */
 export function obfuscateTrace(track: Fix[], zone?: PrivacyZone): number[][] {
   if (track.length < 2) return [];
@@ -47,7 +47,7 @@ function trimEnds(pts: Fix[], metres: number): Fix[] {
     acc += haversine(pts[i].lat, pts[i].lon, pts[i - 1].lat, pts[i - 1].lon);
     end = i - 1;
   }
-  if (end - start < 1) return pts; // too short to trim — keep the shape
+  if (end - start < 1) return pts; // too short to trim, keep the shape
   return pts.slice(start, end + 1);
 }
 
@@ -78,7 +78,7 @@ function normalize(pts: Fix[]): number[][] {
   ]);
 }
 
-/** A vague area label for a shared yonder — derived from a place name, never
+/** A vague area label for a shared yonder, derived from a place name, never
  * coordinates. "Hampstead Heath, London" -> "near Hampstead Heath". */
 export function areaLabel(destinations: Pick<Destination, "name">[]): string {
   const first = destinations[0]?.name?.split(",")[0]?.trim();

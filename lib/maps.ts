@@ -12,7 +12,7 @@ const osm = (d: LatLon) =>
   `https://www.openstreetmap.org/directions?engine=fossgis_osrm_foot&route=;${d.lat},${d.lon}`;
 
 /**
- * The maps apps to hand off to — the one sanctioned exit ("Just take me
+ * The maps apps to hand off to, the one sanctioned exit ("Just take me
  * there"). Device-native first, then the rest. Always walking directions.
  */
 export function directionsOptions(d: LatLon): DirectionsOption[] {

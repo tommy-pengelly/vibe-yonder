@@ -9,10 +9,10 @@ export const ARRIVAL_REARM_RATIO = 1.6;
 /** Below this total walked distance, finishing a yonder skips the recap. */
 export const TRIVIAL_WALK_M = 5;
 
-/** Track recording throttle — only add a fix if the position changed by this. */
+/** Track recording throttle, only add a fix if the position changed by this. */
 export const MIN_FIX_DISTANCE_M = 3;
 
-/** Track recording throttle — or this much time has passed since last fix. */
+/** Track recording throttle, or this much time has passed since last fix. */
 export const MIN_FIX_INTERVAL_MS = 3000;
 
 /** Default scope zoom (metres per pixel). */

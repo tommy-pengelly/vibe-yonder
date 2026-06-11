@@ -151,7 +151,7 @@ export async function getMission(id: string): Promise<Mission | null> {
   return rowToMission(r, `@${handles[r.user_id] ?? "wanderer"}`);
 }
 
-/** Record an attempt — keep only the user's best (lowest max, then avg). */
+/** Record an attempt, keep only the user's best (lowest max, then avg). */
 export async function recordAttempt(
   missionId: string,
   s: { maxDeviation: number; avgDeviation: number; inCorridorPct: number; medal: Medal },

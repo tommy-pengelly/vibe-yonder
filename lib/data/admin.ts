@@ -21,7 +21,7 @@ type ReportRow = {
   created_at: string | null;
 };
 
-/** The report queue — returns [] for non-admins (RLS gates it). */
+/** The report queue, returns [] for non-admins (RLS gates it). */
 export async function loadReports(): Promise<ReportItem[]> {
   const c = await ctx();
   if (!c) return [];

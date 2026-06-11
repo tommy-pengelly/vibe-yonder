@@ -65,7 +65,7 @@ export async function loadSettings(): Promise<Settings> {
   if (!c) return readLocal();
   const { data } = await c.sb.from("settings").select("*").eq("user_id", c.uid).maybeSingle();
   if (!data) {
-    // First cloud load — carry the guest's local prefs (hideNumbers) forward.
+    // First cloud load, carry the guest's local prefs (hideNumbers) forward.
     const local = readLocal();
     await saveCloud(c, local);
     return local;

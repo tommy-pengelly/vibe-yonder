@@ -1,12 +1,12 @@
 // The ambient-discovery scoring brain (Doc 7). One pure function decides what's
-// worth wandering toward — a *draw* (how much it pulls you) weighed against a
+// worth wandering toward, a *draw* (how much it pulls you) weighed against a
 // *cost* (what reaching it asks). Surface when draw ≥ cost. Every refinement
 // (distance gate, "must be good to turn around for", guides, familiarity) is a
 // term on one side of that single inequality, which is why the ambient mode,
 // sidequests, and category search can all share this one function.
 //
 // On-brand invariant: we rank by *notability* (there's a story here), NEVER by
-// quality/ratings/popularity (banned — and not licence-cleanly free anyway).
+// quality/ratings/popularity (banned, and not licence-cleanly free anyway).
 
 import { bearing, haversine, toRad } from "./geo";
 import type { LatLon } from "./types";
@@ -24,11 +24,11 @@ export type Candidate = NearbyPlace & {
 
 export type ScoreCtx = {
   origin: LatLon;
-  /** Direction of travel (deg from N) or null — null ⇒ no directional term. */
+  /** Direction of travel (deg from N) or null, null ⇒ no directional term. */
   travelBearing: number | null;
   /** 0–1; scales the turn-around penalty so churn opens the engine to all sides. */
   confidence: number;
-  /** An active guide/category key, or null. Leans draw toward it — never blinds. */
+  /** An active guide/category key, or null. Leans draw toward it, never blinds. */
   activeGuide: string | null;
   /** 0–1 penalty from the seen/skipped ledger; subtracted from draw. */
   familiarity?: (id: string) => number;
@@ -43,7 +43,7 @@ export type Scored = Candidate & {
   surfaced: boolean;
 };
 
-// Tunable — expect to tweak these on a real walk. All in "draw units": a node
+// Tunable, expect to tweak these on a real walk. All in "draw units": a node
 // at REFERENCE_M costs ~1, so notability (max ~0.9) must be helped by proximity
 // or a guide to clear distant ground. Keep them here, commented.
 export const TUNING = {
@@ -54,10 +54,10 @@ export const TUNING = {
   // distance before the route's wiki-only filter even applies.
   REFERENCE_M: 3500,
   DIR_WEIGHT: 1.2, // max turn-around penalty (at confidence 1, directly behind)
-  GUIDE_BOOST: 0.5, // draw added to a guide-matching category (modest — leans)
+  GUIDE_BOOST: 0.5, // draw added to a guide-matching category (modest, leans)
   // Chain penalty: enough to rank a chain outlet below any independent, but
   // small enough that a *near* chain still surfaces in a leftover slot when
-  // nothing local is around — "deprioritise, don't hide".
+  // nothing local is around, "deprioritise, don't hide".
   CHAIN_PENALTY: 0.12,
   // Notability tier cutoffs (on the 0–1 notability scale).
   TIER_NOTABLE: 0.75,
@@ -68,7 +68,7 @@ export const TUNING = {
 // café/restaurant/pub). We don't penalise a stadium or museum for a brand tag.
 const CHAINABLE = new Set(["cafe", "food", "pub"]);
 
-/** Interestingness, 0–1 — a "there's a story here" signal, never a rating. */
+/** Interestingness, 0–1, a "there's a story here" signal, never a rating. */
 export function notability(c: Candidate): number {
   if (c.wiki) return 0.9; // has a Wikipedia / wikidata entry
   if (c.klass === "interesting") return 0.55;
@@ -77,7 +77,7 @@ export function notability(c: Candidate): number {
 }
 
 /**
- * A *qualitative* notability label for the UI — never a number. Maps the score
+ * A *qualitative* notability label for the UI, never a number. Maps the score
  * to a tier so the scope/sheet can show "✦ Noted" / a stronger glow without
  * ever exposing a rating.
  */
@@ -111,7 +111,7 @@ export function score(c: Candidate, ctx: ScoreCtx): Scored {
   // lowered by how familiar you already are with it, and by a chain penalty so
   // we favour locally-run places. Notability TRUMPS the chain penalty: a place
   // with a Wikipedia entry (the Emirates, a landmark brewery) is a notable visit
-  // not a chain to bury — so the penalty only bites generic, non-notable,
+  // not a chain to bury, so the penalty only bites generic, non-notable,
   // branded everyday amenities.
   const guideBoost =
     ctx.activeGuide && c.category === ctx.activeGuide ? TUNING.GUIDE_BOOST : 0;
@@ -125,7 +125,7 @@ export function score(c: Candidate, ctx: ScoreCtx): Scored {
 }
 
 /**
- * Snap a point to a coarse grid cell — the key behind "fetch by tile, not by
+ * Snap a point to a coarse grid cell, the key behind "fetch by tile, not by
  * tick" (Doc 7 Part F). Two nearby fixes share a cell, so we only re-query when
  * you cross into a new one. ~0.01° ≈ 1 km.
  */
@@ -133,7 +133,7 @@ export function cellKey(lat: number, lon: number, step = 0.01): string {
   return `${Math.round(lat / step)},${Math.round(lon / step)}`;
 }
 
-/** Stable id for a place that has no OSM ref — a rounded-coordinate hash. */
+/** Stable id for a place that has no OSM ref, a rounded-coordinate hash. */
 export function coordId(p: { lat: number; lon: number }): string {
   return `@${p.lat.toFixed(5)},${p.lon.toFixed(5)}`;
 }
