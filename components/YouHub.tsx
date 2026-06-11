@@ -5,8 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 import AuthModal from "@/components/AuthModal";
 import FollowRequests from "@/components/FollowRequests";
 import { useAuthUser, signOut } from "@/lib/auth";
+import { Trace } from "@/components/ui/viz";
 import { loadFavourites, loadMaps, loadYonders, unreadNotificationCount } from "@/lib/data";
-import { fmtDist } from "@/lib/geo";
+import { fmtDist, toUnitBox } from "@/lib/geo";
+import { MEDAL_LABEL } from "@/lib/straightline";
 import type { FavouritePlace, SavedYonder } from "@/lib/types";
 
 export default function YouHub() {
@@ -133,32 +135,11 @@ export default function YouHub() {
               No yonders yet, go wander.
             </p>
           ) : (
-            <ul className="flex flex-col divide-y divide-[var(--border)]">
+            <div className="flex flex-col gap-3">
               {yonders.slice(0, 12).map((y) => (
-                <li key={y.id}>
-                  <Link
-                    href={`/recap/${y.id}`}
-                    className="w-full text-left py-3 flex items-center justify-between gap-3 hover:text-[var(--accent)]"
-                  >
-                    <div className="min-w-0">
-                      <div className="font-display text-lg truncate">
-                        {y.name}
-                      </div>
-                      <div className="text-xs text-[var(--muted)] mt-0.5">
-                        {new Date(y.endedAt).toLocaleDateString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                        })}{" "}
-                        · {fmtDist(y.walked ?? 0)}
-                      </div>
-                    </div>
-                    <div className="text-xs font-mono text-[var(--accent)] tabular-nums shrink-0">
-                      {(y.yondered ?? 1).toFixed(2)}×
-                    </div>
-                  </Link>
-                </li>
+                <HistoryCard key={y.id} y={y} />
               ))}
-            </ul>
+            </div>
           )}
         </section>
 
@@ -208,6 +189,36 @@ function ProfileHeader({
     </Link>
   ) : (
     <div className="flex items-center gap-3 min-w-0 flex-1">{inner}</div>
+  );
+}
+
+function HistoryCard({ y }: { y: SavedYonder }) {
+  const pts = toUnitBox((y.track ?? []).map((p) => ({ lat: p.lat, lon: p.lon })));
+  const sl = y.play === "straightline" ? y.straightLine : undefined;
+  return (
+    <Link
+      href={`/recap/${y.id}`}
+      className="block rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden hover:border-[var(--accent)]/50 transition-colors"
+    >
+      <div className="px-4 pt-3.5 pb-1 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="font-display text-lg truncate">{y.name}</div>
+          <div className="text-xs text-[var(--muted)] mt-0.5">
+            {new Date(y.endedAt).toLocaleDateString(undefined, {
+              month: "short",
+              day: "numeric",
+            })}{" "}
+            · {fmtDist(y.walked ?? 0)}
+          </div>
+        </div>
+        <div className="font-display text-lg text-[var(--accent)] tabular-nums shrink-0">
+          {sl ? MEDAL_LABEL[sl.medal] : `${(y.yondered ?? 1).toFixed(1)}×`}
+        </div>
+      </div>
+      {pts.length > 1 && (
+        <Trace points={pts} height={110} scaleLabel={fmtDist(y.walked ?? 0)} />
+      )}
+    </Link>
   );
 }
 
