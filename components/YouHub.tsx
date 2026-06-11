@@ -150,7 +150,7 @@ export default function YouHub() {
             { value: "yonders", label: "Yonders" },
             { value: "maps", label: "Maps" },
             { value: "missions", label: "Missions" },
-            { value: "favourites", label: "Favourites" },
+            { value: "favourites", label: "Places" },
           ]}
         />
 

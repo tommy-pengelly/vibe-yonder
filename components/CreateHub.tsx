@@ -285,7 +285,7 @@ export default function CreateHub({
 
           {favourites.length > 0 && (
             <section className="flex flex-col gap-2 mt-4">
-              <h2 className="text-[10px] uppercase tracking-widest text-[var(--muted)]">Favourites</h2>
+              <h2 className="text-[10px] uppercase tracking-widest text-[var(--muted)]">Places</h2>
               <div className="flex flex-wrap gap-2">
                 {favourites.map((f) => (
                   <button

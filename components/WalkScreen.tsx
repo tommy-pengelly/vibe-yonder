@@ -411,7 +411,7 @@ export default function WalkScreen({
               <button
                 type="button"
                 onClick={() => void toggleFavourite()}
-                aria-label={favId ? "Remove favourite" : "Favourite this place"}
+                aria-label={favId ? "Remove from places" : "Save this place"}
                 aria-pressed={favId != null}
                 className={`shrink-0 size-7 flex items-center justify-center ${
                   favId

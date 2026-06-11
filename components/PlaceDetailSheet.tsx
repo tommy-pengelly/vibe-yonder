@@ -194,7 +194,7 @@ export default function PlaceDetailSheet({
                         strokeWidth={1.75}
                         fill={favId ? "var(--accent)" : "none"}
                       />
-                      {favId ? "Favourited" : "Favourite"}
+                      {favId ? "Saved" : "Save place"}
                     </button>
                   </div>
                 </div>

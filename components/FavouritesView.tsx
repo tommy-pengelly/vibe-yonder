@@ -95,7 +95,7 @@ export default function FavouritesView({ embedded = false }: { embedded?: boolea
     favourites === null ? null : favourites.length === 0 ? (
         <EmptyState
           icon={Heart}
-          title="No favourites yet"
+          title="No places yet"
           body="Heart a place on a yonder to keep it here, then nickname it, Home, Work, the best café, for one-tap wandering."
         />
       ) : (
@@ -189,7 +189,7 @@ export default function FavouritesView({ embedded = false }: { embedded?: boolea
             onClick={() => setAddOpen(true)}
             className="inline-flex items-center gap-1.5 text-sm text-[var(--accent)] hover:opacity-80"
           >
-            <Plus className="w-4 h-4" strokeWidth={1.75} /> Add a favourite
+            <Plus className="w-4 h-4" strokeWidth={1.75} /> Add a place
           </button>
         </div>
         {grid}
@@ -201,14 +201,14 @@ export default function FavouritesView({ embedded = false }: { embedded?: boolea
   return (
     <PageScaffold>
       <PageHeader
-        kicker="Favourites"
+        kicker="Places"
         title="Places you love"
         backHref="/you"
         action={
           <button
             type="button"
             onClick={() => setAddOpen(true)}
-            aria-label="Add a favourite"
+            aria-label="Add a place"
             className="size-9 rounded-full bg-[var(--accent)] text-black flex items-center justify-center active:opacity-80"
           >
             <Plus className="w-4 h-4" strokeWidth={2} />
@@ -232,7 +232,7 @@ function AddFavouriteSheet({
 }) {
   const { q, setQ, results, loading } = usePlaceSearch(null);
   return (
-    <BottomSheet open={open} onClose={onClose} title="Add a favourite" minHeightVh={60}>
+    <BottomSheet open={open} onClose={onClose} title="Add a place" minHeightVh={60}>
       <input
         autoFocus
         value={q}
