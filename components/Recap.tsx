@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
 import { useAuthUser } from "@/lib/auth";
-import { createMission } from "@/lib/data";
+import { createMission, loadLeaderboard } from "@/lib/data";
 import { fmtDist, fmtDuration } from "@/lib/geo";
 import { projectTrack, summarize } from "@/lib/stats";
 import { MEDAL_LABEL } from "@/lib/straightline";
@@ -113,6 +113,30 @@ export default function Recap({
   const router = useRouter();
   const { user } = useAuthUser();
   const [missionBusy, setMissionBusy] = useState(false);
+  const [placement, setPlacement] = useState<{ pos: number; total: number } | null>(null);
+
+  // A mission attempt: find where you landed on the board. The attempt is
+  // recorded on finish, so retry a couple of times in case it's mid-write.
+  useEffect(() => {
+    if (!sl || !saved.missionId) return;
+    let cancelled = false;
+    let tries = 0;
+    const check = () => {
+      void loadLeaderboard(saved.missionId!).then((board) => {
+        if (cancelled) return;
+        const idx = board.findIndex((r) => r.isMe);
+        if (idx >= 0) {
+          setPlacement({ pos: idx + 1, total: board.length });
+        } else if (tries++ < 3) {
+          setTimeout(check, 700);
+        }
+      });
+    };
+    check();
+    return () => {
+      cancelled = true;
+    };
+  }, [sl, saved.missionId]);
 
   const makeMission = async () => {
     const b = saved.destinations[0];
@@ -207,10 +231,21 @@ export default function Recap({
       </div>
 
       {sl ? (
-        <p className="font-display text-3xl tracking-tight text-center leading-tight">
-          <span className="text-[var(--accent)]">{MEDAL_LABEL[sl.medal]}</span>
-          {sl.medal === "none" ? ", you finished the line." : ", you held the line."}
-        </p>
+        <div className="flex flex-col items-center gap-1">
+          <p className="font-display text-3xl tracking-tight text-center leading-tight">
+            <span className="text-[var(--accent)]">{MEDAL_LABEL[sl.medal]}</span>
+            {sl.medal === "none" ? ", you finished the line." : ", you held the line."}
+          </p>
+          {saved.missionId && placement && (
+            <p className="text-sm text-[var(--warm)]">
+              You came{" "}
+              <span className="text-[var(--accent)] font-medium">
+                {ordinal(placement.pos)}
+              </span>{" "}
+              of {placement.total} on this mission.
+            </p>
+          )}
+        </div>
       ) : (
         <p className="font-display text-3xl tracking-tight text-center leading-tight">
           You yondered{" "}
@@ -386,6 +421,12 @@ export default function Recap({
       )}
     </div>
   );
+}
+
+function ordinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
 }
 
 function RecapAddPlace({
