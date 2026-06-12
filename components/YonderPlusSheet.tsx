@@ -2,6 +2,7 @@
 import { Check, Telescope } from "lucide-react";
 import { useState } from "react";
 import { useAuthUser } from "@/lib/auth";
+import { getSupabase } from "@/lib/supabase/client";
 import BottomSheet from "@/components/ui/BottomSheet";
 import AuthModal from "./AuthModal";
 
@@ -27,14 +28,28 @@ export default function YonderPlusSheet({
   const { user } = useAuthUser();
   const [authOpen, setAuthOpen] = useState(false);
 
-  const startCheckout = () => {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const startCheckout = async () => {
     if (!user) {
       setAuthOpen(true);
       return;
     }
-    // TODO: redirect to Stripe Checkout once keys + /api/checkout exist.
-    // For now this is a no-op stub so the gate UX is real.
-    window.alert("Yonder+ checkout is coming soon.");
+    const sb = getSupabase();
+    if (!sb) return;
+    setBusy(true);
+    setErr(null);
+    const { data, error } = await sb.functions.invoke("create-checkout");
+    setBusy(false);
+    const url = (data as { url?: string } | null)?.url;
+    if (url) {
+      window.location.href = url;
+    } else {
+      // Until Stripe is wired (function deployed + secrets set) this just fails.
+      setErr("Checkout isn't available yet.");
+      console.warn("create-checkout:", error?.message);
+    }
   };
 
   return (
@@ -56,13 +71,15 @@ export default function YonderPlusSheet({
         </ul>
         <button
           type="button"
-          onClick={startCheckout}
-          className="rounded-full bg-[var(--accent)] text-black font-semibold py-3 active:opacity-80"
+          onClick={() => void startCheckout()}
+          disabled={busy}
+          className="rounded-full bg-[var(--accent)] text-black font-semibold py-3 active:opacity-80 disabled:opacity-40"
         >
-          Get Yonder+
+          {busy ? "Opening…" : "Get Yonder+ · £3/mo"}
         </button>
+        {err && <p className="text-[11px] text-red-400 text-center">{err}</p>}
         <p className="text-[11px] text-[var(--muted)] text-center">
-          The core wander stays free, always.
+          7-day free trial · the core wander stays free, always.
         </p>
       </BottomSheet>
       <AuthModal
