@@ -11,13 +11,14 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import AuthModal from "@/components/AuthModal";
 import FavouritesView from "@/components/FavouritesView";
 import FollowRequests from "@/components/FollowRequests";
 import PlacePhoto from "@/components/PlacePhoto";
 import { EmptyState, InfiniteScroll, SegmentedTabs, StickyBar } from "@/components/ui";
 import { DotMap, Trace } from "@/components/ui/viz";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import { useAuthUser, signOut } from "@/lib/auth";
 import {
   loadMaps,
@@ -37,7 +38,7 @@ export default function YouHub() {
   const [yonders, setYonders] = useState<SavedYonder[]>([]);
   const [unread, setUnread] = useState(0);
   const [authOpen, setAuthOpen] = useState(false);
-  const [tab, setTab] = useState<Tab>("yonders");
+  const [tab, setTab] = usePersistedState<Tab>("me.tab", "yonders");
 
   const stats = useMemo(() => {
     const places = new Set<string>();
@@ -183,62 +184,77 @@ export default function YouHub() {
 
 // ----- Tabs -----
 
-// One consistent create affordance for every tab: a small "+ label" link.
-function TabCreate({
-  label,
-  href,
-  onClick,
-}: {
-  label: string;
-  href?: string;
-  onClick?: () => void;
-}) {
-  const cls =
-    "inline-flex items-center gap-1.5 text-sm text-[var(--accent)] hover:opacity-80";
-  const inner = (
-    <>
-      <Plus className="w-4 h-4" strokeWidth={1.75} /> {label}
-    </>
-  );
-  return href ? (
-    <Link href={href} className={cls}>
-      {inner}
-    </Link>
-  ) : (
-    <button type="button" onClick={onClick} className={cls}>
-      {inner}
-    </button>
-  );
-}
 
-// A small filter input for a Me tab.
-function TabSearch({
-  value,
-  onChange,
-  placeholder,
+// One consistent actions row for every Me tab: an optional left slot (e.g.
+// "All your ways"), a search icon that expands an input, and a + to create.
+// Icons only, so all tabs match (no mismatched "+ New X" text sizes).
+function TabActions({
+  left,
+  createLabel,
+  createHref,
+  onCreate,
+  query,
+  onQuery,
+  searchPlaceholder,
 }: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
+  left?: ReactNode;
+  createLabel: string;
+  createHref?: string;
+  onCreate?: () => void;
+  query: string;
+  onQuery: (v: string) => void;
+  searchPlaceholder: string;
 }) {
+  const [open, setOpen] = useState(query.length > 0);
+  const iconBtn =
+    "size-9 shrink-0 rounded-full border border-[var(--border)] flex items-center justify-center hover:text-[var(--accent)] hover:border-[var(--accent)]";
+  const closeSearch = () => {
+    onQuery("");
+    setOpen(false);
+  };
   return (
-    <div className="flex items-center gap-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] px-3 focus-within:border-[var(--accent)]">
-      <Search className="w-4 h-4 text-[var(--muted)] shrink-0" strokeWidth={1.75} />
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="flex-1 min-w-0 bg-transparent py-2.5 text-sm outline-none placeholder:text-[var(--muted)]/60"
-      />
-      {value && (
-        <button
-          type="button"
-          onClick={() => onChange("")}
-          aria-label="Clear"
-          className="text-[var(--muted)] hover:text-[var(--foreground)]"
-        >
-          <X className="w-4 h-4" strokeWidth={1.75} />
-        </button>
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">{left}</div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => (open ? closeSearch() : setOpen(true))}
+            aria-label="Search"
+            className={`${iconBtn} ${open ? "text-[var(--accent)] border-[var(--accent)]" : "text-[var(--muted)]"}`}
+          >
+            <Search className="w-4 h-4" strokeWidth={1.75} />
+          </button>
+          {createHref ? (
+            <Link href={createHref} aria-label={createLabel} title={createLabel} className={`${iconBtn} text-[var(--accent)] border-[var(--accent)]/50`}>
+              <Plus className="w-4 h-4" strokeWidth={1.75} />
+            </Link>
+          ) : (
+            <button type="button" onClick={onCreate} aria-label={createLabel} title={createLabel} className={`${iconBtn} text-[var(--accent)] border-[var(--accent)]/50`}>
+              <Plus className="w-4 h-4" strokeWidth={1.75} />
+            </button>
+          )}
+        </div>
+      </div>
+      {open && (
+        <div className="flex items-center gap-2 rounded-xl bg-[var(--surface)] border border-[var(--accent)] px-3">
+          <Search className="w-4 h-4 text-[var(--muted)] shrink-0" strokeWidth={1.75} />
+          <input
+            autoFocus
+            value={query}
+            onChange={(e) => onQuery(e.target.value)}
+            placeholder={searchPlaceholder}
+            className="flex-1 min-w-0 bg-transparent py-2.5 text-sm outline-none placeholder:text-[var(--muted)]/60"
+          />
+          <button
+            type="button"
+            onClick={closeSearch}
+            aria-label="Close search"
+            className="text-[var(--muted)] hover:text-[var(--foreground)]"
+          >
+            <X className="w-4 h-4" strokeWidth={1.75} />
+          </button>
+        </div>
       )}
     </div>
   );
@@ -256,19 +272,23 @@ function YondersTab({ yonders }: { yonders: SavedYonder[] }) {
   const filtered = yonders.filter((y) => matches(q, y.name));
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        {yonders.length > 0 ? (
-          <Link
-            href="/ways"
-            className="inline-flex items-center gap-1.5 text-sm text-[var(--muted)] hover:text-[var(--foreground)]"
-          >
-            <Footprints className="w-4 h-4" strokeWidth={1.75} /> All your ways
-          </Link>
-        ) : (
-          <span />
-        )}
-        <TabCreate label="New yonder" href="/walk" />
-      </div>
+      <TabActions
+        left={
+          yonders.length > 0 ? (
+            <Link
+              href="/ways"
+              className="inline-flex items-center gap-1.5 text-sm text-[var(--muted)] hover:text-[var(--foreground)]"
+            >
+              <Footprints className="w-4 h-4" strokeWidth={1.75} /> All your ways
+            </Link>
+          ) : undefined
+        }
+        createLabel="New yonder"
+        createHref="/walk"
+        query={q}
+        onQuery={setQ}
+        searchPlaceholder="Search your yonders…"
+      />
       {yonders.length === 0 ? (
         <EmptyState
           icon={Footprints}
@@ -277,9 +297,6 @@ function YondersTab({ yonders }: { yonders: SavedYonder[] }) {
         />
       ) : (
         <>
-          {yonders.length > 4 && (
-            <TabSearch value={q} onChange={setQ} placeholder="Search your yonders…" />
-          )}
           {filtered.slice(0, shown).map((y) => (
             <HistoryCard key={y.id} y={y} />
           ))}
@@ -311,9 +328,13 @@ function MapsTab() {
   const filtered = maps.filter((m) => matches(q, m.name));
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex justify-end">
-        <TabCreate label="New map" href="/maps/new" />
-      </div>
+      <TabActions
+        createLabel="New map"
+        createHref="/maps/new"
+        query={q}
+        onQuery={setQ}
+        searchPlaceholder="Search your maps…"
+      />
       {maps.length === 0 ? (
         <EmptyState
           icon={MapIcon}
@@ -322,9 +343,6 @@ function MapsTab() {
         />
       ) : (
         <>
-          {maps.length > 4 && (
-            <TabSearch value={q} onChange={setQ} placeholder="Search your maps…" />
-          )}
           {filtered.length === 0 && (
             <p className="text-sm text-[var(--muted)] py-2">No maps match.</p>
           )}
@@ -387,9 +405,13 @@ function MissionsTab() {
   const filtered = missions.filter((m) => matches(q, m.name ?? "Straight-line mission"));
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex justify-end">
-        <TabCreate label="New mission" onClick={newMission} />
-      </div>
+      <TabActions
+        createLabel="New mission"
+        onCreate={newMission}
+        query={q}
+        onQuery={setQ}
+        searchPlaceholder="Search your missions…"
+      />
       {missions.length === 0 ? (
         <EmptyState
           icon={Ruler}
@@ -398,9 +420,6 @@ function MissionsTab() {
         />
       ) : (
         <>
-          {missions.length > 4 && (
-            <TabSearch value={q} onChange={setQ} placeholder="Search your missions…" />
-          )}
           {filtered.length === 0 && (
             <p className="text-sm text-[var(--muted)] py-2">No missions match.</p>
           )}
@@ -436,6 +455,7 @@ function MissionsTab() {
 function PlacesTab({ yonders }: { yonders: SavedYonder[] }) {
   const router = useRouter();
   const [q, setQ] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
   const visited = useMemo(() => {
     const m = new Map<
       string,
@@ -477,8 +497,14 @@ function PlacesTab({ yonders }: { yonders: SavedYonder[] }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <TabSearch value={q} onChange={setQ} placeholder="Search your places…" />
-      <FavouritesView embedded query={q} />
+      <TabActions
+        createLabel="Add a place"
+        onCreate={() => setAddOpen(true)}
+        query={q}
+        onQuery={setQ}
+        searchPlaceholder="Search your places…"
+      />
+      <FavouritesView embedded query={q} addOpen={addOpen} onAddOpenChange={setAddOpen} />
       {visited.length > 0 && (
         <section className="flex flex-col gap-2">
           <h2 className="text-[10px] uppercase tracking-widest text-[var(--muted)]">

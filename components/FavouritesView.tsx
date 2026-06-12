@@ -18,14 +18,23 @@ import type { FavouritePlace, RankedResult } from "@/lib/types";
 export default function FavouritesView({
   embedded = false,
   query = "",
+  addOpen: addOpenProp,
+  onAddOpenChange,
 }: {
   embedded?: boolean;
   query?: string;
+  /** Controlled add-sheet open state (the Me > Places tab drives it). */
+  addOpen?: boolean;
+  onAddOpenChange?: (v: boolean) => void;
 } = {}) {
   const [favourites, setFavourites] = useState<FavouritePlace[] | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
-  const [addOpen, setAddOpen] = useState(false);
+  const [addOpenLocal, setAddOpenLocal] = useState(false);
+  // Controlled when the parent passes addOpen (then it owns the "+" button too).
+  const controlledAdd = addOpenProp !== undefined;
+  const addOpen = addOpenProp ?? addOpenLocal;
+  const setAddOpen = onAddOpenChange ?? setAddOpenLocal;
   const router = useRouter();
   const { user } = useAuthUser();
 
@@ -204,15 +213,17 @@ export default function FavouritesView({
   if (embedded) {
     return (
       <div className="flex flex-col gap-3">
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={() => setAddOpen(true)}
-            className="inline-flex items-center gap-1.5 text-sm text-[var(--accent)] hover:opacity-80"
-          >
-            <Plus className="w-4 h-4" strokeWidth={1.75} /> Add a place
-          </button>
-        </div>
+        {!controlledAdd && (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setAddOpen(true)}
+              className="inline-flex items-center gap-1.5 text-sm text-[var(--accent)] hover:opacity-80"
+            >
+              <Plus className="w-4 h-4" strokeWidth={1.75} /> Add a place
+            </button>
+          </div>
+        )}
         {grid}
         {addSheet}
       </div>

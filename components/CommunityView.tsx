@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
 import { Empty, Loading, MapCard, MissionCard, WaysCard, YonderCard } from "@/components/feed/Cards";
 import { useFeedActions } from "@/components/feed/useFeedActions";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import {
   BottomSheet,
   InfiniteScroll,
@@ -22,7 +23,7 @@ type Tab = "following" | "everyone" | "discover";
 // (the whole community), and Discover (maps to wander).
 export default function CommunityView() {
   const a = useFeedActions();
-  const [tab, setTab] = useState<Tab>("following");
+  const [tab, setTab] = usePersistedState<Tab>("community.tab", "following");
   const [searchOpen, setSearchOpen] = useState(false);
 
   return (
