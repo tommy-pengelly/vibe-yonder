@@ -6,7 +6,6 @@ import { Bookmark, Navigation, Ruler, Sprout } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import MissionLineViz from "@/components/MissionLineViz";
 import { DotMap, Trace, Traces } from "@/components/ui/viz";
 import { fmtDist } from "@/lib/geo";
 import { MEDAL_LABEL } from "@/lib/straightline";
@@ -291,10 +290,24 @@ export function MissionCard({
         <Ruler className="w-4 h-4 text-[var(--accent)] shrink-0" strokeWidth={1.75} />
         <div className="font-display text-[17px] truncate leading-tight">{mi.name}</div>
       </div>
-      <div className="mt-2.5">
-        <MissionLineViz attempts={[]} highlight={null} height={96} />
-      </div>
-      <Stats>A {fmtDist(mi.distanceM)} line to hold · see who&apos;s winning</Stats>
+      <Stats>A {fmtDist(mi.distanceM)} line to hold</Stats>
+      {mi.top && mi.top.length > 0 ? (
+        <ol className="flex flex-col gap-1.5 px-3.5 pt-2.5">
+          {mi.top.map((t, i) => (
+            <li key={t.handle + i} className="flex items-center gap-2.5 text-sm">
+              <span className="font-mono text-[var(--muted)] w-4 tabular-nums">{i + 1}</span>
+              <span className="truncate flex-1">{t.handle}</span>
+              <span className="text-[var(--accent)] font-display text-[13px]">
+                {MEDAL_LABEL[t.medal]}
+              </span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="text-sm text-[var(--muted)] px-3.5 pt-1.5">
+          No attempts yet, be the first to hold it.
+        </p>
+      )}
       <div
         className="flex items-center px-3.5 pt-2.5 pb-3.5 gap-2"
         onClick={(e) => e.stopPropagation()}

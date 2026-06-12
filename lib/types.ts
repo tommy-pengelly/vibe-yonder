@@ -229,6 +229,8 @@ export type FeedMission = {
   /** The line endpoints, so the card can start an attempt directly. */
   a?: LatLon;
   b?: LatLon;
+  /** Top of the board (best first), for the card's podium peek. */
+  top?: { handle: string; medal: Medal }[];
 };
 
 /** One item in the unified feed, a community post of any kind. */

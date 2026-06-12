@@ -227,7 +227,7 @@ export async function loadFeed(
     rows.filter((r) => r.kind !== "ways").map((r) => r.id),
   );
 
-  return rows.map((r): FeedItem => {
+  const items = rows.map((r): FeedItem => {
     const p = profiles[r.user_id] ?? { username: "wanderer" };
     const who = p.displayName ?? `@${p.username}`;
     const handle = `@${p.username}`;
@@ -326,6 +326,37 @@ export async function loadFeed(
       },
     };
   });
+
+  // Podium peek: batch-load the top of the board for the missions on this page.
+  const missionIds = items
+    .filter((i): i is Extract<FeedItem, { kind: "mission" }> => i.kind === "mission")
+    .map((i) => i.mi.missionId);
+  if (missionIds.length > 0) {
+    const { data: atts } = await sb
+      .from("mission_attempts")
+      .select("mission_id,user_id,medal,max_deviation")
+      .in("mission_id", missionIds)
+      .order("max_deviation", { ascending: true });
+    const top = new Map<string, { userId: string; medal: Medal }[]>();
+    for (const a of (atts as { mission_id: string; user_id: string; medal: Medal | null }[]) ??
+      []) {
+      const arr = top.get(a.mission_id) ?? [];
+      if (arr.length < 3) arr.push({ userId: a.user_id, medal: a.medal ?? "none" });
+      top.set(a.mission_id, arr);
+    }
+    const topProfiles = await profilesByIds(
+      [...top.values()].flat().map((t) => t.userId),
+    );
+    for (const item of items) {
+      if (item.kind !== "mission") continue;
+      item.mi.top = (top.get(item.mi.missionId) ?? []).map((t) => ({
+        handle: `@${topProfiles[t.userId]?.username ?? "wanderer"}`,
+        medal: t.medal,
+      }));
+    }
+  }
+
+  return items;
 }
 
 // ----- Ways reports (posts kind='ways') -----
