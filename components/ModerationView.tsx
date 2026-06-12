@@ -4,7 +4,13 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useGoBack } from "@/components/ui";
 import { useAuthUser } from "@/lib/auth";
-import { amAdmin, loadReports, resolveReport } from "@/lib/data";
+import {
+  amAdmin,
+  loadPlusMembers,
+  loadReports,
+  resolveReport,
+  setPlusByUsername,
+} from "@/lib/data";
 import type { ReportItem } from "@/lib/types";
 
 export default function ModerationView() {
@@ -13,18 +19,37 @@ export default function ModerationView() {
   const [admin, setAdmin] = useState<boolean | null>(null);
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [showResolved, setShowResolved] = useState(false);
+  const [entUser, setEntUser] = useState("");
+  const [entMsg, setEntMsg] = useState<string | null>(null);
+  const [members, setMembers] = useState<{ handle: string; status: string }[]>([]);
+
+  const refreshMembers = () => void loadPlusMembers().then(setMembers);
 
   useEffect(() => {
     let c = false;
     void amAdmin().then((a) => {
       if (c) return;
       setAdmin(a);
-      if (a) void loadReports().then((r) => !c && setReports(r));
+      if (a) {
+        void loadReports().then((r) => !c && setReports(r));
+        void loadPlusMembers().then((m) => !c && setMembers(m));
+      }
     });
     return () => {
       c = true;
     };
   }, [user]);
+
+  const setPlus = async (on: boolean) => {
+    const name = entUser.trim();
+    if (!name) return;
+    const ok = await setPlusByUsername(name, on);
+    setEntMsg(ok ? `${on ? "Granted" : "Revoked"} Yonder+ for @${name.replace(/^@/, "")}` : `No user @${name.replace(/^@/, "")}`);
+    if (ok) {
+      setEntUser("");
+      refreshMembers();
+    }
+  };
 
   if (admin === null) return <div className="flex-1" />;
   if (!admin) {
@@ -65,6 +90,48 @@ export default function ModerationView() {
           </button>
         </header>
 
+        <section className="flex flex-col gap-3 rounded-2xl border border-[var(--border)] p-4">
+          <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
+            Yonder+ (comp accounts)
+          </span>
+          <div className="flex items-center gap-2">
+            <input
+              value={entUser}
+              onChange={(e) => setEntUser(e.target.value)}
+              placeholder="@username"
+              className="flex-1 min-w-0 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+            />
+            <button
+              type="button"
+              onClick={() => void setPlus(true)}
+              className="rounded-lg bg-[var(--accent)] text-black text-sm font-semibold px-3 py-2 active:opacity-80"
+            >
+              Grant
+            </button>
+            <button
+              type="button"
+              onClick={() => void setPlus(false)}
+              className="rounded-lg border border-[var(--border)] text-[var(--muted)] text-sm px-3 py-2 hover:text-red-400"
+            >
+              Revoke
+            </button>
+          </div>
+          {entMsg && <p className="text-xs text-[var(--muted)]">{entMsg}</p>}
+          {members.length > 0 && (
+            <ul className="flex flex-col gap-1 pt-1">
+              {members.map((m) => (
+                <li key={m.handle} className="flex items-center justify-between text-sm">
+                  <span>{m.handle}</span>
+                  <span className="text-[11px] text-[var(--muted)] font-mono">{m.status}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
+          Report queue
+        </span>
         {visible.length === 0 ? (
           <p className="text-sm text-[var(--muted)]">Nothing in the queue. A calm community.</p>
         ) : (

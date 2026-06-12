@@ -2,13 +2,51 @@
 import type { ReportItem } from "../types";
 import { ctx } from "./ctx";
 import { relTime } from "./feed";
-import { getProfilesByIds } from "./profiles";
+import { getProfileByUsername, getProfilesByIds } from "./profiles";
 
 export async function amAdmin(): Promise<boolean> {
   const c = await ctx();
   if (!c) return false;
   const { data } = await c.sb.from("profiles").select("is_admin").eq("id", c.uid).maybeSingle();
   return Boolean((data as { is_admin?: boolean } | null)?.is_admin);
+}
+
+/** Admin: grant or revoke Yonder+ for a user (a comp account). */
+export async function setPlusByUsername(username: string, on: boolean): Promise<boolean> {
+  const c = await ctx();
+  if (!c) return false;
+  const prof = await getProfileByUsername(username.replace(/^@/, "").trim());
+  if (!prof) return false;
+  const { error } = await c.sb.from("entitlements").upsert(
+    {
+      user_id: prof.id,
+      tier: on ? "plus" : "free",
+      status: on ? "active" : "canceled",
+      current_period_end: null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" },
+  );
+  return !error;
+}
+
+/** Admin: current Yonder+ holders (comp + paying). */
+export async function loadPlusMembers(): Promise<{ handle: string; status: string }[]> {
+  const c = await ctx();
+  if (!c) return [];
+  const { data } = await c.sb
+    .from("entitlements")
+    .select("user_id,status")
+    .eq("tier", "plus")
+    .order("updated_at", { ascending: false });
+  const rows = (data as { user_id: string; status: string }[]) ?? [];
+  if (rows.length === 0) return [];
+  const profiles = await getProfilesByIds(rows.map((r) => r.user_id));
+  const byId = new Map(profiles.map((p) => [p.id, p]));
+  return rows.map((r) => ({
+    handle: `@${byId.get(r.user_id)?.username ?? "wanderer"}`,
+    status: r.status,
+  }));
 }
 
 type ReportRow = {
