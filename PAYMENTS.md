@@ -4,10 +4,16 @@ The app's monetisation plumbing is built and policy-agnostic. The **split lives
 in `lib/plans.ts`** (which features need Yonder+, the metered allowances). Change
 it there; nothing else moves.
 
+## Status: infra built, nothing gated yet
+Everything is **fully usable, no limits**. The gating machinery exists but no
+call site uses it — so the paywall never fires until you wire it. To gate a
+feature later: call `useGate("maps")` / `useMeter("missionAttempts", reason)` at
+its call site and use `guard()` / `consume()` before the action.
+
 ## What's already wired
 - **Entitlement read** (`useEntitlement` → `premium`), webhook-written.
-- **Gating**: `useGate(feature)` / `useMeter(key)` + `PaywallProvider` (opens the
-  Yonder+ sheet). One example gate is live (custom medals).
+- **Gating machinery**: `useGate(feature)` / `useMeter(key)` + `PaywallProvider`
+  (opens the Yonder+ sheet). Ready, but not applied anywhere.
 - **Meters**: `usage_counters` table + `lib/data/usage`.
 - **Admin**: grant/revoke Yonder+ by @username in the Moderation view (comp
   accounts + testing).
