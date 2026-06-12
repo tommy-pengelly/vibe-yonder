@@ -6,6 +6,9 @@ type Props = {
   lat: number;
   lon: number;
   name: string;
+  /** The place's own Wikipedia title / Wikidata id (OSM `wikipedia`/`wikidata`
+   * tag), when known. Resolves an exact-entity photo instead of guessing. */
+  wiki?: string;
   /** Sizing/shape comes from the parent; the image fills it. */
   className?: string;
   /** Render a faint placeholder when no photo is found, instead of nothing. */
@@ -19,6 +22,7 @@ export default function PlacePhoto({
   lat,
   lon,
   name,
+  wiki,
   className = "",
   keepPlaceholder = false,
 }: Props) {
@@ -32,7 +36,8 @@ export default function PlacePhoto({
     const ctrl = new AbortController();
     const url =
       `/api/place-photo?lat=${lat}&lon=${lon}` +
-      `&name=${encodeURIComponent(name)}`;
+      `&name=${encodeURIComponent(name)}` +
+      (wiki ? `&wiki=${encodeURIComponent(wiki)}` : "");
     fetch(url, { signal: ctrl.signal })
       .then((r) => (r.ok ? r.json() : null))
       .then((d: PlacePhotoData | null) => {
@@ -45,7 +50,7 @@ export default function PlacePhoto({
       alive = false;
       ctrl.abort();
     };
-  }, [lat, lon, name]);
+  }, [lat, lon, name, wiki]);
 
   if (photo === null && !keepPlaceholder) return null;
 
