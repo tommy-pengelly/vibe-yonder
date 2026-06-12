@@ -1,5 +1,7 @@
 import { alongFraction, crossTrack } from "./geo";
-import type { LatLon, Medal } from "./types";
+import type { LatLon, Medal, MedalBands } from "./types";
+
+export type { MedalBands } from "./types";
 
 /** A point of an attempt in the line's own frame: [alongFraction 0..1,
  * signed deviation metres]. No absolute coordinates. */
@@ -29,13 +31,33 @@ export function linePath(
 // Scored by deviation (never time). Medal = your *worst* moment off the line;
 // the tiebreaker is average deviation, how tight you held the whole way.
 
-/** Corridor half-widths (m), tightest → loosest. "Either way" = ± this. */
-export const MEDAL_BANDS: { medal: Exclude<Medal, "none">; half: number }[] = [
-  { medal: "platinum", half: 12.5 },
-  { medal: "gold", half: 25 },
-  { medal: "silver", half: 50 },
-  { medal: "bronze", half: 100 },
+// The creator sets the corridor half-widths (MedalBands, in types) per mission;
+// these are the standard defaults.
+export const DEFAULT_BANDS: MedalBands = {
+  platinum: 12.5,
+  gold: 25,
+  silver: 50,
+  bronze: 100,
+};
+
+/** Named difficulty presets the creation UI offers as quick-fills. */
+export const BAND_PRESETS: { id: string; label: string; bands: MedalBands }[] = [
+  { id: "casual", label: "Casual", bands: { platinum: 25, gold: 50, silver: 100, bronze: 200 } },
+  { id: "standard", label: "Standard", bands: DEFAULT_BANDS },
+  { id: "precision", label: "Precision", bands: { platinum: 5, gold: 10, silver: 20, bronze: 40 } },
 ];
+
+/** Bands as an ordered (tightest → loosest) list, for scoring + drawing. */
+export function bandList(
+  bands: MedalBands = DEFAULT_BANDS,
+): { medal: Exclude<Medal, "none">; half: number }[] {
+  return [
+    { medal: "platinum", half: bands.platinum },
+    { medal: "gold", half: bands.gold },
+    { medal: "silver", half: bands.silver },
+    { medal: "bronze", half: bands.bronze },
+  ];
+}
 
 export const MEDAL_LABEL: Record<Medal, string> = {
   platinum: "Platinum",
@@ -45,8 +67,8 @@ export const MEDAL_LABEL: Record<Medal, string> = {
   none: "Finisher",
 };
 
-export function medalFor(maxDeviation: number): Medal {
-  for (const b of MEDAL_BANDS) if (maxDeviation <= b.half) return b.medal;
+export function medalFor(maxDeviation: number, bands: MedalBands = DEFAULT_BANDS): Medal {
+  for (const b of bandList(bands)) if (maxDeviation <= b.half) return b.medal;
   return "none";
 }
 
@@ -60,12 +82,13 @@ export type StraightLineScore = {
   medal: Medal;
 };
 
-/** Score a recorded track against the straight line A→B. */
+/** Score a recorded track against the straight line A→B, with the mission's
+ * bands (defaults to the standard tiers). */
 export function scoreStraightLine(
   track: LatLon[],
   a: LatLon,
   b: LatLon,
-  corridorHalf = 100,
+  bands: MedalBands = DEFAULT_BANDS,
 ): StraightLineScore {
   if (track.length === 0) {
     return { maxDeviation: 0, avgDeviation: 0, inCorridorPct: 100, medal: "platinum" };
@@ -77,12 +100,12 @@ export function scoreStraightLine(
     const d = Math.abs(crossTrack(p, a, b));
     if (d > max) max = d;
     sum += d;
-    if (d <= corridorHalf) inside++;
+    if (d <= bands.bronze) inside++;
   }
   return {
     maxDeviation: max,
     avgDeviation: sum / track.length,
     inCorridorPct: (inside / track.length) * 100,
-    medal: medalFor(max),
+    medal: medalFor(max, bands),
   };
 }

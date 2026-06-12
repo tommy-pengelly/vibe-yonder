@@ -71,6 +71,7 @@ export function useFeedActions() {
           play: "straightline",
           missionId: mi.missionId,
           origin: mi.a,
+          bands: mi.bands,
           name: mi.name,
           targets: [
             {

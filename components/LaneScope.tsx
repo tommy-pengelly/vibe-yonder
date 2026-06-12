@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { alongFraction, crossTrack, fmtDist, haversine } from "@/lib/geo";
-import { MEDAL_BANDS } from "@/lib/straightline";
+import { bandList, DEFAULT_BANDS, type MedalBands } from "@/lib/straightline";
 import type { Fix, LatLon } from "@/lib/types";
 
 // The straight-line "lane" view. The line A→B runs up the screen (A at the
@@ -14,12 +14,14 @@ export default function LaneScope({
   b,
   track,
   hideNumbers,
+  bands = DEFAULT_BANDS,
 }: {
   position: Fix | null;
   a: LatLon;
   b: LatLon;
   track: Fix[];
   hideNumbers: boolean;
+  bands?: MedalBands;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -49,7 +51,7 @@ export default function LaneScope({
       cx + Math.max(-MAX_DEV, Math.min(MAX_DEV, devM)) * pxPerM;
 
     // Corridor as a target zone: faint amber fills tightening toward the centre.
-    for (const band of [...MEDAL_BANDS].reverse()) {
+    for (const band of [...bandList(bands)].reverse()) {
       const bw = band.half * pxPerM;
       ctx.fillStyle = "rgba(245, 166, 35, 0.05)";
       ctx.fillRect(cx - bw, topY, bw * 2, botY - topY);
@@ -57,7 +59,7 @@ export default function LaneScope({
     // Lane lines at each medal threshold.
     ctx.setLineDash([4, 6]);
     ctx.lineWidth = 1;
-    for (const band of MEDAL_BANDS) {
+    for (const band of bandList(bands)) {
       const bw = band.half * pxPerM;
       ctx.strokeStyle = "rgba(245, 166, 35, 0.22)";
       ctx.beginPath();
@@ -132,7 +134,7 @@ export default function LaneScope({
         ctx.fillText(`${fmtDist(toB)} to B`, cx, topY - 12);
       }
     }
-  }, [position, a, b, track, hideNumbers]);
+  }, [position, a, b, track, hideNumbers, bands]);
 
   return (
     <div className="scope-wrap">

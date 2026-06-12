@@ -1,6 +1,6 @@
 "use client";
 import { getSupabase } from "../supabase/client";
-import type { LinePoint } from "../straightline";
+import { DEFAULT_BANDS, type LinePoint, type MedalBands } from "../straightline";
 import type { LatLon, Medal } from "../types";
 import { ctx } from "./ctx";
 
@@ -12,6 +12,8 @@ export type Mission = {
   b: LatLon;
   distanceM: number;
   createdAt: number;
+  /** The creator's medal corridor half-widths. */
+  bands: MedalBands;
   who?: string; // @handle of creator
   attempts?: number;
   mine?: boolean; // created by the current user
@@ -39,6 +41,10 @@ type MissionRow = {
   b_lon: number;
   distance_m: number | null;
   created_at: string | null;
+  platinum_m: number | null;
+  gold_m: number | null;
+  silver_m: number | null;
+  bronze_m: number | null;
 };
 
 function rowToMission(r: MissionRow, who?: string, attempts?: number): Mission {
@@ -49,6 +55,12 @@ function rowToMission(r: MissionRow, who?: string, attempts?: number): Mission {
     a: { lat: r.a_lat, lon: r.a_lon },
     b: { lat: r.b_lat, lon: r.b_lon },
     distanceM: r.distance_m ?? 0,
+    bands: {
+      platinum: r.platinum_m ?? DEFAULT_BANDS.platinum,
+      gold: r.gold_m ?? DEFAULT_BANDS.gold,
+      silver: r.silver_m ?? DEFAULT_BANDS.silver,
+      bronze: r.bronze_m ?? DEFAULT_BANDS.bronze,
+    },
     createdAt: r.created_at ? new Date(r.created_at).getTime() : 0,
     who,
     attempts,
@@ -75,10 +87,12 @@ export async function createMission(opts: {
   a: LatLon;
   b: LatLon;
   distanceM: number;
+  bands?: MedalBands;
 }): Promise<string | null> {
   const c = await ctx();
   if (!c) return null;
   const id = crypto.randomUUID();
+  const bands = opts.bands ?? DEFAULT_BANDS;
   const { error } = await c.sb.from("missions").insert({
     id,
     user_id: c.uid,
@@ -88,6 +102,10 @@ export async function createMission(opts: {
     b_lat: opts.b.lat,
     b_lon: opts.b.lon,
     distance_m: opts.distanceM,
+    platinum_m: bands.platinum,
+    gold_m: bands.gold,
+    silver_m: bands.silver,
+    bronze_m: bands.bronze,
   });
   if (error) {
     console.warn("createMission:", error.message);
@@ -106,6 +124,7 @@ export async function createMission(opts: {
       a_lon: opts.a.lon,
       b_lat: opts.b.lat,
       b_lon: opts.b.lon,
+      bands,
     },
   });
   if (postErr) console.warn("createMission post:", postErr.message);

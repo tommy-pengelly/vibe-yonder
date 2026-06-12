@@ -65,8 +65,8 @@ export default function MissionWalk({
       const d = Math.abs(crossTrack(p, a, b));
       if (d > worst) worst = d;
     }
-    return { current, worst, medal: medalFor(worst) };
-  }, [armed, a, b, position, track, yonder.lineArmedAt]);
+    return { current, worst, medal: medalFor(worst, yonder.bands) };
+  }, [armed, a, b, position, track, yonder.lineArmedAt, yonder.bands]);
 
   // Step 1 shows just the start (A) as a single arrow, nothing else.
   const startTarget = a
@@ -77,7 +77,7 @@ export default function MissionWalk({
     <div className="fixed inset-0 flex flex-col">
       {armed && a && b ? (
         <div className="absolute inset-0">
-          <LaneScope position={position} a={a} b={b} track={track} hideNumbers={hideNumbers} />
+          <LaneScope position={position} a={a} b={b} track={track} hideNumbers={hideNumbers} bands={yonder.bands} />
         </div>
       ) : (
         <div className="absolute inset-0">

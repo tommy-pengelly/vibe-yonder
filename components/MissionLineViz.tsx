@@ -1,5 +1,10 @@
 "use client";
-import { MEDAL_BANDS, type LinePoint } from "@/lib/straightline";
+import {
+  bandList,
+  DEFAULT_BANDS,
+  type LinePoint,
+  type MedalBands,
+} from "@/lib/straightline";
 
 // The mission's straight line A→B (horizontal), the medal corridor bands, and
 // every attempt's run overlaid in the line's frame. Deviation (y) is heavily
@@ -18,12 +23,15 @@ export default function MissionLineViz({
   highlight,
   compare = null,
   height = 150,
+  bands = DEFAULT_BANDS,
 }: {
   attempts: VizAttempt[];
   highlight: number | null;
   compare?: number | null;
   height?: number;
+  bands?: MedalBands;
 }) {
+  const medalBands = bandList(bands);
   const mid = height / 2;
   const half = mid - 12;
   const xAt = (along: number) => PAD + along * (W - 2 * PAD);
@@ -45,7 +53,7 @@ export default function MissionLineViz({
       {/* The corridor as a target zone: a faint amber fill that tightens toward
           the line (each band a touch more opaque), so the graphic reads even
           with no runs on it. */}
-      {[...MEDAL_BANDS].reverse().map((b) => (
+      {[...medalBands].reverse().map((b) => (
         <rect
           key={`fill-${b.medal}`}
           x={PAD}
@@ -56,7 +64,7 @@ export default function MissionLineViz({
           opacity={0.04}
         />
       ))}
-      {MEDAL_BANDS.map((b) => (
+      {medalBands.map((b) => (
         <g key={b.medal} stroke="var(--accent)" strokeOpacity={0.25} strokeDasharray="2 4" strokeWidth={1}>
           <line x1={PAD} y1={yAt(b.half)} x2={W - PAD} y2={yAt(b.half)} />
           <line x1={PAD} y1={yAt(-b.half)} x2={W - PAD} y2={yAt(-b.half)} />

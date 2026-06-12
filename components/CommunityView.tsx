@@ -253,6 +253,7 @@ function MissionsBrowseTab() {
         play: "straightline",
         missionId: m.id,
         origin: m.a,
+        bands: m.bands,
         name: m.name ?? "Straight-line mission",
         targets: [
           {

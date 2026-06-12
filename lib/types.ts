@@ -52,6 +52,14 @@ export type PlayMode = "ambient" | "straightline";
 
 export type Medal = "platinum" | "gold" | "silver" | "bronze" | "none";
 
+/** Corridor half-widths (m) per medal, set by a mission's creator. */
+export type MedalBands = {
+  platinum: number;
+  gold: number;
+  silver: number;
+  bronze: number;
+};
+
 export type ActiveYonder = {
   id: string;
   mode: YonderMode;
@@ -72,6 +80,8 @@ export type ActiveYonder = {
   lineArmedAt?: number;
   /** Optional shared mission this straight-line attempt is against. */
   missionId?: string;
+  /** The mission's medal thresholds, for live + final scoring. */
+  bands?: MedalBands;
 };
 
 export type FavouritePlace = {
@@ -229,6 +239,8 @@ export type FeedMission = {
   /** The line endpoints, so the card can start an attempt directly. */
   a?: LatLon;
   b?: LatLon;
+  /** The mission's medal thresholds, carried for a direct attempt. */
+  bands?: MedalBands;
   /** Top of the board (best first), for the card's podium peek. */
   top?: { handle: string; medal: Medal }[];
 };

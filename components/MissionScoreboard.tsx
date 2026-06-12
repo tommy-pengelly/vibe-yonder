@@ -43,6 +43,7 @@ export default function MissionScoreboard({ id }: { id: string }) {
         play: "straightline",
         missionId: mission.id,
         origin: mission.a, // everyone walks the same A→B
+        bands: mission.bands,
         name: mission.name ?? "Straight-line mission",
         targets: [
           {
@@ -67,10 +68,16 @@ export default function MissionScoreboard({ id }: { id: string }) {
       />
 
       {mission && (
-        <p className="text-sm text-[var(--warm)] -mt-2">
-          {mission.who} · {fmtDist(mission.distanceM)} as the crow flies ·{" "}
-          {mission.attempts ?? board?.length ?? 0} on the board
-        </p>
+        <div className="-mt-2 flex flex-col gap-1.5">
+          <p className="text-sm text-[var(--warm)]">
+            {mission.who} · {fmtDist(mission.distanceM)} as the crow flies ·{" "}
+            {mission.attempts ?? board?.length ?? 0} on the board
+          </p>
+          <p className="font-mono text-[11px] text-[var(--muted)] tabular-nums">
+            Platinum ≤{mission.bands.platinum}m · Gold ≤{mission.bands.gold}m · Silver ≤
+            {mission.bands.silver}m · Bronze ≤{mission.bands.bronze}m
+          </p>
+        </div>
       )}
 
       {board && board.some((r) => r.path && r.path.length > 1) && (
@@ -79,6 +86,7 @@ export default function MissionScoreboard({ id }: { id: string }) {
             attempts={board}
             highlight={comparing && myIndex >= 0 ? myIndex : highlight}
             compare={comparing ? 0 : null}
+            bands={mission?.bands}
           />
           <p className="text-[10px] uppercase tracking-widest text-[var(--muted)] text-center">
             Every run, held against the line · tap a name to trace it

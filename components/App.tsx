@@ -24,6 +24,7 @@ import type {
   ActiveYonder,
   Destination,
   Fix,
+  MedalBands,
   PlayMode,
   SavedYonder,
   Target,
@@ -125,6 +126,7 @@ export default function App() {
         play?: PlayMode;
         missionId?: string;
         origin?: { lat: number; lon: number };
+        bands?: MedalBands;
       };
       if (payload?.targets?.length || payload?.play === "ambient") {
         void beginYonder(payload.targets ?? [], payload.mode, {
@@ -134,6 +136,7 @@ export default function App() {
           play: payload.play,
           missionId: payload.missionId,
           origin: payload.origin,
+          bands: payload.bands,
         });
       }
     } catch {
@@ -224,6 +227,7 @@ export default function App() {
         play?: PlayMode;
         missionId?: string;
         origin?: { lat: number; lon: number };
+        bands?: MedalBands;
       } = {},
     ) => {
       await requestAccess();
@@ -242,6 +246,7 @@ export default function App() {
         // the line is armed (scoring starts) once you're there and tap begin.
         origin: opts.origin,
         lineArmed: opts.play === "straightline" ? false : undefined,
+        bands: opts.bands,
       };
       setYonder(newYonder);
       setTrack([]);
@@ -431,10 +436,12 @@ export default function App() {
     const scoredTrack = track.filter((p) => p.t >= armedAt);
     const straightLine =
       yonder?.play === "straightline" && yonder?.lineArmed && slOrigin && slTarget
-        ? scoreStraightLine(scoredTrack, slOrigin, {
-            lat: slTarget.lat,
-            lon: slTarget.lon,
-          })
+        ? scoreStraightLine(
+            scoredTrack,
+            slOrigin,
+            { lat: slTarget.lat, lon: slTarget.lon },
+            yonder.bands,
+          )
         : undefined;
 
     const y: SavedYonder = {

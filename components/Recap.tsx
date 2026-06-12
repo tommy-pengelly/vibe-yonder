@@ -8,8 +8,14 @@ import { useAuthUser } from "@/lib/auth";
 import { createMission, loadLeaderboard } from "@/lib/data";
 import { fmtDist, fmtDuration } from "@/lib/geo";
 import { projectTrack, summarize } from "@/lib/stats";
-import { MEDAL_LABEL } from "@/lib/straightline";
-import type { Destination, Fix, RankedResult, SavedYonder } from "@/lib/types";
+import { BAND_PRESETS, DEFAULT_BANDS, MEDAL_LABEL } from "@/lib/straightline";
+import type {
+  Destination,
+  Fix,
+  MedalBands,
+  RankedResult,
+  SavedYonder,
+} from "@/lib/types";
 import BottomSheet from "./ui/BottomSheet";
 import PlacePhoto from "./PlacePhoto";
 import ShareControl from "./ShareControl";
@@ -113,6 +119,7 @@ export default function Recap({
   const router = useRouter();
   const { user } = useAuthUser();
   const [missionBusy, setMissionBusy] = useState(false);
+  const [makeOpen, setMakeOpen] = useState(false);
   const [placement, setPlacement] = useState<{ pos: number; total: number } | null>(null);
 
   // A mission attempt: find where you landed on the board. The attempt is
@@ -138,7 +145,7 @@ export default function Recap({
     };
   }, [sl, saved.missionId]);
 
-  const makeMission = async () => {
+  const makeMission = async (bands: MedalBands) => {
     const b = saved.destinations[0];
     if (!saved.origin || !b || missionBusy) return;
     setMissionBusy(true);
@@ -147,6 +154,7 @@ export default function Recap({
       a: saved.origin,
       b: { lat: b.lat, lon: b.lon },
       distanceM: saved.direct,
+      bands,
     });
     if (id) router.push(`/missions/${id}`);
     else setMissionBusy(false);
@@ -291,13 +299,20 @@ export default function Recap({
         ) : user && saved.origin && saved.destinations[0] ? (
           <button
             type="button"
-            onClick={makeMission}
+            onClick={() => setMakeOpen(true)}
             disabled={missionBusy}
             className="rounded-full border border-[var(--accent)]/60 text-[var(--accent)] font-semibold py-2.5 hover:bg-[var(--accent)] hover:text-black disabled:opacity-40"
           >
             {missionBusy ? "Creating…" : "Make this a mission"}
           </button>
         ) : null)}
+
+      <MakeMissionSheet
+        open={makeOpen}
+        onClose={() => setMakeOpen(false)}
+        busy={missionBusy}
+        onCreate={(bands) => void makeMission(bands)}
+      />
 
       {(saved.destinations.length > 0 || onSavePlaces) && (
         <section className="flex flex-col gap-3">
@@ -427,6 +442,99 @@ function ordinal(n: number): string {
   const s = ["th", "st", "nd", "rd"];
   const v = n % 100;
   return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
+}
+
+// Publish a straight line as a mission. Defaults to the standard medal tiers; a
+// "Customise" reveal lets the creator set each band (preset quick-fills + raw
+// metres). Future: gate customising behind premium.
+function MakeMissionSheet({
+  open,
+  onClose,
+  busy,
+  onCreate,
+}: {
+  open: boolean;
+  onClose: () => void;
+  busy: boolean;
+  onCreate: (bands: MedalBands) => void;
+}) {
+  const [custom, setCustom] = useState(false);
+  const [bands, setBands] = useState<MedalBands>(DEFAULT_BANDS);
+  const keys = ["platinum", "gold", "silver", "bronze"] as const;
+  return (
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title="Make this a mission"
+      minHeightVh={custom ? 72 : 42}
+    >
+      <div className="flex flex-col gap-4 pb-2">
+        <p className="text-sm text-[var(--muted)] -mt-1">
+          Others walk your exact line and race to hold it tightest. Medals reward how
+          close they stay.
+        </p>
+
+        {!custom ? (
+          <div className="flex flex-col gap-3">
+            <p className="font-mono text-[11px] text-[var(--muted)] tabular-nums">
+              Platinum ≤{bands.platinum}m · Gold ≤{bands.gold}m · Silver ≤{bands.silver}m ·
+              Bronze ≤{bands.bronze}m
+            </p>
+            <button
+              type="button"
+              onClick={() => setCustom(true)}
+              className="self-start text-sm text-[var(--accent)] hover:opacity-80"
+            >
+              Customise medals
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-2">
+              {BAND_PRESETS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setBands(p.bands)}
+                  className="rounded-full border border-[var(--border)] px-3 py-1.5 text-sm hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            {keys.map((k) => (
+              <label key={k} className="flex items-center justify-between gap-3 text-sm">
+                <span className="font-display text-[var(--accent)]">{MEDAL_LABEL[k]}</span>
+                <span className="flex items-center gap-1.5 text-[var(--muted)]">
+                  ≤
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={1}
+                    value={bands[k]}
+                    onChange={(e) =>
+                      setBands((b) => ({ ...b, [k]: Number(e.target.value) || 0 }))
+                    }
+                    className="w-20 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-2 py-1.5 text-right text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
+                  />
+                  m
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => onCreate(bands)}
+          disabled={busy}
+          className="rounded-full bg-[var(--accent)] text-black font-semibold py-3 active:opacity-80 disabled:opacity-40"
+        >
+          {busy ? "Creating…" : "Create mission"}
+        </button>
+      </div>
+    </BottomSheet>
+  );
 }
 
 function RecapAddPlace({

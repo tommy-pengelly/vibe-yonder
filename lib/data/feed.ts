@@ -6,6 +6,7 @@ import type {
   FeedMap,
   FeedYonder,
   Medal,
+  MedalBands,
 } from "../types";
 import { ctx } from "./ctx";
 import { grubCountsFor } from "./social";
@@ -295,6 +296,7 @@ export async function loadFeed(
             pl.b_lat != null
               ? { lat: pl.b_lat as number, lon: pl.b_lon as number }
               : undefined,
+          bands: (pl.bands as MedalBands | undefined) ?? undefined,
         },
       };
     }
