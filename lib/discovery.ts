@@ -20,6 +20,9 @@ export type Candidate = NearbyPlace & {
   importance?: number;
   /** Which ring the route placed it in (drives the far-must-be-notable gate). */
   klass?: "any" | "interesting" | "notable";
+  /** The lens/theme this candidate was fetched under, if any. Drives the violet
+   * "matches what you're looking for" tint in the constellation. */
+  lensTheme?: string;
 };
 
 export type ScoreCtx = {

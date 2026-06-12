@@ -2,7 +2,7 @@
 import { Heart, Navigation, X } from "lucide-react";
 import PlacePhoto from "@/components/PlacePhoto";
 import BottomSheet from "@/components/ui/BottomSheet";
-import { CATEGORIES, categoryByKey } from "@/lib/nearby";
+import { categoryByKey, THEMES } from "@/lib/nearby";
 import { fmtDist } from "@/lib/geo";
 import type { ScopeCandidate } from "@/hooks/useDiscovery";
 
@@ -36,7 +36,7 @@ export default function SuggestionsSheet({
   return (
     <BottomSheet open={open} onClose={onClose} title="Around you" minHeightVh={72}>
       <div className="flex gap-2 overflow-x-auto -mx-5 px-5 pb-3 [scrollbar-width:none]">
-        {CATEGORIES.map((c) => {
+        {THEMES.map((c) => {
           const on = activeGuide === c.key;
           return (
             <button

@@ -131,6 +131,22 @@ export default function WalkScreen({
     [commitCandidate, onAddPlace, onSetActive],
   );
 
+  // The rare nudge: a genuinely notable, close, unseen find earns one calm,
+  // dismissible chip, never a feed. Gated high so it stays special.
+  const [nudgedIds, setNudgedIds] = useState<Set<string>>(new Set());
+  const dismissNudge = useCallback((id: string) => {
+    setNudgedIds((s) => new Set(s).add(id));
+  }, []);
+  const nudge = useMemo(
+    () =>
+      DISCOVERY_ENABLED && suggestionsOn
+        ? candidates.find(
+            (c) => c.notability >= 0.8 && c.dist <= 200 && !nudgedIds.has(c.id),
+          ) ?? null
+        : null,
+    [candidates, nudgedIds, suggestionsOn],
+  );
+
   const unvisited = useMemo(
     () => yonder.targets.filter((t) => !t.visited),
     [yonder.targets],
@@ -485,6 +501,33 @@ export default function WalkScreen({
               pausedMs={pausedMs}
               paused={paused}
             />
+          )}
+
+          {nudge && !detailCand && !suggestionsOpen && (
+            <div className="mb-2 flex items-center gap-1 rounded-full border border-[var(--accent)]/40 bg-black/40 backdrop-blur-sm pl-3 pr-1 py-1 max-w-full pointer-events-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setDetailCand(nudge);
+                  dismissNudge(nudge.id);
+                }}
+                className="flex items-center gap-2 min-w-0 text-sm text-[var(--foreground)]"
+              >
+                <Sparkles className="w-4 h-4 shrink-0 text-[var(--accent)]" strokeWidth={1.75} />
+                <span className="truncate">
+                  {nudge.name ?? "Something notable"}
+                  {!hideNumbers ? `, ${fmtDist(nudge.dist)}` : " nearby"}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => dismissNudge(nudge.id)}
+                aria-label="Not now"
+                className="shrink-0 size-7 flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]"
+              >
+                <X className="w-3.5 h-3.5" strokeWidth={1.75} />
+              </button>
+            </div>
           )}
 
           <WalkControls

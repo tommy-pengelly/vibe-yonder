@@ -109,7 +109,7 @@ export function useDiscovery({
         lon: s.lon,
         dist: s.dist,
         notability: notability(s),
-        matchesLens: activeGuide != null && s.category === activeGuide,
+        matchesLens: activeGuide != null && s.lensTheme === activeGuide,
         tier: notabilityTier(s),
         name: s.name,
         category: s.category,
@@ -135,12 +135,14 @@ export function useDiscovery({
     lastQueryAt.current = now;
     lastFetchKey.current = key;
     const { lat, lon } = position;
-    const guide = activeGuide ? `&category=${activeGuide}` : "";
+    const lens = activeGuide ?? "";
+    const guide = lens ? `&theme=${lens}` : "";
     void fetch(`/api/nearby?scope=ambient&lat=${lat}&lon=${lon}${guide}`)
       .then((r) => (r.ok ? r.json() : []))
       .then((places: NearbyPlace[]) => {
         for (const p of places) {
           const c = toCandidate(p);
+          if (lens) c.lensTheme = lens; // tag what lens surfaced it (violet tint)
           if (!committedRef.current.has(c.id)) pool.current.set(c.id, c);
         }
         prunePool(pool.current, lat, lon);
