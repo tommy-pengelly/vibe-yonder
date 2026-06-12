@@ -1,6 +1,7 @@
 "use client";
-import { Search, X } from "lucide-react";
+import { Bookmark, Navigation, Ruler, Search, X } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
 import { Empty, Loading, MapCard, MissionCard, WaysCard, YonderCard } from "@/components/feed/Cards";
@@ -13,10 +14,19 @@ import {
   SegmentedTabs,
   StickyBar,
 } from "@/components/ui";
-import { FEED_PAGE, loadCommunity, loadFeed, searchProfiles } from "@/lib/data";
+import {
+  FEED_PAGE,
+  loadCommunity,
+  loadFeed,
+  loadMissions,
+  type Mission,
+  saveMission,
+  searchProfiles,
+} from "@/lib/data";
+import { fmtDist } from "@/lib/geo";
 import type { FeedItem, FeedMap, FeedYonder, Profile } from "@/lib/types";
 
-type Tab = "following" | "everyone" | "discover";
+type Tab = "following" | "everyone" | "discover" | "missions";
 
 // The outward tab. A search button in the header opens a search sheet; below,
 // three tabs: Following (your people's wanders, the default feed), Everyone
@@ -47,6 +57,7 @@ export default function CommunityView() {
                   { value: "following", label: "Following" },
                   { value: "everyone", label: "Everyone" },
                   { value: "discover", label: "Maps" },
+                  { value: "missions", label: "Missions" },
                 ]}
               />
             </div>
@@ -63,6 +74,8 @@ export default function CommunityView() {
 
         {tab === "discover" ? (
           <DiscoverTab a={a} />
+        ) : tab === "missions" ? (
+          <MissionsBrowseTab />
         ) : (
           <FeedTab a={a} scope={tab} onBrowseEveryone={() => setTab("everyone")} />
         )}
@@ -217,6 +230,103 @@ function FeedItemCard({
 }
 
 // ----- Discover: maps to wander -----
+// Browse all public missions as a board of lines to attempt.
+function MissionsBrowseTab() {
+  const router = useRouter();
+  const [missions, setMissions] = useState<Mission[] | null>(null);
+  const [saved, setSaved] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    let c = false;
+    void loadMissions().then((m) => !c && setMissions(m));
+    return () => {
+      c = true;
+    };
+  }, []);
+
+  const attempt = (m: Mission) => {
+    if (typeof window === "undefined") return;
+    window.sessionStorage.setItem(
+      "vibe-yonder.start",
+      JSON.stringify({
+        mode: "single",
+        play: "straightline",
+        missionId: m.id,
+        origin: m.a,
+        name: m.name ?? "Straight-line mission",
+        targets: [
+          {
+            id: crypto.randomUUID(),
+            name: m.name ?? "The far point",
+            lat: m.b.lat,
+            lon: m.b.lon,
+            visited: false,
+          },
+        ],
+      }),
+    );
+    router.push("/walk");
+  };
+  const save = (m: Mission) => {
+    setSaved((s) => ({ ...s, [m.id]: true }));
+    void saveMission(m.id, true);
+  };
+
+  if (missions === null) return <Loading />;
+  if (missions.length === 0)
+    return (
+      <Empty
+        title="No missions yet"
+        body="Walk a straight line, then make it a mission for others to race."
+      />
+    );
+  return (
+    <div className="flex flex-col gap-3.5">
+      {missions.map((m) => (
+        <div
+          key={m.id}
+          className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden"
+        >
+          <Link href={`/missions/${m.id}`} className="block px-3.5 pt-3.5">
+            <div className="flex items-center gap-2">
+              <Ruler className="w-4 h-4 text-[var(--accent)] shrink-0" strokeWidth={1.75} />
+              <div className="font-display text-[17px] truncate leading-tight">
+                {m.name ?? "Straight-line mission"}
+              </div>
+            </div>
+            <div className="font-mono text-[11px] text-[var(--muted)] pt-2 tabular-nums">
+              {m.who} · {fmtDist(m.distanceM)} line · {m.attempts ?? 0}{" "}
+              {m.attempts === 1 ? "attempt" : "attempts"}
+            </div>
+          </Link>
+          <div className="flex items-center px-3.5 pt-2.5 pb-3.5 gap-2">
+            <button
+              type="button"
+              onClick={() => save(m)}
+              disabled={!!saved[m.id]}
+              className={`inline-flex items-center gap-1.5 text-[13px] py-1.5 px-1 ${
+                saved[m.id] ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
+              }`}
+            >
+              <Bookmark className="w-4 h-4" strokeWidth={1.75} />
+              {saved[m.id] ? "Saved" : "Save"}
+            </button>
+            <div className="flex-1" />
+            <button
+              type="button"
+              onClick={() => attempt(m)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--accent)]/60 text-[var(--accent)] text-xs font-semibold px-3 py-1.5 hover:bg-[var(--accent)] hover:text-black"
+            >
+              <Navigation className="w-3.5 h-3.5" strokeWidth={1.75} />
+              Attempt
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function DiscoverTab({ a }: { a: ReturnType<typeof useFeedActions> }) {
   const [sort, setSort] = useState<"recent" | "popular">("recent");
   const [maps, setMaps] = useState<FeedMap[] | null>(null);
