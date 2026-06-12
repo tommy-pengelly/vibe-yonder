@@ -1,6 +1,6 @@
 # DISCOVERY.md — the discovery design (source of truth)
 
-How Yonderful surfaces things to *stumble on*. CLAUDE.md is the brand law, SCHEMA.md the data law; this is the discovery law. Read it before touching `lib/discovery*`, `lib/nearby*`, `app/api/discover`, the scope's candidate layer, or the suggestions/nudge UI.
+How Yonderful surfaces things to *stumble on*. CLAUDE.md is the brand law, SCHEMA.md the data law; this is the discovery law. Read it before touching `lib/discovery*`, `lib/nearby*`, `app/api/nearby`, the scope's candidate layer, or the suggestions/nudge UI.
 
 ## The point
 Put **a few points of light in your sky**, never a turn list in your hand. Discovery is a calm *constellation* you read eyes-up, plus an on-demand *list*, plus a *rare* nudge for the genuinely-worth-it. Never an interrupting feed, never a directory you scroll before leaving the house. Rank by **notability + independence + proximity**, NEVER by ratings/popularity (banned, and not licence-clean).
@@ -11,12 +11,12 @@ A **content-based ranker: a hand-tuned linear utility (draw − cost), surface w
 Scorer (`lib/discovery.ts`, keep): `draw = notability + guideBoost − familiarity − chainPenalty`; `cost = dist/REFERENCE + turnAround`. The change: **notability becomes continuous** (Wikidata sitelinks, log-scaled 0–1) instead of a flat 0.9 for any wiki tag — so the constellation can have bright-vs-faint stars.
 
 ## One engine, three seeds
-The candidate pool is **source-agnostic**. The same `/api/discover` + scorer serves three surfaces by changing only the starting point:
+The candidate pool is **source-agnostic**. The same `/api/nearby` + scorer serves three surfaces by changing only the starting point:
 1. **Your live position** → the on-walk constellation.
 2. **A search / lens** ("statues", or a standing preference) → themed discovery.
 3. **A map's items** → "similar suggestions" while building or viewing a map.
 
-`/api/discover` federates **Overpass** (the independent/everyday layer, OSM tags) + **Wikidata SPARQL** (typed + notability-ranked: `wikibase:around` + direct `P31` against a curated type-QID set — NOT transitive `P279*`, which times out). Merge + dedupe by wikidata id → OSM id → coords. Keyless, cached.
+`/api/nearby` (the discover endpoint; `?scope=ambient`, optional `?theme=`) federates **Overpass** (the independent/everyday layer, OSM tags) + **Wikidata SPARQL** (typed + notability-ranked: `wikibase:around` + direct `P31` against a curated type-QID set — NOT transitive `P279*`, which times out). Merge + dedupe by wikidata id → OSM id → coords. Keyless, cached.
 
 ## The scope: two registers
 - **Going somewhere** (a committed target): the directional head **points**, distance counts down; out of range it rides the rim and points. This is the ONLY thing that points.

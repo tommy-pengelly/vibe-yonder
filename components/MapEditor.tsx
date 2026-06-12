@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import SimilarNearby from "@/components/SimilarNearby";
 import { fmtDist } from "@/lib/geo";
 import { getMap, saveMap } from "@/lib/data";
 import {
@@ -284,6 +285,15 @@ export default function MapEditor({ editId }: { editId?: string } = {}) {
           </li>
         ))}
       </ul>
+
+      {items.length >= 1 && (
+        <SimilarNearby
+          items={items.map((it) => ({ lat: it.lat, lon: it.lon }))}
+          fallback={fix ? { lat: fix.lat, lon: fix.lon } : null}
+          existingNames={new Set(items.map((it) => it.name.toLowerCase()))}
+          onAdd={(p) => add(p)}
+        />
+      )}
 
       <button
         type="button"
