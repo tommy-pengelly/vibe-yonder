@@ -608,7 +608,6 @@ export default function App() {
         onResume={resume}
         onFinish={finish}
         onDiscard={discard}
-        onArmLine={armLine}
         onSetVisited={onSetVisited}
         onSetActive={onSetActive}
         onRemoveTarget={onRemoveTarget}

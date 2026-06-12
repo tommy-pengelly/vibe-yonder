@@ -4,7 +4,6 @@ import {
   Heart,
   ListChecks,
   Locate,
-  Pause,
   Plus,
   Sparkles,
   X,
@@ -23,18 +22,19 @@ import {
   RIM_FRACTION,
   SCALE_LEVELS_M,
 } from "@/lib/constants";
-import { crossTrack, haversine, fmtDist } from "@/lib/geo";
-import { MEDAL_LABEL, medalFor } from "@/lib/straightline";
+import { haversine, fmtDist } from "@/lib/geo";
 import { directionsOptions } from "@/lib/maps";
 import type {
   ActiveYonder,
   Fix,
   Target,
 } from "@/lib/types";
-import LaneScope from "./LaneScope";
 import Scope from "./Scope";
 import StatStrip from "./StatStrip";
 import BottomSheet from "./ui/BottomSheet";
+import CalibrateHint from "./walk/CalibrateHint";
+import WalkControls from "./walk/WalkControls";
+import WalkHeader from "./walk/WalkHeader";
 
 type Props = {
   yonder: ActiveYonder;
@@ -50,7 +50,6 @@ type Props = {
   onResume: () => void;
   onFinish: () => void;
   onDiscard: () => void;
-  onArmLine: () => void;
   onSetVisited: (targetId: string, visited: boolean) => void;
   onSetActive: (targetId: string) => void;
   onRemoveTarget: (targetId: string) => void;
@@ -73,7 +72,6 @@ export default function WalkScreen({
   onResume,
   onFinish,
   onDiscard,
-  onArmLine,
   onClearTargets,
   onSetVisited,
   onSetActive,
@@ -153,45 +151,6 @@ export default function WalkScreen({
   }, [yonder.activeIndex, yonder.targets, position]);
 
   const activeTarget = focusIndex != null ? yonder.targets[focusIndex] : null;
-
-  // Straight-line has two phases: walk to the start A, then hold the line A→B.
-  const isLine = yonder.play === "straightline";
-  const goToStart = isLine && !yonder.lineArmed && !!yonder.origin;
-  // Armed and holding the line → the dedicated lane view.
-  const laneMode = isLine && !!yonder.lineArmed && !!yonder.origin && !!yonder.targets[0];
-  const distToStart =
-    goToStart && position && yonder.origin
-      ? haversine(position.lat, position.lon, yonder.origin.lat, yonder.origin.lon)
-      : null;
-  const atStart = distToStart != null && distToStart < ARRIVAL_RADIUS_M;
-
-  // Live deviation feedback, only once the line is armed. Worst so far sets the
-  // medal you're on track for; only the post-arm track counts.
-  const lineStats = useMemo(() => {
-    if (!isLine || !yonder.lineArmed || !yonder.origin || !yonder.targets[0]) {
-      return null;
-    }
-    const a = yonder.origin;
-    const b = yonder.targets[0];
-    const armedAt = yonder.lineArmedAt ?? 0;
-    const current = position ? Math.abs(crossTrack(position, a, b)) : 0;
-    let worst = 0;
-    for (const p of track) {
-      if (p.t < armedAt) continue;
-      const d = Math.abs(crossTrack(p, a, b));
-      if (d > worst) worst = d;
-    }
-    return { current, worst, medal: medalFor(worst) };
-  }, [isLine, yonder.lineArmed, yonder.lineArmedAt, yonder.origin, yonder.targets, position, track]);
-
-  // During "go to the start", the active marker points at A (with B faint);
-  // once armed it's the destination B as usual.
-  const startTarget: Target | null =
-    goToStart && yonder.origin
-      ? { id: "__start", name: "Start", lat: yonder.origin.lat, lon: yonder.origin.lon, visited: false }
-      : null;
-  const scopeTargets = startTarget ? [startTarget, ...yonder.targets] : yonder.targets;
-  const scopeActiveIndex = startTarget ? 0 : focusIndex;
 
   // Favourite the active destination (the only walk-screen way to create a
   // favourite). Tracks the stored record's id so it can be un-favourited.
@@ -329,9 +288,6 @@ export default function WalkScreen({
   const zoomed = Math.abs(mpp - DEFAULT_MPP) > 0.01;
 
   const headerLabel = useMemo(() => {
-    if (goToStart) {
-      return { kicker: "Straight line", title: "Walk to the start" };
-    }
     if (yonder.targets.length === 0) {
       return { kicker: "No destination", title: "Wandering free" };
     }
@@ -357,7 +313,7 @@ export default function WalkScreen({
       kicker: null,
       title: activeTarget?.name ?? yonder.name ?? "Yonder",
     };
-  }, [yonder, activeTarget, unvisited, goToStart]);
+  }, [yonder, activeTarget, unvisited]);
 
   const needsCalibration = position != null && heading == null;
   const currentArrivalId = arrivalQueue[0];
@@ -378,142 +334,82 @@ export default function WalkScreen({
 
   return (
     <div className="fixed inset-0 flex flex-col">
-      {laneMode && yonder.origin && yonder.targets[0] ? (
-        // Holding the line: the dedicated lane view (no pinch-zoom; fixed scale).
-        <div className="absolute inset-0">
-          <LaneScope
-            position={position}
-            a={yonder.origin}
-            b={yonder.targets[0]}
-            track={track}
-            hideNumbers={hideNumbers}
-          />
-        </div>
-      ) : (
-        <div
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-          className="absolute inset-0"
-        >
-          <Scope
-            position={position}
-            heading={heading}
-            track={track}
-            targets={scopeTargets}
-            activeIndex={scopeActiveIndex}
-            mpp={mpp}
-            hideNumbers={hideNumbers}
-            onPickTarget={goToStart ? undefined : onSetActive}
-            candidates={suggestionsOn ? candidates : undefined}
-            onPickCandidate={suggestionsOn ? () => setSuggestionsOpen(true) : undefined}
-            lineOrigin={null}
-          />
-        </div>
-      )}
+      <div
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        className="absolute inset-0"
+      >
+        <Scope
+          position={position}
+          heading={heading}
+          track={track}
+          targets={yonder.targets}
+          activeIndex={focusIndex}
+          mpp={mpp}
+          hideNumbers={hideNumbers}
+          onPickTarget={onSetActive}
+          candidates={suggestionsOn ? candidates : undefined}
+          onPickCandidate={suggestionsOn ? () => setSuggestionsOpen(true) : undefined}
+        />
+      </div>
 
-      <header className="relative z-10 flex items-start justify-between gap-3 px-5 pt-6 pointer-events-none">
-        <div className="flex flex-col min-w-0 pointer-events-auto">
-          {headerLabel.kicker && (
-            <span className="text-[10px] uppercase tracking-widest text-[var(--accent)]/80">
-              {headerLabel.kicker}
-            </span>
-          )}
-          <div className="flex items-center gap-2 min-w-0">
-            <h1 className="font-display text-2xl tracking-tight leading-tight truncate">
-              {headerLabel.title}
-            </h1>
-            {activeTarget && (
+      <WalkHeader
+        kicker={headerLabel.kicker}
+        title={headerLabel.title}
+        titleAccessory={
+          activeTarget ? (
+            <button
+              type="button"
+              onClick={() => void toggleFavourite()}
+              aria-label={favId ? "Remove from places" : "Save this place"}
+              aria-pressed={favId != null}
+              className={`shrink-0 size-7 flex items-center justify-center ${
+                favId ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
+              }`}
+            >
+              <Heart
+                className="w-5 h-5"
+                strokeWidth={1.75}
+                fill={favId ? "var(--accent)" : "none"}
+              />
+            </button>
+          ) : undefined
+        }
+        right={
+          <>
+            {suggestionsOn ? (
               <button
                 type="button"
-                onClick={() => void toggleFavourite()}
-                aria-label={favId ? "Remove from places" : "Save this place"}
-                aria-pressed={favId != null}
-                className={`shrink-0 size-7 flex items-center justify-center ${
-                  favId
-                    ? "text-[var(--accent)]"
-                    : "text-[var(--muted)] hover:text-[var(--foreground)]"
-                }`}
+                onClick={() => setSuggestionsOpen(true)}
+                aria-label="Suggestions around you"
+                className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-[var(--border)] text-[var(--muted)] hover:text-[var(--accent)] bg-black/30 backdrop-blur-sm"
               >
-                <Heart
-                  className="w-5 h-5"
-                  strokeWidth={1.75}
-                  fill={favId ? "var(--accent)" : "none"}
-                />
+                <Sparkles className="w-4 h-4" strokeWidth={1.75} />
+                <span className="text-sm tabular-nums">{candidates.length}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setSuggestionsOn(true)}
+                aria-label="Turn suggestions on"
+                className="inline-flex items-center justify-center size-9 rounded-full border border-[var(--border)] text-[var(--muted)]/50 hover:text-[var(--accent)] bg-black/30 backdrop-blur-sm"
+              >
+                <Sparkles className="w-4 h-4" strokeWidth={1.75} />
               </button>
             )}
-          </div>
-        </div>
-        <div className="shrink-0 flex items-center gap-2 pointer-events-auto">
-          {suggestionsOn ? (
             <button
               type="button"
-              onClick={() => setSuggestionsOpen(true)}
-              aria-label="Suggestions around you"
+              onClick={() => setPanelOpen(true)}
+              aria-label="Destinations"
               className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-[var(--border)] text-[var(--muted)] hover:text-[var(--accent)] bg-black/30 backdrop-blur-sm"
             >
-              <Sparkles className="w-4 h-4" strokeWidth={1.75} />
-              <span className="text-sm tabular-nums">{candidates.length}</span>
+              <ListChecks className="w-4 h-4" strokeWidth={1.75} />
+              <span className="text-sm tabular-nums">{yonder.targets.length}</span>
             </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setSuggestionsOn(true)}
-              aria-label="Turn suggestions on"
-              className="inline-flex items-center justify-center size-9 rounded-full border border-[var(--border)] text-[var(--muted)]/50 hover:text-[var(--accent)] bg-black/30 backdrop-blur-sm"
-            >
-              <Sparkles className="w-4 h-4" strokeWidth={1.75} />
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setPanelOpen(true)}
-            aria-label="Destinations"
-            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-[var(--border)] text-[var(--muted)] hover:text-[var(--accent)] bg-black/30 backdrop-blur-sm"
-          >
-            <ListChecks className="w-4 h-4" strokeWidth={1.75} />
-            <span className="text-sm tabular-nums">{yonder.targets.length}</span>
-          </button>
-        </div>
-      </header>
-
-      {goToStart && (
-        <div className="relative z-10 -mt-1 flex justify-center pointer-events-auto">
-          {atStart ? (
-            <button
-              type="button"
-              onClick={onArmLine}
-              className="rounded-full bg-[var(--accent)] text-black font-semibold px-6 py-2.5 active:opacity-80 shadow-lg"
-            >
-              {yonder.missionId ? "Start mission" : "Start the line"}
-            </button>
-          ) : (
-            <div className="rounded-full bg-black/40 backdrop-blur-sm border border-[var(--border)] px-3 py-1.5 text-xs flex items-center gap-2">
-              <span className="text-[var(--accent)]">Go to the start</span>
-              {!hideNumbers && distToStart != null && (
-                <span className="font-mono text-[var(--muted)] tabular-nums">
-                  {fmtDist(distToStart)}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {lineStats && (
-        <div className="relative z-10 -mt-1 flex justify-center pointer-events-none">
-          <div className="rounded-full bg-black/40 backdrop-blur-sm border border-[var(--border)] px-3 py-1.5 text-xs flex items-center gap-2">
-            <span className="font-mono text-[var(--accent)]">
-              {MEDAL_LABEL[lineStats.medal]}
-            </span>
-            {!hideNumbers && (
-              <span className="font-mono text-[var(--muted)] tabular-nums">
-                ±{Math.round(lineStats.current)}m · worst {Math.round(lineStats.worst)}m
-              </span>
-            )}
-          </div>
-        </div>
-      )}
+          </>
+        }
+      />
 
       <div className="relative z-10 flex-1 flex flex-col justify-end px-5 pb-8 gap-4 pointer-events-none">
         {!position && (
@@ -522,18 +418,7 @@ export default function WalkScreen({
           </p>
         )}
 
-        {needsCalibration && (
-          <div className="self-center text-center text-xs text-[var(--muted)] max-w-xs pointer-events-auto">
-            Point your phone to set direction.
-            <button
-              type="button"
-              onClick={onCalibrate}
-              className="block mx-auto mt-1 text-[var(--accent)] hover:opacity-80"
-            >
-              Tap if it still doesn&apos;t move
-            </button>
-          </div>
-        )}
+        {needsCalibration && <CalibrateHint onCalibrate={onCalibrate} />}
 
         {zoomed && (
           <button
@@ -581,84 +466,34 @@ export default function WalkScreen({
         )}
 
         <div className="flex flex-col gap-3 pointer-events-auto">
-          {/* Before the line is armed you're just heading to the start, so the
-              scored time/distance would mislead. Show a clear pre-start note. */}
-          {goToStart ? (
-            <p className="text-center text-sm text-[var(--muted)]">
-              {atStart
-                ? `You're at the start. ${yonder.missionId ? "Start the mission" : "Start the line"} when you're ready, the clock starts then.`
-                : "Find your way to the start. Nothing's timed yet, this is just the way there."}
-            </p>
-          ) : (
-            !hideNumbers && (
-              <StatStrip
-                track={track}
-                startTime={startTime}
-                pausedMs={pausedMs}
-                paused={paused}
-              />
-            )
+          {!hideNumbers && (
+            <StatStrip
+              track={track}
+              startTime={startTime}
+              pausedMs={pausedMs}
+              paused={paused}
+            />
           )}
 
-          <div className="flex items-center justify-between gap-3 pt-1">
-            {paused ? (
-              <>
+          <WalkControls
+            paused={paused}
+            onPause={onPause}
+            onResume={onResume}
+            onFinish={onFinish}
+            onDiscard={onDiscard}
+            extra={
+              activeTarget ? (
                 <button
                   type="button"
-                  onClick={onDiscard}
-                  className="text-xs text-[var(--muted)] hover:text-red-400 px-2 py-1"
+                  onClick={() => setDirectionsOpen(true)}
+                  className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] inline-flex items-center gap-1"
                 >
-                  Discard
+                  Just take me there
+                  <ExternalLink className="w-3 h-3" strokeWidth={1.75} />
                 </button>
-                <button
-                  type="button"
-                  onClick={onResume}
-                  className="rounded-full bg-[var(--accent)] text-black font-semibold px-6 py-2.5 active:opacity-80"
-                >
-                  Resume
-                </button>
-                <button
-                  type="button"
-                  onClick={goToStart ? onDiscard : onFinish}
-                  className="text-xs text-[var(--foreground)] hover:text-[var(--accent)] px-2 py-1"
-                >
-                  {goToStart ? "Cancel" : "Finish"}
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={onPause}
-                  aria-label="Pause"
-                  className="size-11 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--foreground)] hover:border-[var(--accent)] bg-black/30 backdrop-blur-sm"
-                >
-                  <Pause className="w-4 h-4" strokeWidth={1.75} />
-                </button>
-                {activeTarget && !goToStart && (
-                  <button
-                    type="button"
-                    onClick={() => setDirectionsOpen(true)}
-                    className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] inline-flex items-center gap-1"
-                  >
-                    Just take me there
-                    <ExternalLink className="w-3 h-3" strokeWidth={1.75} />
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={goToStart ? onDiscard : onFinish}
-                  className={`rounded-full font-semibold px-5 py-2 bg-black/30 backdrop-blur-sm ${
-                    goToStart
-                      ? "border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)]"
-                      : "border border-[var(--accent)]/60 text-[var(--accent)] hover:bg-[var(--accent)] hover:text-black"
-                  }`}
-                >
-                  {goToStart ? "Cancel" : "Finish"}
-                </button>
-              </>
-            )}
-          </div>
+              ) : undefined
+            }
+          />
         </div>
 
         <div className="flex items-center justify-center gap-2 text-[10px] text-[var(--muted)] tabular-nums min-h-4 pointer-events-auto">
