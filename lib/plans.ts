@@ -15,16 +15,18 @@ export type FeatureKey =
   | "waysReport" // post a ways report
   | "discoveryGuides"; // steer the discovery taste
 
-/** Features that require Yonder+. Anything not here is free. */
+// Default gate state per feature. Everything starts FREE — nothing is gated
+// until you flip it on in the admin panel (which overrides these in the DB).
+// This is the catalog of *gateable* features; their default is ungated.
 export const PLUS_FEATURES: Record<FeatureKey, boolean> = {
-  freeRoam: true,
-  maps: true,
-  missionsBrowse: true,
-  createMission: true,
-  customMedals: true,
-  heatmap: true,
-  waysReport: true,
-  discoveryGuides: true,
+  freeRoam: false,
+  maps: false,
+  missionsBrowse: false,
+  createMission: false,
+  customMedals: false,
+  heatmap: false,
+  waysReport: false,
+  discoveryGuides: false,
 };
 
 export type MeterKey = "missionAttempts";
@@ -34,6 +36,25 @@ export const METERS: Record<MeterKey, { free: number; period: "month" }> = {
   // Attempting a mission someone sent you: a taste before Yonder+.
   missionAttempts: { free: 3, period: "month" },
 };
+
+/** Short labels for the admin config screen. */
+export const FEATURE_LABEL: Record<FeatureKey, string> = {
+  freeRoam: "Free-roam wander",
+  maps: "Maps",
+  missionsBrowse: "Browse missions",
+  createMission: "Create missions",
+  customMedals: "Custom medals",
+  heatmap: "Exploration heatmap",
+  waysReport: "Ways reports",
+  discoveryGuides: "Discovery guides",
+};
+
+export const METER_LABEL: Record<MeterKey, string> = {
+  missionAttempts: "Mission attempts / month",
+};
+
+export const FEATURE_KEYS = Object.keys(PLUS_FEATURES) as FeatureKey[];
+export const METER_KEYS = Object.keys(METERS) as MeterKey[];
 
 /** A short, human reason for the paywall sheet, per feature. */
 export const FEATURE_REASON: Record<FeatureKey, string> = {

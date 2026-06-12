@@ -6,11 +6,23 @@ import { useGoBack } from "@/components/ui";
 import { useAuthUser } from "@/lib/auth";
 import {
   amAdmin,
+  loadPlanConfig,
   loadPlusMembers,
   loadReports,
+  type PlanConfig,
   resolveReport,
+  setFeatureGate,
+  setMeterLimit,
   setPlusByUsername,
 } from "@/lib/data";
+import {
+  FEATURE_KEYS,
+  FEATURE_LABEL,
+  type FeatureKey,
+  METER_KEYS,
+  METER_LABEL,
+  type MeterKey,
+} from "@/lib/plans";
 import type { ReportItem } from "@/lib/types";
 
 export default function ModerationView() {
@@ -22,6 +34,7 @@ export default function ModerationView() {
   const [entUser, setEntUser] = useState("");
   const [entMsg, setEntMsg] = useState<string | null>(null);
   const [members, setMembers] = useState<{ handle: string; status: string }[]>([]);
+  const [plan, setPlan] = useState<PlanConfig | null>(null);
 
   const refreshMembers = () => void loadPlusMembers().then(setMembers);
 
@@ -33,12 +46,24 @@ export default function ModerationView() {
       if (a) {
         void loadReports().then((r) => !c && setReports(r));
         void loadPlusMembers().then((m) => !c && setMembers(m));
+        void loadPlanConfig().then((p) => !c && setPlan(p));
       }
     });
     return () => {
       c = true;
     };
   }, [user]);
+
+  const toggleGate = (f: FeatureKey, plus: boolean) => {
+    setPlan((p) => (p ? { ...p, plusFeatures: { ...p.plusFeatures, [f]: plus } } : p));
+    void setFeatureGate(f, plus);
+  };
+  const changeMeter = (m: MeterKey, free: number) => {
+    setPlan((p) =>
+      p ? { ...p, meters: { ...p.meters, [m]: { ...p.meters[m], free } } } : p,
+    );
+    void setMeterLimit(m, free);
+  };
 
   const setPlus = async (on: boolean) => {
     const name = entUser.trim();
@@ -128,6 +153,46 @@ export default function ModerationView() {
             </ul>
           )}
         </section>
+
+        {plan && (
+          <section className="flex flex-col gap-3 rounded-2xl border border-[var(--border)] p-4">
+            <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
+              Gating &amp; meters
+            </span>
+            <p className="text-xs text-[var(--muted)] -mt-1">
+              Toggle what needs Yonder+ and set the free allowances. Live, no deploy.
+            </p>
+            {FEATURE_KEYS.map((f) => (
+              <div key={f} className="flex items-center justify-between gap-3 text-sm">
+                <span>{FEATURE_LABEL[f]}</span>
+                <button
+                  type="button"
+                  onClick={() => toggleGate(f, !plan.plusFeatures[f])}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                    plan.plusFeatures[f]
+                      ? "bg-[var(--accent)] text-black"
+                      : "border border-[var(--border)] text-[var(--muted)]"
+                  }`}
+                >
+                  {plan.plusFeatures[f] ? "Yonder+" : "Free"}
+                </button>
+              </div>
+            ))}
+            <div className="h-px bg-[var(--border)] my-1" />
+            {METER_KEYS.map((m) => (
+              <label key={m} className="flex items-center justify-between gap-3 text-sm">
+                <span>{METER_LABEL[m]}</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={plan.meters[m].free}
+                  onChange={(e) => changeMeter(m, Number(e.target.value) || 0)}
+                  className="w-16 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-2 py-1.5 text-right text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
+                />
+              </label>
+            ))}
+          </section>
+        )}
 
         <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
           Report queue

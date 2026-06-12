@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { usePaywall } from "@/components/PaywallProvider";
 import { bumpUsage, getUsage } from "@/lib/data";
-import { FEATURE_REASON, type FeatureKey, METERS, type MeterKey, PLUS_FEATURES } from "@/lib/plans";
+import { FEATURE_REASON, type FeatureKey, type MeterKey } from "@/lib/plans";
 import { useEntitlement } from "./useEntitlement";
 
 // Gate a Yonder+ feature. `allowed` for conditional UI; `guard()` returns true
@@ -10,8 +10,8 @@ import { useEntitlement } from "./useEntitlement";
 // running the action).
 export function useGate(feature: FeatureKey) {
   const { premium } = useEntitlement();
-  const { requirePlus } = usePaywall();
-  const allowed = premium || !PLUS_FEATURES[feature];
+  const { requirePlus, config } = usePaywall();
+  const allowed = premium || !config.plusFeatures[feature];
   const guard = () => {
     if (allowed) return true;
     requirePlus(FEATURE_REASON[feature]);
@@ -24,12 +24,12 @@ export function useGate(feature: FeatureKey) {
 // returns true if allowed, else opens the paywall and returns false.
 export function useMeter(key: MeterKey, reason: string) {
   const { premium } = useEntitlement();
-  const { requirePlus } = usePaywall();
+  const { requirePlus, config } = usePaywall();
   const [used, setUsed] = useState(0);
   useEffect(() => {
     void getUsage(key).then(setUsed);
   }, [key]);
-  const limit = METERS[key].free;
+  const limit = config.meters[key].free;
   const remaining = premium ? Infinity : Math.max(0, limit - used);
   const consume = async () => {
     if (premium) return true;
