@@ -17,8 +17,10 @@ export type PlaceLite = {
   lon: number;
   label?: string;
   category?: string;
+  /** Wikidata type label ("Statue", "Listed building"), when known. */
+  typeLabel?: string;
   dist?: number;
-  /** Has a Wikipedia/wikidata entry, shows a subtle "noted" mark. */
+  /** Has a Wikipedia/wikidata entry, shows a subtle "noted" mark + exact photo. */
   wiki?: string;
 };
 
@@ -74,7 +76,8 @@ export default function PlaceDetailSheet({
     let c = false;
     const ctrl = new AbortController();
     void fetch(
-      `/api/place-blurb?lat=${place.lat}&lon=${place.lon}&name=${encodeURIComponent(place.name)}`,
+      `/api/place-blurb?lat=${place.lat}&lon=${place.lon}&name=${encodeURIComponent(place.name)}` +
+        (place.wiki ? `&wiki=${encodeURIComponent(place.wiki)}` : ""),
       { signal: ctrl.signal },
     )
       .then((r) => (r.ok ? r.json() : null))
@@ -126,17 +129,22 @@ export default function PlaceDetailSheet({
                   lat={place.lat}
                   lon={place.lon}
                   name={place.name}
+                  wiki={place.wiki}
                   keepPlaceholder
                   className="w-full h-48"
                 />
                 <div className="px-5 py-4 flex flex-col gap-4 max-w-md mx-auto">
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      {cat && (
+                      {cat ? (
                         <span className="text-xs text-[var(--muted)]">
                           {cat.emoji} {cat.label}
                         </span>
-                      )}
+                      ) : place.typeLabel ? (
+                        <span className="text-xs text-[var(--muted)] capitalize">
+                          {place.typeLabel}
+                        </span>
+                      ) : null}
                       {place.dist != null && (
                         <span className="text-[11px] font-mono text-[var(--accent)] tabular-nums">
                           {fmtDist(place.dist)} away

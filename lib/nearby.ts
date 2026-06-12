@@ -10,6 +10,13 @@ export type NearbyPlace = {
   /** Wikipedia title or wikidata id when the place has one, a free, on-brand
    * "notable" signal (no external ratings). */
   wiki?: string;
+  /** Wikidata sitelink count (how many Wikipedias cover it) when known, a
+   * *continuous* encyclopedic-notability signal, NOT a rating/popularity. This
+   * is what lets the constellation grade brightness from bright-notable to
+   * faint-obscure. See `notability()`. */
+  sitelinks?: number;
+  /** A human type label from Wikidata ("Statue", "Listed building"). */
+  typeLabel?: string;
   /** Stable OSM ref ("node/123"), for de-dupe and the seen/skipped ledger. */
   id?: string;
   /** Which ambient ring the place surfaced from (Doc 7 Part B). Drives the
@@ -21,6 +28,43 @@ export type NearbyPlace = {
    * landmark by visit). See `score()`. */
   chain?: boolean;
 };
+
+// Wikidata curio types for the *notable* layer: typed, encyclopedic things to
+// stumble on, ranked by sitelink count. Direct `P31` against these QIDs only
+// (transitive subclass walks time out on the public endpoint). Each theme maps
+// to OSM filters (the everyday/independent layer) AND Wikidata QIDs (the typed,
+// notable layer), so one theme key drives both sources. `qids` empty ⇒ OSM-only.
+export type Theme = {
+  key: string;
+  label: string;
+  emoji: string;
+  /** Overpass tag selectors. */
+  filters: string[];
+  /** Wikidata P31 type QIDs (no leading "wd:"). */
+  qids: string[];
+};
+
+export const THEMES: Theme[] = [
+  { key: "art", label: "Public art", emoji: "🗿", filters: ['"tourism"="artwork"'],
+    qids: ["Q179700", "Q860861", "Q219423"] }, // statue, sculpture, mural
+  { key: "history", label: "Heritage", emoji: "🏛️", filters: ['"historic"'],
+    qids: ["Q4989906", "Q5003624", "Q839954", "Q23413", "Q16970"] }, // monument, memorial, archaeological site, castle, church
+  { key: "water", label: "Water & wells", emoji: "⛲", filters: ['"natural"="water"'],
+    qids: ["Q483453", "Q43483"] }, // fountain, well
+  { key: "viewpoint", label: "Viewpoints", emoji: "🗻", filters: ['"tourism"="viewpoint"'],
+    qids: [] },
+  { key: "museum", label: "Museums & galleries", emoji: "🖼️", filters: ['"tourism"="museum"', '"tourism"="gallery"'],
+    qids: ["Q33506", "Q207694"] }, // museum, art museum
+  { key: "park", label: "Parks & gardens", emoji: "🌳", filters: ['"leisure"="park"', '"leisure"="garden"'],
+    qids: ["Q22698"] }, // park
+];
+
+/** The union of curio QIDs, used by the ambient ring (no specific theme). */
+export const CURIO_QIDS = Array.from(new Set(THEMES.flatMap((t) => t.qids)));
+
+export function themeByKey(key: string): Theme | undefined {
+  return THEMES.find((t) => t.key === key);
+}
 
 // Ambient discovery rings (Doc 7 Part B): near = anything in the active
 // categories, further out = only progressively more notable. The bar rises with

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   cellKey,
   coordId,
+  notability,
   notabilityTier,
   rankCandidates,
   type Candidate,
@@ -20,8 +21,7 @@ import type { Fix, Target } from "@/lib/types";
 
 const STEP = 0.01; // ~1 km tile
 const QUERY_THROTTLE_MS = 60 * 1000; // floor between cell-move refetches
-const REVEAL_M = 60; // within this, a mystery dot resolves to its name
-const ON_CANVAS_CAP = 6; // keep the void uncluttered
+const ON_CANVAS_CAP = 12; // keep the void uncluttered, but it's a constellation
 const POOL_CAP = 80; // bound memory; farthest pruned
 
 export type ScopeCandidate = {
@@ -29,11 +29,16 @@ export type ScopeCandidate = {
   lat: number;
   lon: number;
   dist: number;
-  /** Within REVEAL_M, show its name/category; otherwise a faint mystery dot. */
-  revealed: boolean;
   name?: string;
   category?: string;
+  /** Wikidata type label ("Statue", "Listed building"), when known. */
+  typeLabel?: string;
+  /** Wikipedia title or Wikidata id, drives the entity-accurate photo/blurb. */
   wiki?: string;
+  /** 0–1 continuous notability. Drives the star's brightness + size. */
+  notability: number;
+  /** Matches the active lens/guide ⇒ tinted (violet) in the constellation. */
+  matchesLens?: boolean;
   tier: "none" | "noted" | "notable";
 };
 
@@ -103,13 +108,12 @@ export function useDiscovery({
         lat: s.lat,
         lon: s.lon,
         dist: s.dist,
-        // `revealed` gates the on-scope label (mystery dots until you're close);
-        // the full name/category travel with it so the suggestions sheet, the
-        // deliberate "show me what's around" view, can display them.
-        revealed: s.dist < REVEAL_M,
+        notability: notability(s),
+        matchesLens: activeGuide != null && s.category === activeGuide,
         tier: notabilityTier(s),
         name: s.name,
         category: s.category,
+        typeLabel: s.typeLabel,
         wiki: s.wiki,
       })),
     );

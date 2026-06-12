@@ -4,14 +4,16 @@ import {
   Heart,
   ListChecks,
   Locate,
+  Navigation,
   Plus,
   Sparkles,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useDiscovery } from "@/hooks/useDiscovery";
+import { useDiscovery, type ScopeCandidate } from "@/hooks/useDiscovery";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
 import SuggestionsSheet from "@/components/SuggestionsSheet";
+import PlaceDetailSheet from "@/components/PlaceDetailSheet";
 import { getFavourite, pushFavourite, removeFavourite } from "@/lib/data";
 import {
   ARRIVAL_RADIUS_M,
@@ -97,6 +99,8 @@ export default function WalkScreen({
   // wander stays a clean void. Silenceable per-walk when on.
   const [suggestionsOn, setSuggestionsOn] = useState(DISCOVERY_ENABLED);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  // Tapping a star opens its blurb + photo; the header sparkle opens the list.
+  const [detailCand, setDetailCand] = useState<ScopeCandidate | null>(null);
   const [activeGuide, setActiveGuide] = useState<string | null>(null);
   const committedIds = useMemo(
     () => new Set(yonder.targets.map((t) => t.id)),
@@ -354,7 +358,9 @@ export default function WalkScreen({
           onPickTarget={onSetActive}
           candidates={DISCOVERY_ENABLED && suggestionsOn ? candidates : undefined}
           onPickCandidate={
-            DISCOVERY_ENABLED && suggestionsOn ? () => setSuggestionsOpen(true) : undefined
+            DISCOVERY_ENABLED && suggestionsOn
+              ? (id) => setDetailCand(candidates.find((c) => c.id === id) ?? null)
+              : undefined
           }
         />
       </div>
@@ -578,6 +584,41 @@ export default function WalkScreen({
             setSuggestionsOpen(false);
           }}
           hideNumbers={hideNumbers}
+        />
+      )}
+
+      {DISCOVERY_ENABLED && (
+        <PlaceDetailSheet
+          open={!!detailCand}
+          onClose={() => setDetailCand(null)}
+          place={
+            detailCand
+              ? {
+                  name: detailCand.name ?? "Somewhere nearby",
+                  lat: detailCand.lat,
+                  lon: detailCand.lon,
+                  category: detailCand.category,
+                  typeLabel: detailCand.typeLabel,
+                  dist: hideNumbers ? undefined : detailCand.dist,
+                  wiki: detailCand.wiki,
+                }
+              : null
+          }
+          actions={
+            detailCand
+              ? [
+                  {
+                    icon: Navigation,
+                    label: "Head here next",
+                    primary: true,
+                    onClick: () => {
+                      takeNext(detailCand.id);
+                      setDetailCand(null);
+                    },
+                  },
+                ]
+              : []
+          }
         />
       )}
 

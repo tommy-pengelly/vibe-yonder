@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
   categoryByKey,
+  CURIO_QIDS,
   INTERESTING_FILTERS,
   NEARBY_RINGS,
   type NearbyPlace,
+  themeByKey,
 } from "@/lib/nearby";
 
 // Yonderful's third server route: "places of type X near a point", for
@@ -22,6 +24,8 @@ import {
 //                 score it.
 
 const CONTACT = process.env.NOMINATIM_CONTACT ?? "tom.peng95@gmail.com";
+const UA = `Yonderful/1.0 (${CONTACT})`;
+const SIX_H = 60 * 60 * 6;
 // A couple of community endpoints; we try them in order (the main one 504s when
 // busy). Self-host/managed later via env.
 const OVERPASS_ENDPOINTS = (
@@ -123,15 +127,27 @@ export async function GET(req: NextRequest) {
   const lon = parseFloat(sp.get("lon") ?? "");
   const ambient = sp.get("scope") === "ambient";
   const cat = categoryByKey(sp.get("category") ?? "");
+  // A theme (e.g. "art", "history") drives BOTH layers: its OSM filters for the
+  // everyday ring and its Wikidata QIDs for the notable ring. No theme ⇒ the
+  // broad curio set.
+  const theme = themeByKey(sp.get("theme") ?? "");
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
     return NextResponse.json([]);
   }
-  // Default path still requires a category; ambient can run guide-less.
+  // Default path still requires a category; ambient can run guide/theme-less.
   if (!ambient && !cat) return NextResponse.json([]);
 
+  const ambientFilters = theme?.filters ?? cat?.filters ?? [];
   const query = ambient
-    ? ambientQuery(lat, lon, cat?.filters ?? [])
+    ? ambientQuery(lat, lon, ambientFilters)
     : defaultQuery(lat, lon, cat!.filters, clampRadius(sp.get("radius")));
+
+  // Kick the notable (Wikidata) layer off in parallel with Overpass so the
+  // ambient round-trip is max(overpass, wikidata), not their sum. wikidataCurios
+  // swallows its own errors (returns []), so this never rejects.
+  const wdPromise = ambient
+    ? wikidataCurios(lat, lon, NEARBY_RINGS.notable / 1000, theme?.qids ?? CURIO_QIDS)
+    : null;
 
   try {
     const data = await runOverpass(query);
@@ -151,12 +167,30 @@ export async function GET(req: NextRequest) {
     places.sort((a, b) => (a.dist ?? 0) - (b.dist ?? 0));
 
     if (ambient) {
+      // Federate the notable layer: typed curios from Wikidata, ranked by
+      // sitelinks. Enrich an OSM place that already carries the same Qid (so it
+      // gains a notability count), else add it.
+      const wd = (await wdPromise) ?? [];
+      const byQid = new Map(
+        places.filter((p) => p.wiki && /^Q\d+$/.test(p.wiki)).map((p) => [p.wiki!, p]),
+      );
+      for (const w of wd) {
+        const ex = w.wiki ? byQid.get(w.wiki) : undefined;
+        if (ex) {
+          ex.sitelinks = w.sitelinks;
+          ex.typeLabel = w.typeLabel;
+          ex.klass = "notable";
+        } else {
+          places.push(w);
+        }
+      }
+      places.sort((a, b) => (a.dist ?? 0) - (b.dist ?? 0));
       // Keep a bounded, varied pool, the client's score()/rankCandidates does
       // the real gating. Never drop the notable far ones in favour of near
-      // clutter, so partition: nearest non-wiki + nearest wiki.
-      const wiki = places.filter((p) => p.wiki).slice(0, 6);
+      // clutter, so partition: nearest notable + nearest everyday.
+      const notable = places.filter((p) => p.wiki).slice(0, 12);
       const rest = places.filter((p) => !p.wiki).slice(0, 8);
-      return NextResponse.json([...rest, ...wiki]);
+      return NextResponse.json([...rest, ...notable]);
     }
 
     // Default wander-toward ordering: closest handful, then a few from further
@@ -208,6 +242,73 @@ function ambientQuery(lat: number, lon: number, catFilters: string[]) {
   // hint when a near place happens to carry it.
   parts.push(`${ringSet(['"wikipedia"'], NEARBY_RINGS.notable)};out center 30;`);
   return `[out:json][timeout:25];${parts.join("")}`;
+}
+
+// The *notable* layer: typed curios near a point, ranked by encyclopedic
+// notability (sitelink count), via Wikidata's geospatial SPARQL service. Direct
+// P31 against a QID set (transitive P279* times out on the public endpoint).
+// Coordinate-free notability, keyless, cached. Returns [] on any failure so the
+// route degrades to OSM-only.
+type WdBinding = {
+  item: { value: string };
+  itemLabel?: { value: string };
+  coord?: { value: string };
+  dist?: { value: string };
+  sitelinks?: { value: string };
+  typeLabel?: { value: string };
+};
+
+async function wikidataCurios(
+  lat: number,
+  lon: number,
+  radiusKm: number,
+  qids: string[],
+): Promise<NearbyPlace[]> {
+  if (!qids.length) return [];
+  const values = qids.map((q) => `wd:${q}`).join(" ");
+  const query =
+    `SELECT ?item ?itemLabel ?coord ?dist ?sitelinks ?typeLabel WHERE {` +
+    `SERVICE wikibase:around { ?item wdt:P625 ?coord. ` +
+    `bd:serviceParam wikibase:center "Point(${lon} ${lat})"^^geo:wktLiteral. ` +
+    `bd:serviceParam wikibase:radius "${radiusKm}". bd:serviceParam wikibase:distance ?dist. } ` +
+    `VALUES ?type { ${values} } ?item wdt:P31 ?type. ?item wikibase:sitelinks ?sitelinks. ` +
+    `SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } } ` +
+    `ORDER BY DESC(?sitelinks) LIMIT 40`;
+  try {
+    const res = await fetch(
+      `https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(query)}`,
+      {
+        headers: { "User-Agent": UA, Accept: "application/sparql-results+json" },
+        next: { revalidate: SIX_H },
+        signal: AbortSignal.timeout(8000),
+      },
+    );
+    if (!res.ok) return [];
+    const data = (await res.json()) as { results?: { bindings?: WdBinding[] } };
+    const out: NearbyPlace[] = [];
+    for (const b of data.results?.bindings ?? []) {
+      const qid = b.item.value.split("/").pop() ?? "";
+      const name = b.itemLabel?.value;
+      if (!name || name === qid) continue; // no English label ⇒ skip
+      const m = b.coord?.value.match(/Point\(([-\d.]+) ([-\d.]+)\)/);
+      if (!m) continue;
+      out.push({
+        name,
+        lat: parseFloat(m[2]),
+        lon: parseFloat(m[1]),
+        category: "",
+        dist: b.dist ? Math.round(parseFloat(b.dist.value) * 1000) : undefined,
+        wiki: qid,
+        sitelinks: b.sitelinks ? parseInt(b.sitelinks.value, 10) : undefined,
+        typeLabel: b.typeLabel?.value,
+        klass: "notable",
+        id: `wd/${qid}`,
+      });
+    }
+    return out;
+  } catch {
+    return [];
+  }
 }
 
 async function runOverpass(

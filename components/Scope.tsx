@@ -40,6 +40,10 @@ type Props = {
 const ACCENT = "#f5a623";
 const FG = "#ededed";
 const MUTED_TEXT = "rgba(173, 168, 157, 0.55)";
+// Discovery stars are cool (white), reserved amber is the path. A match to your
+// lens tints violet. RGB triplets so opacity can encode notability.
+const STAR_RGB = "237, 237, 237";
+const LENS_RGB = "167, 139, 250";
 
 export default function Scope({
   position,
@@ -245,10 +249,10 @@ export default function Scope({
       }
     }
 
-    // Ambient discovery candidates: faint mystery dots that gain a name + a
-    // category glyph once you're within reveal range. On-canvas only (mystery
-    // lives in the void, never as a rim chevron). Drawn under the user dot;
-    // muted white, never amber, amber stays reserved for the destination.
+    // The constellation: discovery stars at their true positions, on-canvas only
+    // ("in focus", zoom out to reach further). Brightness + size encode
+    // notability; hue is cool (a lens-match tints violet); never amber, never a
+    // rim chevron, discovery never points. Drawn under the user dot.
     candHitsRef.current = [];
     if (position) {
       for (const c of candidates) {
@@ -422,38 +426,38 @@ function drawCandidate(
   y: number,
   c: ScopeCandidate,
 ) {
-  if (!c.revealed) {
-    // Mystery: a faint, nameless point. The void stays calm.
-    ctx.fillStyle = "rgba(237, 237, 237, 0.26)";
-    ctx.beginPath();
-    ctx.arc(x, y, 3, 0, Math.PI * 2);
-    ctx.fill();
-    return;
-  }
-  // Revealed: a brighter dot, a category glyph, and the name. A notable place
-  // gets a subtle ring (the on-scope echo of the sheet's "✦ Noted").
+  // Brightness + size grade by notability: a bright, big star is notable (many
+  // sitelinks); a faint, small one is an obscure curio, there to be stumbled on.
+  const n = Math.max(0, Math.min(1, c.notability));
+  const op = 0.28 + 0.62 * n;
+  const r = 2.2 + 3.3 * n;
+  const rgb = c.matchesLens ? LENS_RGB : STAR_RGB;
+
+  // Notable stars get a faint halo, the on-scope echo of the sheet's "✦ Noted".
   if (c.tier === "notable") {
-    ctx.strokeStyle = "rgba(237, 237, 237, 0.45)";
+    ctx.strokeStyle = `rgba(${rgb}, ${(op * 0.5).toFixed(2)})`;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.arc(x, y, 8, 0, Math.PI * 2);
+    ctx.arc(x, y, r + 4, 0, Math.PI * 2);
     ctx.stroke();
   }
-  ctx.fillStyle = "rgba(237, 237, 237, 0.85)";
+  ctx.fillStyle = `rgba(${rgb}, ${op.toFixed(2)})`;
   ctx.beginPath();
-  ctx.arc(x, y, 4, 0, Math.PI * 2);
+  ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.fill();
-  const emoji = c.category ? categoryByKey(c.category)?.emoji : undefined;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  if (emoji) {
-    ctx.font = "12px system-ui, sans-serif";
-    ctx.fillText(emoji, x, y - 14);
-  }
-  if (c.name) {
-    ctx.fillStyle = "rgba(237, 237, 237, 0.7)";
+
+  // Only the brighter stars carry a name, so the void stays a calm sky.
+  if (c.name && n >= 0.6) {
+    const emoji = c.category ? categoryByKey(c.category)?.emoji : undefined;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    if (emoji) {
+      ctx.font = "12px system-ui, sans-serif";
+      ctx.fillText(emoji, x, y - r - 9);
+    }
+    ctx.fillStyle = `rgba(${rgb}, ${Math.min(0.8, op).toFixed(2)})`;
     ctx.font = "500 11px var(--font-sans), system-ui, sans-serif";
-    ctx.fillText(truncate(c.name, 18), x, y + 16);
+    ctx.fillText(truncate(c.name, 18), x, y + r + 10);
   }
 }
 

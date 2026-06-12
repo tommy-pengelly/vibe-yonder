@@ -68,9 +68,18 @@ export const TUNING = {
 // café/restaurant/pub). We don't penalise a stadium or museum for a brand tag.
 const CHAINABLE = new Set(["cafe", "food", "pub"]);
 
-/** Interestingness, 0–1, a "there's a story here" signal, never a rating. */
+/**
+ * Interestingness, 0–1, a "there's a story here" signal, never a rating.
+ *
+ * When we have a Wikidata sitelink count it's *continuous* (log-scaled): a thing
+ * covered by many Wikipedias glows brighter than one covered by one. This is
+ * encyclopedic notability, NOT crowd popularity, the brand-clean signal. Falls
+ * back to the old tiered tags when there's no count.
+ */
 export function notability(c: Candidate): number {
-  if (c.wiki) return 0.9; // has a Wikipedia / wikidata entry
+  if (c.sitelinks != null && c.sitelinks > 0)
+    return Math.max(0.3, Math.min(0.95, 0.3 + 0.13 * Math.log2(1 + c.sitelinks)));
+  if (c.wiki) return 0.82; // has a wiki entry, count unknown
   if (c.klass === "interesting") return 0.55;
   if (c.importance != null) return Math.max(0.2, Math.min(0.7, c.importance));
   return 0.2; // a plainly-named amenity
