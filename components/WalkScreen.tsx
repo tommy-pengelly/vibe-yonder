@@ -467,9 +467,9 @@ export default function WalkScreen({
             <button
               type="button"
               onClick={onArmLine}
-              className="rounded-full bg-[var(--accent)] text-black font-semibold px-5 py-2 active:opacity-80"
+              className="rounded-full bg-[var(--accent)] text-black font-semibold px-6 py-2.5 active:opacity-80 shadow-lg"
             >
-              Begin the line
+              {yonder.missionId ? "Start mission" : "Start the line"}
             </button>
           ) : (
             <div className="rounded-full bg-black/40 backdrop-blur-sm border border-[var(--border)] px-3 py-1.5 text-xs flex items-center gap-2">
@@ -570,8 +570,8 @@ export default function WalkScreen({
           {goToStart ? (
             <p className="text-center text-sm text-[var(--muted)]">
               {atStart
-                ? "You're at the start. Begin the line when ready."
-                : "Head to the start. The line begins when you arrive."}
+                ? `You're at the start. ${yonder.missionId ? "Start the mission" : "Start the line"} when you're ready, the clock starts then.`
+                : "Find your way to the start. Nothing's timed yet, this is just the way there."}
             </p>
           ) : (
             !hideNumbers && (

@@ -317,13 +317,24 @@ export default function App() {
     setYonder((y) => (y ? { ...y, activeIndex: y.targets.findIndex((t) => t.id === targetId) } : y));
   }, []);
 
-  // Arm the straight line: you've reached the start (A), scoring begins now.
+  // Arm the straight line: you've reached the start (A) and tapped "Start". The
+  // walk *to* the start was just navigation, so start the run fresh here, the
+  // clock, distance and trace all begin now (not from when you set off).
   const armLine = useCallback(() => {
+    const at = Date.now();
     setYonder((y) =>
       y && y.play === "straightline" && !y.lineArmed
-        ? { ...y, lineArmed: true, lineArmedAt: Date.now() }
+        ? { ...y, lineArmed: true, lineArmedAt: at }
         : y,
     );
+    setStartTime(at);
+    setEndTime(null);
+    setPausedMs(0);
+    // Seed the trace at the start point so the line is measured from here.
+    setTrack(() => {
+      const f = lastFix.current;
+      return f ? [{ ...f, t: at }] : [];
+    });
   }, []);
 
   // Remove a destination. Removing the last one drops you into a pure wander
