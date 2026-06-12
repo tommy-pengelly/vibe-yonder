@@ -392,15 +392,18 @@ export default function App() {
       yonder?.targets[0] ??
       null;
 
-    const destinations: Destination[] =
-      yonder?.targets.map((t) => ({
-        name: t.name,
-        label: t.label,
-        lat: t.lat,
-        lon: t.lon,
-      })) ?? [];
-
-    const seen = yonder?.targets.filter((t) => t.visited) ?? [];
+    // Places "seen" = only those you actually got near: visited on arrival, or
+    // the track passed within ~40 m. A target you never approached doesn't count.
+    const SEEN_M = 40;
+    const nearTrack = (t: { lat: number; lon: number }) =>
+      track.some((p) => haversine(p.lat, p.lon, t.lat, t.lon) <= SEEN_M);
+    const seen = yonder?.targets.filter((t) => t.visited || nearTrack(t)) ?? [];
+    const destinations: Destination[] = seen.map((t) => ({
+      name: t.name,
+      label: t.label,
+      lat: t.lat,
+      lon: t.lon,
+    }));
     const autoName =
       yonder?.name ??
       (seen.length > 1
