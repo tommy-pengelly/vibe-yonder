@@ -24,6 +24,7 @@ import {
 } from "@/lib/constants";
 import { haversine, fmtDist } from "@/lib/geo";
 import { directionsOptions } from "@/lib/maps";
+import { DISCOVERY_ENABLED } from "@/lib/flags";
 import type {
   ActiveYonder,
   Fix,
@@ -91,8 +92,10 @@ export default function WalkScreen({
   // Discovery, the single suggestions engine (replaces the old sidequest).
   // Faint candidate dots populate the scope (the eyes-up constellation); the
   // suggestions sheet is the deliberate "show me what's around" view. A guide
-  // leans what surfaces. On for every wander, silenceable per-walk.
-  const [suggestionsOn, setSuggestionsOn] = useState(true);
+  // leans what surfaces. Gated behind DISCOVERY_ENABLED (off by default while the
+  // taste is reworked); when off, every discovery seam below no-ops and the
+  // wander stays a clean void. Silenceable per-walk when on.
+  const [suggestionsOn, setSuggestionsOn] = useState(DISCOVERY_ENABLED);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [activeGuide, setActiveGuide] = useState<string | null>(null);
   const committedIds = useMemo(
@@ -106,7 +109,7 @@ export default function WalkScreen({
   } = useDiscovery({
     position,
     track,
-    enabled: suggestionsOn && !paused,
+    enabled: DISCOVERY_ENABLED && suggestionsOn && !paused,
     activeGuide,
     committedIds,
   });
@@ -349,8 +352,10 @@ export default function WalkScreen({
           mpp={mpp}
           hideNumbers={hideNumbers}
           onPickTarget={onSetActive}
-          candidates={suggestionsOn ? candidates : undefined}
-          onPickCandidate={suggestionsOn ? () => setSuggestionsOpen(true) : undefined}
+          candidates={DISCOVERY_ENABLED && suggestionsOn ? candidates : undefined}
+          onPickCandidate={
+            DISCOVERY_ENABLED && suggestionsOn ? () => setSuggestionsOpen(true) : undefined
+          }
         />
       </div>
 
@@ -378,26 +383,27 @@ export default function WalkScreen({
         }
         right={
           <>
-            {suggestionsOn ? (
-              <button
-                type="button"
-                onClick={() => setSuggestionsOpen(true)}
-                aria-label="Suggestions around you"
-                className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-[var(--border)] text-[var(--muted)] hover:text-[var(--accent)] bg-black/30 backdrop-blur-sm"
-              >
-                <Sparkles className="w-4 h-4" strokeWidth={1.75} />
-                <span className="text-sm tabular-nums">{candidates.length}</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setSuggestionsOn(true)}
-                aria-label="Turn suggestions on"
-                className="inline-flex items-center justify-center size-9 rounded-full border border-[var(--border)] text-[var(--muted)]/50 hover:text-[var(--accent)] bg-black/30 backdrop-blur-sm"
-              >
-                <Sparkles className="w-4 h-4" strokeWidth={1.75} />
-              </button>
-            )}
+            {DISCOVERY_ENABLED &&
+              (suggestionsOn ? (
+                <button
+                  type="button"
+                  onClick={() => setSuggestionsOpen(true)}
+                  aria-label="Suggestions around you"
+                  className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-[var(--border)] text-[var(--muted)] hover:text-[var(--accent)] bg-black/30 backdrop-blur-sm"
+                >
+                  <Sparkles className="w-4 h-4" strokeWidth={1.75} />
+                  <span className="text-sm tabular-nums">{candidates.length}</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setSuggestionsOn(true)}
+                  aria-label="Turn suggestions on"
+                  className="inline-flex items-center justify-center size-9 rounded-full border border-[var(--border)] text-[var(--muted)]/50 hover:text-[var(--accent)] bg-black/30 backdrop-blur-sm"
+                >
+                  <Sparkles className="w-4 h-4" strokeWidth={1.75} />
+                </button>
+              ))}
             <button
               type="button"
               onClick={() => setPanelOpen(true)}
@@ -550,28 +556,30 @@ export default function WalkScreen({
         onClose={() => setPanelOpen(false)}
       />
 
-      <SuggestionsSheet
-        open={suggestionsOpen}
-        onClose={() => setSuggestionsOpen(false)}
-        suggestions={candidates}
-        activeGuide={activeGuide}
-        onSetGuide={setActiveGuide}
-        onTakeNext={takeNext}
-        onSaveForLater={(c) => {
-          void pushFavourite({
-            name: c.name ?? "Nearby place",
-            lat: c.lat,
-            lon: c.lon,
-          });
-          skipCandidate(c.id);
-        }}
-        onDecline={skipCandidate}
-        onTurnOff={() => {
-          setSuggestionsOn(false);
-          setSuggestionsOpen(false);
-        }}
-        hideNumbers={hideNumbers}
-      />
+      {DISCOVERY_ENABLED && (
+        <SuggestionsSheet
+          open={suggestionsOpen}
+          onClose={() => setSuggestionsOpen(false)}
+          suggestions={candidates}
+          activeGuide={activeGuide}
+          onSetGuide={setActiveGuide}
+          onTakeNext={takeNext}
+          onSaveForLater={(c) => {
+            void pushFavourite({
+              name: c.name ?? "Nearby place",
+              lat: c.lat,
+              lon: c.lon,
+            });
+            skipCandidate(c.id);
+          }}
+          onDecline={skipCandidate}
+          onTurnOff={() => {
+            setSuggestionsOn(false);
+            setSuggestionsOpen(false);
+          }}
+          hideNumbers={hideNumbers}
+        />
+      )}
 
       <BottomSheet
         open={directionsOpen}

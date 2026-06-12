@@ -44,11 +44,11 @@ export default function CreateHub({
   onClose: () => void;
 }) {
   const router = useRouter();
-  const { q, setQ, results, loading } = usePlaceSearch(position);
+  const [favourites, setFavourites] = useState<FavouritePlace[]>([]);
+  const { q, setQ, results, loading } = usePlaceSearch(position, favourites);
   const [picks, setPicks] = useState<Target[]>([]);
   const [mode, setMode] = useState<YonderMode>("collection");
   const [maps, setMaps] = useState<StoredMap[]>([]);
-  const [favourites, setFavourites] = useState<FavouritePlace[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [mapsTab, setMapsTab] = useState<MapsTab>("mine");
   const [communityMaps, setCommunityMaps] = useState<FeedMap[] | null>(null);
@@ -68,7 +68,7 @@ export default function CreateHub({
   const [lineStart, setLineStart] = useState<{ name: string; lat: number; lon: number } | null>(null);
 
   const building = picks.length > 0;
-  const idle = q.trim().length < 3;
+  const typing = q.trim().length > 0;
 
   const exitLine = () => {
     setLineMode(false);
@@ -238,17 +238,25 @@ export default function CreateHub({
         </div>
       )}
 
-      {/* Search results */}
-      {!idle && (
+      {/* Search results, your saved places resolve first (type "home") */}
+      {typing && (
         <ul className="flex flex-col divide-y divide-[var(--border)] min-h-12">
-          {loading && <li className="text-sm text-[var(--muted)] py-2 px-1">Searching…</li>}
-          {!loading && results.length === 0 && (
+          {loading && results.length === 0 && (
+            <li className="text-sm text-[var(--muted)] py-2 px-1">Searching…</li>
+          )}
+          {!loading && results.length === 0 && q.trim().length >= 3 && (
             <li className="text-sm text-[var(--muted)] py-2 px-1">No matches. Try adding the town.</li>
           )}
           {results.map((r, i) => (
             <li key={`${r.lat},${r.lon},${i}`} className="flex items-center gap-2">
               <button type="button" onClick={() => onResultTap(r)} className="flex-1 text-left py-3 min-w-0 hover:text-[var(--accent)]">
-                {r.dist != null && <div className="text-[11px] font-mono text-[var(--accent)] tabular-nums">{fmtDist(r.dist)} away</div>}
+                {r.favourite ? (
+                  <div className="text-[11px] font-mono uppercase tracking-widest text-[var(--accent)]">
+                    Saved{r.dist != null ? ` · ${fmtDist(r.dist)} away` : ""}
+                  </div>
+                ) : (
+                  r.dist != null && <div className="text-[11px] font-mono text-[var(--accent)] tabular-nums">{fmtDist(r.dist)} away</div>
+                )}
                 <div className="font-display text-lg truncate">{r.name}</div>
                 <div className="text-xs text-[var(--muted)] line-clamp-1">{r.label}</div>
               </button>
@@ -261,7 +269,7 @@ export default function CreateHub({
       )}
 
       {/* Idle: stacked modes */}
-      {idle && !building && !lineMode && (
+      {!typing && !building && !lineMode && (
         <div className="flex flex-col gap-2">
           <ModeRow
             icon={Compass}

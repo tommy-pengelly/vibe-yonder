@@ -34,6 +34,8 @@ export type GeocodeResult = LatLon & {
 export type RankedResult = GeocodeResult & {
   dist?: number;
   score?: number;
+  /** Set when this result is one of the user's saved places (alias match). */
+  favourite?: boolean;
 };
 
 export type YonderMode = "single" | "collection" | "ordered";
