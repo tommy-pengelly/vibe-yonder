@@ -565,13 +565,23 @@ export default function WalkScreen({
         )}
 
         <div className="flex flex-col gap-3 pointer-events-auto">
-          {!hideNumbers && (
-            <StatStrip
-              track={track}
-              startTime={startTime}
-              pausedMs={pausedMs}
-              paused={paused}
-            />
+          {/* Before the line is armed you're just heading to the start, so the
+              scored time/distance would mislead. Show a clear pre-start note. */}
+          {goToStart ? (
+            <p className="text-center text-sm text-[var(--muted)]">
+              {atStart
+                ? "You're at the start. Begin the line when ready."
+                : "Head to the start. The line begins when you arrive."}
+            </p>
+          ) : (
+            !hideNumbers && (
+              <StatStrip
+                track={track}
+                startTime={startTime}
+                pausedMs={pausedMs}
+                paused={paused}
+              />
+            )
           )}
 
           <div className="flex items-center justify-between gap-3 pt-1">
@@ -593,10 +603,10 @@ export default function WalkScreen({
                 </button>
                 <button
                   type="button"
-                  onClick={onFinish}
+                  onClick={goToStart ? onDiscard : onFinish}
                   className="text-xs text-[var(--foreground)] hover:text-[var(--accent)] px-2 py-1"
                 >
-                  Finish
+                  {goToStart ? "Cancel" : "Finish"}
                 </button>
               </>
             ) : (
@@ -609,7 +619,7 @@ export default function WalkScreen({
                 >
                   <Pause className="w-4 h-4" strokeWidth={1.75} />
                 </button>
-                {activeTarget && (
+                {activeTarget && !goToStart && (
                   <button
                     type="button"
                     onClick={() => setDirectionsOpen(true)}
@@ -621,10 +631,14 @@ export default function WalkScreen({
                 )}
                 <button
                   type="button"
-                  onClick={onFinish}
-                  className="rounded-full border border-[var(--accent)]/60 text-[var(--accent)] font-semibold px-5 py-2 hover:bg-[var(--accent)] hover:text-black bg-black/30 backdrop-blur-sm"
+                  onClick={goToStart ? onDiscard : onFinish}
+                  className={`rounded-full font-semibold px-5 py-2 bg-black/30 backdrop-blur-sm ${
+                    goToStart
+                      ? "border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)]"
+                      : "border border-[var(--accent)]/60 text-[var(--accent)] hover:bg-[var(--accent)] hover:text-black"
+                  }`}
                 >
-                  Finish
+                  {goToStart ? "Cancel" : "Finish"}
                 </button>
               </>
             )}
