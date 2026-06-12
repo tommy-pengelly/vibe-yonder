@@ -56,6 +56,7 @@ The discovery engine has a **taste**, and it sends people to good, **locally-run
 |---|---|
 | a **yonder** (the *activity* — a walk you do/did); "to yonder", "you yondered 32×" | a walk / a run / a workout |
 | a **map** (the *plan* — a saved, reusable, shareable set of places to yonder); "make a map", "yonder this map", "your maps" | a list / a collection / a route / an itinerary |
+| a **mission** (the *plan* — a reusable straight-line challenge A→B with medal bands and a board); "attempt this mission", "your missions" | a challenge / a race / a level |
 | **Yondered** (the wander multiplier, e.g. `32×`) | wander factor |
 | a **grub** (the one-tap kudos on a shared yonder); "grub it" | like / kudos / heart (in the social feed) |
 | **Direct** (straight-line start→finish) | (the idiom "as the crow flies" is fine in Explain copy only) |
@@ -64,7 +65,7 @@ The discovery engine has a **taste**, and it sends people to good, **locally-run
 | a **sidequest** (a suggestion/detour you take mid-wander — now surfaced via the suggestions sheet; the old standalone offer card + `useSidequest` are retired) | — |
 | **places seen**, **explore**, **wander**, **eyes up** | — |
 
-**A yonder vs a map.** A **yonder** is an *outing* — you walk it; it has a trace, time, and a Yondered score. A **map** is a *plan* — a curated set of places, no trace, that you can yonder anytime, do again, keep for later, or (Doc 3) share publicly so others **Load / Duplicate** its places and wander their own way. The two are separate objects (the `yonders` table = activities; the `maps` table = plans).
+**Yonder vs map vs mission (the object model — see [SCHEMA.md](SCHEMA.md) for the full law).** A **yonder** is an *outing* — you walk it; it has a trace, time, a Yondered score. A **map** and a **mission** are *plans* — reusable things you load and do: a map is a set of places, a mission is a line A→B with medal bands and a board. **The model is Strava's: the yonder (activity) is the spine, and everything hangs off it.** Doing a plan produces a yonder linked to it (`map_id` *or* `mission_id`) — so a mission attempt is just a yonder, shown in your history, re-attemptable. **Sharing is opt-in** and shares a *yonder* (the activity); plans go public via a `visibility` flag and are browsed in their Community tab, **never posted to the feed**. The feed is yonders. Read SCHEMA.md before changing any of this.
 
 **Banned from UI and features:** pace, route, navigate, turn-by-turn, fastest, ETA, calories, elevation, climb, splits, PR, record, "efficiency".
 
@@ -91,25 +92,27 @@ The discovery engine has a **taste**, and it sends people to good, **locally-run
 Guest-first. Active walk is a full-screen takeover (no nav). Membership is light: an account just unlocks saving.
 
 ```
-/                  Feed             — Mine · Following. Your wanders + (Doc 3) people you follow.
-                                       The guest landing. (Community discovery now lives in /explore.)
+/                  Community        — the guest landing + everything outward-facing. Tabs below:
+                                       Following · Everyone · Maps · Missions.
 /walk              Active yonder     — launched by the centre ⊕ (telescope). Full-bleed heading-up scope,
                                        directional head, Time + Distance (hideable), pause / finish. No nav.
 /recap/[id]        Recap             — faded trace, "You yondered N×", tiles (Walked, Time, Direct,
                                        Yondered). Save, Do again, Save for later, Share.
-/explore           Explore           — community discovery: one search with a Places/Explorers scope toggle,
-                                       Recent/Popular, public maps + yonders to Load / Duplicate.
+                   (Community tabs) — Following · Everyone (the yonder feed) · Maps · Missions (public
+                                       plans, browsed live by visibility — Load a map / attempt a mission).
+                                       The old /explore is folded in here (/explore → /).
 /explain           How it works      — the philosophy + what each metric means.
-/you               Me                — profile: your yonders, maps, favourites, saved, settings, sign in/out.
+/you               Me                — profile: your yonders (history), maps, missions, places, settings.
 /maps, /maps/[id]                    — a map: a saved set of places with visited / visit-again state;
-                                       "Yonder this map".
-/favourites                          — saved places, each can start a yonder.
-/saved                               — save-for-later bookmarks; tap to yonder.
-/u/[username]                        — public profile: shared yonders, exploration stats, follow.
-/yonder/[id]                         — a shared yonder (obfuscated): grub, Save, Yonder this, report.
+                                       "Yonder this map". A map yonder produces a yonder with map_id.
+/missions/[id]                       — a mission: the line A→B, medal bands, the board; "Attempt this".
+                                       A mission attempt produces a yonder with mission_id (shows in history).
+/favourites                          — saved places, each can start a yonder. (Surfaced as "Places" under Me.)
+/u/[username]                        — public profile: your shared yonders (posts), exploration stats, follow.
+/yonder/[id]                         — a shared yonder (an obfuscated post): grub, Save, Yonder this, report.
 ```
 
-**Privacy invariant (Doc 3).** The precise `yonders.track` is owner-only — there is no public/followers read path on `yonders`. Sharing publishes an *obfuscated copy* into `shared_yonders` (home zone removed, start/finish trimmed, coordinates stripped to a 0–100 memento). You share **places + a memento, never a route**. Grubs are kudos; there are no comments and no leaderboards.
+**Privacy invariant.** The precise `yonders.track` is owner-only — there is no public/followers read path on `yonders`. Sharing publishes an *obfuscated copy* into a **`posts`** row (home zone removed, start/finish trimmed, coordinates stripped to a 0–100 memento). You share **places + a memento, never a route**. `posts` is the *one* sharing path — there is no `shared_yonders`. Grubs are one-tap kudos on a post; there are no comments. A mission has a **board**, but it is scored by *holding the line* (deviation), never by time or speed, and it carries normalised, coordinate-free paths only. See [SCHEMA.md](SCHEMA.md).
 
 Nav: a **Community · ⊕ · Me** three-slot bottom bar. **Community** (`/`, the guest landing) is everything outward-facing — Discover (public maps + yonders + search people/places) and Following; **⊕** (centre, the brand spyglass mark) launches a yonder and is the home for game modes — an action, not a destination; **Me** (`/you`) is everything inward — your yonders (history), maps, favourites, settings. (Earlier 5-slot Feed·Maps·⊕·Find·Me is retired; `/explore` redirects to `/`, `/maps` + `/favourites` live under Me.) The active walk is a full takeover with no nav (the shell lives in `AppChrome`; `/walk` is the one immersive route). Member screens are built from `components/ui/` primitives (`PageScaffold`, `PageHeader`, `EmptyState`, `SegmentedTabs`, `BottomSheet`, `ListRow`) — the scope is never one of these. Auth is a **contextual sheet**, never a page; on sign-up, import the guest's local yonders.
 
@@ -119,17 +122,17 @@ Nav: a **Community · ⊕ · Me** three-slot bottom bar. **Community** (`/`, the
 
 - **Next.js App Router + TypeScript.** Screens thin; logic in `lib/` (geo, stats — *never pace* —, rank, maps, wake). Framework-free and testable.
 - **Client components** for sensors/canvas; the **scope is a `<canvas>`**.
-- **Supabase** for auth + data, **Row Level Security on every table** (rows tied to `auth.uid()`). Guest data in `localStorage`, imported on sign-up.
+- **Supabase** for auth + data, **Row Level Security on every table** (rows tied to `auth.uid()`). Guest data in `localStorage`, imported on sign-up. **The object model lives in [SCHEMA.md](SCHEMA.md) — read it before touching the schema, `lib/data/*`, or anything social.** The dual-mode layer (`lib/data/*`) is cloud-when-signed-in, `localStorage` otherwise; every op is async.
 - **Two server routes**, both keyless, identifying User-Agent + cache:
   - `/api/geocode` — place search. Default provider **Photon** (proximity-biased, autocomplete-friendly); set `GEOCODER=nominatim` to fall back. Passes `importance` through for ranking. (We left Nominatim's *public* server because it bans search-as-you-type and commercial production traffic.)
-  - `/api/place-photo` — resolves a place photo from **Wikimedia** (Wikipedia lead image, then Commons geosearch). Always returns CC attribution. Coverage is intentionally uneven — a delight when present, never required. Privacy: only call it where real coordinates are owned (recap, maps, search/selection); **never on shared yonders** (their coords are stripped on purpose).
+  - `/api/place-photo` — resolves a place photo from **Wikimedia** (Wikipedia lead image, then Commons geosearch). Always returns CC attribution. Coverage is intentionally uneven — a delight when present, never required. Privacy: only call it where real coordinates are owned (recap, maps, search/selection); **never on shared content** (a post's coords are stripped on purpose).
 - **Bias to free/keyless and client-side.** No new external service or paid dependency without a real reason. No map tiles in the core scope (it's an abstract trace).
 
 ---
 
 ## Future (keep on-brand if/when built)
 
-- **Social (phase 2) — exploration-flavoured, not competitive.** Sharing a yonder (trace + "yondered N×"), shareable/collaborative maps, following friends to see where they've *discovered*, kudos on a good ramble. **Never** pace/speed leaderboards or racing. **Privacy is paramount** — location is sensitive: obfuscate start points near home, sharing opt-in and granular. Build only after the solo loop is loved; social amplifies a good core, it can't create one.
+- **Social — exploration-flavoured, not competitive.** Sharing a yonder (trace + "yondered N×"), shareable maps + missions, following friends to see where they've *discovered*, grubs on a good ramble. A mission's board is fine because it scores *holding the line* (deviation), an exploration skill — but **never** a pace/speed leaderboard or a race against the clock. **Privacy is paramount** — location is sensitive: obfuscate start points near home, sharing opt-in and granular.
 - Auto-discovered POIs + Wikipedia blurbs · dead-end warnings (OSM pedestrian graph) · real map tiles under the trail · shareable recap image · offline/PWA.
 
 ---
