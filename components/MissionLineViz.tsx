@@ -42,8 +42,22 @@ export default function MissionLineViz({
       role="img"
       aria-label="The line, with attempts overlaid"
     >
+      {/* The corridor as a target zone: a faint amber fill that tightens toward
+          the line (each band a touch more opaque), so the graphic reads even
+          with no runs on it. */}
+      {[...MEDAL_BANDS].reverse().map((b) => (
+        <rect
+          key={`fill-${b.medal}`}
+          x={PAD}
+          y={yAt(b.half)}
+          width={W - 2 * PAD}
+          height={yAt(-b.half) - yAt(b.half)}
+          fill="var(--accent)"
+          opacity={0.04}
+        />
+      ))}
       {MEDAL_BANDS.map((b) => (
-        <g key={b.medal} stroke="var(--border)" strokeDasharray="2 4" strokeWidth={1}>
+        <g key={b.medal} stroke="var(--accent)" strokeOpacity={0.25} strokeDasharray="2 4" strokeWidth={1}>
           <line x1={PAD} y1={yAt(b.half)} x2={W - PAD} y2={yAt(b.half)} />
           <line x1={PAD} y1={yAt(-b.half)} x2={W - PAD} y2={yAt(-b.half)} />
         </g>

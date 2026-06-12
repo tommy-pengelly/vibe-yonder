@@ -14,7 +14,8 @@ export type Mission = {
   createdAt: number;
   who?: string; // @handle of creator
   attempts?: number;
-  mine?: boolean; // created by the current user (vs one they're racing on)
+  mine?: boolean; // created by the current user
+  attempted?: boolean; // the user has a run on it
 };
 
 export type LeaderRow = {
@@ -98,18 +99,42 @@ export async function createMission(opts: {
     kind: "mission",
     ref_id: id,
     visibility: "public",
-    payload: { name: opts.name ?? null, distance_m: opts.distanceM },
+    payload: {
+      name: opts.name ?? null,
+      distance_m: opts.distanceM,
+      a_lat: opts.a.lat,
+      a_lon: opts.a.lon,
+      b_lat: opts.b.lat,
+      b_lon: opts.b.lon,
+    },
   });
   if (postErr) console.warn("createMission post:", postErr.message);
   return id;
 }
 
-/** Missions in the user's world: ones they made, plus ones they're racing on
- * (have an attempt against). `mine` flags the ones they created. */
+/** Bookmark (or un-bookmark) a mission to attempt later. */
+export async function saveMission(missionId: string, on: boolean): Promise<void> {
+  const c = await ctx();
+  if (!c) return;
+  if (on) {
+    await c.sb
+      .from("mission_saves")
+      .upsert({ mission_id: missionId, user_id: c.uid }, { onConflict: "mission_id,user_id" });
+  } else {
+    await c.sb
+      .from("mission_saves")
+      .delete()
+      .eq("mission_id", missionId)
+      .eq("user_id", c.uid);
+  }
+}
+
+/** Missions in the user's world: ones they made, ones they're racing on (an
+ * attempt), and ones they've saved. `mine` flags the ones they created. */
 export async function loadMyMissions(): Promise<Mission[]> {
   const c = await ctx();
   if (!c) return [];
-  const [createdRes, attRes] = await Promise.all([
+  const [createdRes, attRes, savedRes] = await Promise.all([
     c.sb
       .from("missions")
       .select("*")
@@ -117,20 +142,25 @@ export async function loadMyMissions(): Promise<Mission[]> {
       .order("created_at", { ascending: false })
       .limit(50),
     c.sb.from("mission_attempts").select("mission_id").eq("user_id", c.uid),
+    c.sb.from("mission_saves").select("mission_id").eq("user_id", c.uid),
   ]);
   const createdRows = (createdRes.data as MissionRow[]) ?? [];
   const mineIds = new Set(createdRows.map((r) => r.id));
-  const attIds = [
-    ...new Set(((attRes.data as { mission_id: string }[]) ?? []).map((a) => a.mission_id)),
-  ].filter((id) => !mineIds.has(id));
+  const attemptedIds = new Set(
+    ((attRes.data as { mission_id: string }[]) ?? []).map((a) => a.mission_id),
+  );
+  const savedIds = new Set(
+    ((savedRes.data as { mission_id: string }[]) ?? []).map((s) => s.mission_id),
+  );
+  const otherIds = [...new Set([...attemptedIds, ...savedIds])].filter((id) => !mineIds.has(id));
 
-  let attemptedRows: MissionRow[] = [];
-  if (attIds.length > 0) {
-    const { data } = await c.sb.from("missions").select("*").in("id", attIds).limit(50);
-    attemptedRows = (data as MissionRow[]) ?? [];
+  let otherRows: MissionRow[] = [];
+  if (otherIds.length > 0) {
+    const { data } = await c.sb.from("missions").select("*").in("id", otherIds).limit(50);
+    otherRows = (data as MissionRow[]) ?? [];
   }
 
-  const rows = [...createdRows, ...attemptedRows];
+  const rows = [...createdRows, ...otherRows];
   if (rows.length === 0) return [];
 
   const handles = await handlesFor(rows.map((r) => r.user_id));
@@ -149,6 +179,7 @@ export async function loadMyMissions(): Promise<Mission[]> {
     .map((r) => ({
       ...rowToMission(r, `@${handles[r.user_id] ?? "wanderer"}`, tally[r.id] ?? 0),
       mine: mineIds.has(r.id),
+      attempted: attemptedIds.has(r.id),
     }))
     .sort((a, b) => b.createdAt - a.createdAt);
 }

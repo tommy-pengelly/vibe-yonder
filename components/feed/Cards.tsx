@@ -2,7 +2,7 @@
 // Shared presentational feed cards. One skeleton for every item: a tappable
 // card (the whole thing opens its detail) with a social footer (grub + Save).
 // The primary action (Yonder this / Attempt) lives on the detail you open.
-import { Bookmark, Ruler, Sprout } from "lucide-react";
+import { Bookmark, Navigation, Ruler, Sprout } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
@@ -273,7 +273,17 @@ export function MapCard({
 
 // ---- Plan: a straight-line mission -----------------------------------------
 
-export function MissionCard({ mi }: { mi: FeedMission }) {
+export function MissionCard({
+  mi,
+  saved,
+  onSave,
+  onAttempt,
+}: {
+  mi: FeedMission;
+  saved: boolean;
+  onSave: () => void;
+  onAttempt: () => void;
+}) {
   return (
     <CardShell href={`/missions/${mi.missionId}`}>
       <CardHeader who={mi.who} handle={mi.handle} when={mi.when} tag="Mission" />
@@ -285,7 +295,31 @@ export function MissionCard({ mi }: { mi: FeedMission }) {
         <MissionLineViz attempts={[]} highlight={null} height={96} />
       </div>
       <Stats>A {fmtDist(mi.distanceM)} line to hold · see who&apos;s winning</Stats>
-      <div className="pb-3.5" />
+      <div
+        className="flex items-center px-3.5 pt-2.5 pb-3.5 gap-2"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={saved}
+          className={`inline-flex items-center gap-1.5 text-[13px] py-1.5 px-1 ${
+            saved ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
+          }`}
+        >
+          <Bookmark className="w-4 h-4" strokeWidth={1.75} />
+          {saved ? "Saved" : "Save"}
+        </button>
+        <div className="flex-1" />
+        <button
+          type="button"
+          onClick={onAttempt}
+          className="inline-flex items-center gap-1.5 rounded-full border border-[var(--accent)]/60 text-[var(--accent)] text-xs font-semibold px-3 py-1.5 hover:bg-[var(--accent)] hover:text-black"
+        >
+          <Navigation className="w-3.5 h-3.5" strokeWidth={1.75} />
+          Attempt
+        </button>
+      </div>
     </CardShell>
   );
 }

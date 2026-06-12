@@ -287,6 +287,14 @@ export async function loadFeed(
           when,
           name: (pl.name as string) ?? "Straight-line mission",
           distanceM: (pl.distance_m as number) ?? 0,
+          a:
+            pl.a_lat != null
+              ? { lat: pl.a_lat as number, lon: pl.a_lon as number }
+              : undefined,
+          b:
+            pl.b_lat != null
+              ? { lat: pl.b_lat as number, lon: pl.b_lon as number }
+              : undefined,
         },
       };
     }

@@ -181,7 +181,17 @@ function FeedItemCard({
   a: ReturnType<typeof useFeedActions>;
 }) {
   if (item.kind === "ways") return <WaysCard w={item.w} />;
-  if (item.kind === "mission") return <MissionCard mi={item.mi} />;
+  if (item.kind === "mission") {
+    const mi = item.mi;
+    return (
+      <MissionCard
+        mi={mi}
+        saved={!!a.saved[mi.id]}
+        onSave={() => a.saveMissionPost(mi)}
+        onAttempt={() => a.attemptMission(mi)}
+      />
+    );
+  }
   if (item.kind === "map") {
     const m = item.m;
     return (

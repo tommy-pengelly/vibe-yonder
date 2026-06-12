@@ -440,7 +440,7 @@ function MissionsTab() {
                 </div>
               </div>
               <span className="text-[10px] uppercase tracking-widest text-[var(--muted)] shrink-0">
-                {m.mine ? "Yours" : "Racing"}
+                {m.mine ? "Yours" : m.attempted ? "Racing" : "Saved"}
               </span>
             </Link>
           ))}

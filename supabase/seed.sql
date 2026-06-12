@@ -119,7 +119,7 @@ values
   -- A mission set (bob) -> flat in the feed
   ('77777777-7777-7777-7777-777777777777', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
    'mission', '11111111-1111-1111-1111-111111111111', null, 'public', null,
-   '{"name":"The Panhandle straight shot","distance_m":1480}')
+   '{"name":"The Panhandle straight shot","distance_m":1480,"a_lat":37.7715,"a_lon":-122.4517,"b_lat":37.7726,"b_lon":-122.4350}')
 on conflict (id) do nothing;
 
 -- ---- A few grubs (kudos) on the feed posts ----------------------------------

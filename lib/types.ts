@@ -226,6 +226,9 @@ export type FeedMission = {
   when: string;
   name: string;
   distanceM: number;
+  /** The line endpoints, so the card can start an attempt directly. */
+  a?: LatLon;
+  b?: LatLon;
 };
 
 /** One item in the unified feed, a community post of any kind. */
