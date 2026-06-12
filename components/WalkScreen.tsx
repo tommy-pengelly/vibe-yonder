@@ -31,6 +31,7 @@ import type {
   Fix,
   Target,
 } from "@/lib/types";
+import LaneScope from "./LaneScope";
 import Scope from "./Scope";
 import StatStrip from "./StatStrip";
 import BottomSheet from "./ui/BottomSheet";
@@ -156,6 +157,8 @@ export default function WalkScreen({
   // Straight-line has two phases: walk to the start A, then hold the line A→B.
   const isLine = yonder.play === "straightline";
   const goToStart = isLine && !yonder.lineArmed && !!yonder.origin;
+  // Armed and holding the line → the dedicated lane view.
+  const laneMode = isLine && !!yonder.lineArmed && !!yonder.origin && !!yonder.targets[0];
   const distToStart =
     goToStart && position && yonder.origin
       ? haversine(position.lat, position.lon, yonder.origin.lat, yonder.origin.lon)
@@ -375,26 +378,39 @@ export default function WalkScreen({
 
   return (
     <div className="fixed inset-0 flex flex-col">
-      <div
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        className="absolute inset-0"
-      >
-        <Scope
-          position={position}
-          heading={heading}
-          track={track}
-          targets={scopeTargets}
-          activeIndex={scopeActiveIndex}
-          mpp={mpp}
-          hideNumbers={hideNumbers}
-          onPickTarget={goToStart ? undefined : onSetActive}
-          candidates={suggestionsOn ? candidates : undefined}
-          onPickCandidate={suggestionsOn ? () => setSuggestionsOpen(true) : undefined}
-          lineOrigin={isLine && yonder.lineArmed ? (yonder.origin ?? null) : null}
-        />
-      </div>
+      {laneMode && yonder.origin && yonder.targets[0] ? (
+        // Holding the line: the dedicated lane view (no pinch-zoom; fixed scale).
+        <div className="absolute inset-0">
+          <LaneScope
+            position={position}
+            a={yonder.origin}
+            b={yonder.targets[0]}
+            track={track}
+            hideNumbers={hideNumbers}
+          />
+        </div>
+      ) : (
+        <div
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          className="absolute inset-0"
+        >
+          <Scope
+            position={position}
+            heading={heading}
+            track={track}
+            targets={scopeTargets}
+            activeIndex={scopeActiveIndex}
+            mpp={mpp}
+            hideNumbers={hideNumbers}
+            onPickTarget={goToStart ? undefined : onSetActive}
+            candidates={suggestionsOn ? candidates : undefined}
+            onPickCandidate={suggestionsOn ? () => setSuggestionsOpen(true) : undefined}
+            lineOrigin={null}
+          />
+        </div>
+      )}
 
       <header className="relative z-10 flex items-start justify-between gap-3 px-5 pt-6 pointer-events-none">
         <div className="flex flex-col min-w-0 pointer-events-auto">
