@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
+import { Trace } from "@/components/ui/viz";
 import { useGoBack } from "@/components/ui";
 import { useAuthUser } from "@/lib/auth";
 import { getSharedYonder, reportContent, saveYonderPlaces, setGrub } from "@/lib/data";
 import { fmtDist } from "@/lib/geo";
+import { MEDAL_LABEL } from "@/lib/straightline";
 import type { FeedYonder, Target } from "@/lib/types";
 
 function fmtYondered(v: number): string {
@@ -90,75 +92,72 @@ export default function SharedYonderView({ id }: { id: string }) {
     void reportContent("yonder", y.id, "user report");
   };
 
-  const pathD = y.trace.length > 1 ? y.trace.map((p, i) => `${i === 0 ? "M" : "L"}${p[0]},${p[1]}`).join(" ") : "";
-
   return (
-    <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-6 pb-10 gap-5">
+    <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-6 pb-10 gap-3">
       <button type="button" onClick={goBack} aria-label="Back" className="size-9 -ml-2 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]">
         <ArrowLeft className="w-4 h-4" strokeWidth={1.75} />
       </button>
 
-      <Link href={`/u/${y.handle.slice(1)}`} className="flex items-center gap-3">
-        <div className="size-11 shrink-0 rounded-full bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center font-display text-base text-[var(--warm)]">
-          {y.who.replace(/[@.]/g, "").slice(0, 2).toUpperCase()}
+      {/* The shared yonder, as an expanded feed card (header → media → stats →
+          actions), matching the Community card. */}
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
+        <Link href={`/u/${y.handle.slice(1)}`} className="flex items-center gap-2.5 px-3.5 pt-3.5">
+          <div className="size-10 shrink-0 rounded-full bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center font-display text-sm text-[var(--warm)]">
+            {y.who.replace(/[@.]/g, "").slice(0, 2).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <div className="font-display text-base leading-tight truncate hover:text-[var(--accent)]">{y.who}</div>
+            <div className="text-[11px] text-[var(--muted)]">{y.handle} · {y.when} · {y.area}</div>
+          </div>
+        </Link>
+
+        {y.caption && <p className="text-sm leading-relaxed mx-3.5 mt-2.5 text-pretty">{y.caption}</p>}
+
+        <div className="relative mt-3">
+          <Trace points={y.trace} height={200} />
+          <div className="absolute left-4 bottom-2.5 font-mono text-[11px] text-[var(--muted)]">{y.area}</div>
+          <div className="absolute right-4 top-3 text-right">
+            {y.medal ? (
+              <>
+                <div className="font-display text-[24px] leading-none text-[var(--accent)] tracking-tight">{MEDAL_LABEL[y.medal]}</div>
+                <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--muted)] mt-0.5">Straight line</div>
+              </>
+            ) : (
+              <>
+                <div className="font-display text-[28px] leading-none text-[var(--accent)] tabular-nums tracking-tight">{fmtYondered(y.yondered)}×</div>
+                <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--muted)] mt-0.5">Yondered</div>
+              </>
+            )}
+          </div>
         </div>
-        <div>
-          <div className="font-display text-lg leading-tight hover:text-[var(--accent)]">{y.who}</div>
-          <div className="text-xs text-[var(--muted)]">{y.handle} · {y.when} · {y.area}</div>
+
+        <div className="font-mono text-[11px] text-[var(--muted)] px-3.5 pt-3 tabular-nums">
+          {fmtDist(y.walked)} · {y.mins} min · {y.places} {y.places === 1 ? "place" : "places"} seen
         </div>
-      </Link>
 
-      {y.caption && <p className="text-base leading-relaxed text-pretty">{y.caption}</p>}
-
-      <div className="recap-mask w-full" style={{ height: 220 }}>
-        {pathD && (
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full block">
-            <path d={pathD} fill="none" stroke="var(--accent)" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" opacity={0.9} vectorEffect="non-scaling-stroke" />
-          </svg>
-        )}
-      </div>
-
-      <p className="font-display text-3xl tracking-tight text-center leading-tight">
-        Yondered <span className="text-[var(--accent)]">{fmtYondered(y.yondered)}×</span>.
-      </p>
-
-      <div className="grid grid-cols-3 gap-3 font-mono tabular-nums text-center">
-        <Stat label="Walked" value={fmtDist(y.walked)} />
-        <Stat label="Time" value={`${y.mins} min`} />
-        <Stat label="Places" value={`${y.places}`} />
-      </div>
-
-      <div className="flex items-center gap-2 mt-2">
-        <button type="button" onClick={onGrub} aria-pressed={grub.active}
-          className={`inline-flex items-center gap-1.5 py-2 px-1 font-mono text-sm tabular-nums ${grub.active ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}>
-          <Sprout className="w-5 h-5" strokeWidth={1.75} /> {grub.count}
-        </button>
-        <div className="flex-1" />
-        <button type="button" onClick={onSave} disabled={saved}
-          className={`inline-flex items-center gap-1.5 text-sm py-2 px-2 ${saved ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}>
-          <Bookmark className="w-4 h-4" strokeWidth={1.75} /> {saved ? "Saved" : "Save"}
-        </button>
-        <button type="button" onClick={onLoad}
-          className="inline-flex items-center gap-1.5 rounded-full border border-[var(--accent)]/60 text-[var(--accent)] text-sm font-semibold px-4 py-2 hover:bg-[var(--accent)] hover:text-black">
-          <Navigation className="w-4 h-4" strokeWidth={1.75} /> Yonder this
-        </button>
+        <div className="flex items-center px-3.5 pt-2.5 pb-3.5 gap-2">
+          <button type="button" onClick={onGrub} aria-pressed={grub.active} aria-label="Grub"
+            className={`inline-flex items-center gap-1.5 py-1.5 font-mono text-[13px] tabular-nums ${grub.active ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}>
+            <Sprout className="w-[17px] h-[17px]" strokeWidth={1.75} /> {grub.count}
+          </button>
+          <div className="flex-1" />
+          <button type="button" onClick={onSave} disabled={saved}
+            className={`inline-flex items-center gap-1.5 text-[13px] py-1.5 px-1 ${saved ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}>
+            <Bookmark className="w-4 h-4" strokeWidth={1.75} /> {saved ? "Saved" : "Save"}
+          </button>
+          <button type="button" onClick={onLoad}
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--accent)]/60 text-[var(--accent)] text-xs font-semibold px-3 py-1.5 hover:bg-[var(--accent)] hover:text-black">
+            <Navigation className="w-3.5 h-3.5" strokeWidth={1.75} /> Yonder this
+          </button>
+        </div>
       </div>
 
       <button type="button" onClick={onReport}
-        className="self-center inline-flex items-center gap-1.5 text-xs text-[var(--muted)] hover:text-red-400 pt-2">
+        className="self-center inline-flex items-center gap-1.5 text-xs text-[var(--muted)] hover:text-red-400 pt-1">
         <Flag className="w-3 h-3" strokeWidth={1.75} /> Report
       </button>
 
       <AuthModal open={authOpen} reason={authReason} onClose={() => setAuthOpen(false)} />
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-[var(--border)] py-3">
-      <div className="text-[10px] uppercase tracking-widest text-[var(--muted)] font-sans">{label}</div>
-      <div className="text-lg mt-0.5">{value}</div>
     </div>
   );
 }
