@@ -3,6 +3,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import BootSplash from "./BootSplash";
 import BottomNav from "./BottomNav";
+import PaywallProvider from "./PaywallProvider";
 
 // Routes that are full-screen immersive takeovers, no persistent nav.
 const IMMERSIVE = new Set(["/walk"]);
@@ -18,7 +19,9 @@ export default function AppChrome({ children }: { children: ReactNode }) {
   const immersive = IMMERSIVE.has(pathname);
   return (
     <div className="h-dvh flex flex-col overflow-hidden">
-      <main className="flex-1 overflow-y-auto flex flex-col">{children}</main>
+      <PaywallProvider>
+        <main className="flex-1 overflow-y-auto flex flex-col">{children}</main>
+      </PaywallProvider>
       {!immersive && <BottomNav />}
       <BootSplash />
     </div>

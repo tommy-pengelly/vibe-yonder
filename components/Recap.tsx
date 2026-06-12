@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
+import { useGate } from "@/hooks/useGate";
 import { useAuthUser } from "@/lib/auth";
 import { createMission, loadLeaderboard } from "@/lib/data";
 import { fmtDist, fmtDuration } from "@/lib/geo";
@@ -461,6 +462,7 @@ function MakeMissionSheet({
   const [custom, setCustom] = useState(false);
   const [bands, setBands] = useState<MedalBands>(DEFAULT_BANDS);
   const keys = ["platinum", "gold", "silver", "bronze"] as const;
+  const { guard: guardMedals } = useGate("customMedals");
   return (
     <BottomSheet
       open={open}
@@ -482,7 +484,9 @@ function MakeMissionSheet({
             </p>
             <button
               type="button"
-              onClick={() => setCustom(true)}
+              onClick={() => {
+                if (guardMedals()) setCustom(true);
+              }}
               className="self-start text-sm text-[var(--accent)] hover:opacity-80"
             >
               Customise medals
