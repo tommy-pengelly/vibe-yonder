@@ -33,6 +33,8 @@ type Props = {
   onPickCandidate?: (id: string) => void;
   /** Straight-line mode: A (start). The line runs A→targets[0]; faint corridor. */
   lineOrigin?: LatLon | null;
+  /** Minimal: hide the scale key (e.g. navigating to a mission start). */
+  minimal?: boolean;
 };
 
 const ACCENT = "#f5a623";
@@ -51,6 +53,7 @@ export default function Scope({
   candidates = [],
   onPickCandidate,
   lineOrigin,
+  minimal = false,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rotSmoother = useRef(makeAngleSmoother());
@@ -337,7 +340,8 @@ export default function Scope({
     }
 
     // Subtle scale key, bottom-right. Snaps to a round metres value matching
-    // the current `mpp`.
+    // the current `mpp`. Hidden in minimal mode (e.g. heading to a start).
+    if (minimal) return;
     const halfRadiusPx = rimR;
     const impliedMetres = halfRadiusPx * mpp;
     const snapMetres = nearestScaleLevel(impliedMetres);
@@ -361,7 +365,7 @@ export default function Scope({
     ctx.textAlign = "right";
     ctx.textBaseline = "alphabetic";
     ctx.fillText(formatScale(snapMetres), sxRight, syBaseline - 7);
-  }, [position, heading, track, targets, activeIndex, mpp, hideNumbers, candidates, lineOrigin]);
+  }, [position, heading, track, targets, activeIndex, mpp, hideNumbers, candidates, lineOrigin, minimal]);
 
   const handleClick = (e: ReactMouseEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();

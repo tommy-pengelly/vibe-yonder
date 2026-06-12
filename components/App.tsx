@@ -39,6 +39,7 @@ import { keepAwake } from "@/lib/wake";
 import AuthModal from "./AuthModal";
 import CreateHub from "./CreateHub";
 import Recap from "./Recap";
+import MissionWalk from "./MissionWalk";
 import WalkScreen from "./WalkScreen";
 import { useAuthUser } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
@@ -573,6 +574,25 @@ export default function App() {
   }
 
   if (phase === "walking" && yonder) {
+    // A straight-line mission is its own focused, two-step screen; everything
+    // else is the ambient wander.
+    if (yonder.play === "straightline") {
+      return (
+        <MissionWalk
+          yonder={yonder}
+          position={fix}
+          heading={heading}
+          track={track}
+          startTime={startTime}
+          pausedMs={pausedMs}
+          hideNumbers={settings.hideNumbers}
+          onFinish={finish}
+          onDiscard={discard}
+          onArmLine={armLine}
+          onCalibrate={() => void requestAccess()}
+        />
+      );
+    }
     return (
       <WalkScreen
         yonder={yonder}
