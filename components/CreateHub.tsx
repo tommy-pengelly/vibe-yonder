@@ -1,5 +1,5 @@
 "use client";
-import { Compass, Map as MapIcon, Navigation, Plus, Ruler, Search, X } from "lucide-react";
+import { Compass, Map as MapIcon, MapPin, Navigation, Plus, Ruler, Search, Star, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
@@ -264,8 +264,27 @@ export default function CreateHub({
           {!loading && results.length === 0 && q.trim().length >= 3 && (
             <li className="text-sm text-[var(--muted)] py-2 px-1">No matches. Try adding the town.</li>
           )}
+          {!position && results.length > 0 && (
+            <li className="text-[11px] text-[var(--muted)] py-2 px-1 flex items-center gap-1.5">
+              <MapPin className="w-3 h-3" strokeWidth={1.75} />
+              Turn on location to sort by distance.
+            </li>
+          )}
           {results.map((r, i) => (
-            <li key={`${r.lat},${r.lon},${i}`} className="flex items-center gap-2">
+            <li key={`${r.lat},${r.lon},${i}`} className="flex items-center gap-3">
+              <span
+                className={`shrink-0 size-9 rounded-full border flex items-center justify-center ${
+                  r.favourite
+                    ? "border-[var(--accent)]/40 text-[var(--accent)]"
+                    : "border-[var(--border)] text-[var(--muted)]"
+                }`}
+              >
+                {r.favourite ? (
+                  <Star className="w-4 h-4" strokeWidth={1.75} fill="var(--accent)" />
+                ) : (
+                  <MapPin className="w-4 h-4" strokeWidth={1.75} />
+                )}
+              </span>
               <button type="button" onClick={() => onResultTap(r)} className="flex-1 text-left py-3 min-w-0 hover:text-[var(--accent)]">
                 {r.favourite ? (
                   <div className="text-[11px] font-mono uppercase tracking-widest text-[var(--accent)]">
@@ -277,7 +296,7 @@ export default function CreateHub({
                 <div className="font-display text-lg truncate">{r.name}</div>
                 <div className="text-xs text-[var(--muted)] line-clamp-1">{r.label}</div>
               </button>
-              <button type="button" onClick={() => addPick(r)} aria-label="Add to a multi-place yonder" className="size-9 flex items-center justify-center text-[var(--muted)] hover:text-[var(--accent)]">
+              <button type="button" onClick={() => addPick(r)} aria-label="Add to a multi-place yonder" className="size-9 shrink-0 flex items-center justify-center text-[var(--muted)] hover:text-[var(--accent)]">
                 <Plus className="w-4 h-4" strokeWidth={1.75} />
               </button>
             </li>
