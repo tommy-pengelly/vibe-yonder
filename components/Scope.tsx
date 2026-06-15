@@ -157,20 +157,22 @@ export default function Scope({
       ctx.translate(-cx, -cy);
     }
     if (position && track.length > 1) {
-      const n = track.length;
+      // Your course: one warm, dotted line threading the star sky (round caps +
+      // a tight dash read as dots). setLineDash is restored by the surrounding
+      // save/restore.
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.lineWidth = 3;
-      for (let i = 1; i < n; i++) {
-        const a = projectAt(track[i - 1], position, cx, cy, mpp);
+      ctx.setLineDash([0.1, 8]);
+      ctx.strokeStyle = "rgba(245, 166, 35, 0.6)";
+      ctx.beginPath();
+      const p0 = projectAt(track[0], position, cx, cy, mpp);
+      ctx.moveTo(p0.x, p0.y);
+      for (let i = 1; i < track.length; i++) {
         const b = projectAt(track[i], position, cx, cy, mpp);
-        const opacity = 0.12 + 0.78 * (i / (n - 1));
-        ctx.strokeStyle = `rgba(245, 166, 35, ${opacity.toFixed(2)})`;
-        ctx.beginPath();
-        ctx.moveTo(a.x, a.y);
         ctx.lineTo(b.x, b.y);
-        ctx.stroke();
       }
+      ctx.stroke();
     }
     ctx.restore();
 
@@ -351,24 +353,29 @@ export default function Scope({
     const snapMetres = nearestScaleLevel(impliedMetres);
     const keyPx = snapMetres / mpp;
     const sxRight = w - 18;
-    const syBaseline = h - 22;
-    ctx.strokeStyle = MUTED_TEXT;
-    ctx.lineWidth = 1;
+    const syBaseline = h - 24;
+    // A legible scale key (not rings): a clear bar with end ticks + a bold
+    // distance, bright enough to read at a glance. Still bottom-right, still a
+    // key, never drawn on the resting void.
+    const scaleLine = "rgba(237, 237, 237, 0.6)";
+    ctx.strokeStyle = scaleLine;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([]);
     ctx.beginPath();
     ctx.moveTo(sxRight - keyPx, syBaseline);
     ctx.lineTo(sxRight, syBaseline);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(sxRight - keyPx, syBaseline - 3);
-    ctx.lineTo(sxRight - keyPx, syBaseline + 3);
-    ctx.moveTo(sxRight, syBaseline - 3);
-    ctx.lineTo(sxRight, syBaseline + 3);
+    ctx.moveTo(sxRight - keyPx, syBaseline - 4);
+    ctx.lineTo(sxRight - keyPx, syBaseline + 4);
+    ctx.moveTo(sxRight, syBaseline - 4);
+    ctx.lineTo(sxRight, syBaseline + 4);
     ctx.stroke();
-    ctx.fillStyle = MUTED_TEXT;
-    ctx.font = "500 10px var(--font-mono), ui-monospace, monospace";
+    ctx.fillStyle = "rgba(237, 237, 237, 0.88)";
+    ctx.font = "600 13px var(--font-mono), ui-monospace, monospace";
     ctx.textAlign = "right";
     ctx.textBaseline = "alphabetic";
-    ctx.fillText(formatScale(snapMetres), sxRight, syBaseline - 7);
+    ctx.fillText(formatScale(snapMetres), sxRight, syBaseline - 8);
   }, [position, heading, track, targets, activeIndex, mpp, hideNumbers, candidates, lineOrigin, minimal]);
 
   const handleClick = (e: ReactMouseEvent<HTMLCanvasElement>) => {

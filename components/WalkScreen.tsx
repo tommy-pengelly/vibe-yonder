@@ -19,6 +19,7 @@ import {
   ARRIVAL_RADIUS_M,
   ARRIVAL_REARM_RATIO,
   DEFAULT_MPP,
+  DEFAULT_MPP_FREE,
   MAX_MPP,
   MIN_MPP,
   RIM_FRACTION,
@@ -82,7 +83,11 @@ export default function WalkScreen({
   onAddPlace,
   onCalibrate,
 }: Props) {
-  const [mpp, setMpp] = useState(DEFAULT_MPP);
+  // Wider when wandering free (room for the constellation), tighter when you
+  // have a destination to home in on.
+  const [mpp, setMpp] = useState(() =>
+    yonder.targets.length === 0 ? DEFAULT_MPP_FREE : DEFAULT_MPP,
+  );
   const [arrivalQueue, setArrivalQueue] = useState<string[]>([]);
   const [dismissedArrivals, setDismissedArrivals] = useState<
     Record<string, boolean>
@@ -125,6 +130,7 @@ export default function WalkScreen({
       if (t) {
         onAddPlace(t);
         onSetActive(t.id);
+        setMpp(DEFAULT_MPP); // now you're heading somewhere, tighten the scope
       }
       setSuggestionsOpen(false);
     },
@@ -304,11 +310,12 @@ export default function WalkScreen({
     [mpp],
   );
 
+  const baseMpp = yonder.targets.length === 0 ? DEFAULT_MPP_FREE : DEFAULT_MPP;
   const resetZoom = useCallback(() => {
-    setMpp(DEFAULT_MPP);
-  }, []);
+    setMpp(baseMpp);
+  }, [baseMpp]);
 
-  const zoomed = Math.abs(mpp - DEFAULT_MPP) > 0.01;
+  const zoomed = Math.abs(mpp - baseMpp) > 0.01;
 
   const headerLabel = useMemo(() => {
     if (yonder.targets.length === 0) {

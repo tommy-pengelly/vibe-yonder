@@ -53,10 +53,21 @@ export default function Recap({
     () => summarize(saved.track, saved.startedAt, saved.pausedMs, saved.endedAt),
     [saved],
   );
-  const points = useMemo(
-    () => projectTrack(saved.track as Fix[], W, H),
-    [saved.track],
-  );
+  // Project the track AND the places-seen into one frame, so the recap reads as
+  // a little constellation: your dotted course threading the place-stars.
+  const { points, destPts } = useMemo(() => {
+    const destFix: Fix[] = saved.destinations.map((d) => ({
+      lat: d.lat,
+      lon: d.lon,
+      acc: null,
+      t: 0,
+    }));
+    const all = projectTrack([...(saved.track as Fix[]), ...destFix], W, H);
+    return {
+      points: all.slice(0, saved.track.length),
+      destPts: all.slice(saved.track.length),
+    };
+  }, [saved.track, saved.destinations]);
 
   const pathD = useMemo(() => {
     if (points.length === 0) return "";
@@ -209,6 +220,14 @@ export default function Recap({
             className="w-full h-auto"
             aria-label="Walk path"
           >
+            {/* The places you saw, as faint stars the course threads. */}
+            {destPts.map(([x, y], i) => (
+              <g key={`s${i}`}>
+                <circle cx={x} cy={y} r={7} fill="none" stroke="var(--foreground)" strokeWidth={1} opacity={0.22} />
+                <circle cx={x} cy={y} r={2.6} fill="var(--foreground)" opacity={0.8} />
+              </g>
+            ))}
+            {/* Your course: a dotted line, warm but quiet, threading the sky. */}
             <path
               d={pathD}
               fill="none"
@@ -216,6 +235,8 @@ export default function Recap({
               strokeWidth={3}
               strokeLinecap="round"
               strokeLinejoin="round"
+              strokeDasharray="0.1 9"
+              opacity={0.8}
             />
             {start && (
               <circle

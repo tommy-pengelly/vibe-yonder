@@ -19,10 +19,27 @@ export default function ExplainPage() {
       </h1>
 
       <p className="mt-4 text-[var(--foreground)] leading-relaxed">
-        Yonderful doesn&apos;t give you a route. It shows an arrow pointing
+        Yonderful doesn&apos;t give you a route. It shows a marker pointing
         straight at your destination, as the crow flies, and lets you choose
         your own streets. Wander, detour, double back. Getting there the long
         way is the whole idea.
+      </p>
+
+      <h2 className="text-lg font-semibold mt-8">Reading the sky</h2>
+
+      <p className="mt-3 text-[var(--foreground)] leading-relaxed">
+        The walk screen is a dark, open sky with you at its centre and your
+        course drawn behind you as a dotted line. Your destination is the one
+        warm marker. Everything else is a <strong>constellation</strong>: faint
+        stars for the good, locally-run and curious places around you. The
+        brighter a star, the more notable the spot, so you read the sky the way
+        you would the real one, glance up, take a bearing, wander on.
+      </p>
+      <p className="mt-3 text-[var(--foreground)] leading-relaxed">
+        Tap a star for its photo and a line about what it is. When something
+        genuinely worth a detour comes close, a quiet nudge mentions it once. No
+        feed, no nagging, nothing you have to chase. You stay free to roam, you
+        just don&apos;t miss the good stuff.
       </p>
 
       <h2 className="text-lg font-semibold mt-8">Your stats, explained</h2>

@@ -80,10 +80,11 @@ The discovery engine has a **taste**, and it sends people to good, **locally-run
 - **Type:** Fraunces (display — titles, place names, big stat numbers); a clean grotesk for labels/body; optional mono for live readouts. Uppercase, letter-spaced micro-labels for captions.
 - **The scope is full-bleed and borderless** — no cards or boxes, ever. An **empty void**: no visible range rings at rest. Just your dot at the centre.
 - The destination is a **small directional head** (a chevron/triangle — *not* an arrow, no shaft, no stalk, no line to the centre) riding on a fixed, invisible radius and rotating to point the way; distance + place name sit beneath it. When the destination is close enough to be on the canvas, it becomes a **dot** at its true position instead.
-- Scale is shown only by a **very subtle key in the bottom-right** (centre-to-ring distance, default 100 m), never by drawing rings on the void.
+- Scale is shown by a **legible key in the bottom-right** (centre-to-ring distance) — clear enough to read at a glance, but still a key, **never by drawing rings on the void**.
 - **Heading-up only.** The scope orients to the device's facing direction. (When there's no compass heading, freeze orientation and prompt a calibrate — never break.)
 - **One hero, one primary action per screen.** Walk → the scope. Recap → the trace.
-- **Minimal motion.** No pulsing, no decorative animation, no flashy transitions. The only movement is functional: the marker rotates smoothly to the bearing, the trail draws in as you walk.
+- **Star-map language.** The scope is a sky: discovery sits as a **constellation** of faint stars whose brightness encodes notability (bright = notable, faint = obscure gem), your course is a **dotted warm line**, and the destination is the one amber marker. The recap renders a finished yonder as a small constellation too: the dotted course threading faint stars for the places you saw. (Cool stars / warm path / violet for a lens match.)
+- **Minimal motion.** No pulsing, no decorative animation, no flashy transitions. The only movement is functional: the marker rotates smoothly to the bearing, the dotted course draws in as you walk.
 
 ---
 

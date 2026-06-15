@@ -15,8 +15,12 @@ export const MIN_FIX_DISTANCE_M = 3;
 /** Track recording throttle, or this much time has passed since last fix. */
 export const MIN_FIX_INTERVAL_MS = 3000;
 
-/** Default scope zoom (metres per pixel). */
+/** Default scope zoom (metres per pixel) when heading to a destination. */
 export const DEFAULT_MPP = 0.6;
+
+/** Wider default when wandering free (no destination): pulls the void back so
+ * the constellation has room to show. Tightens to DEFAULT_MPP on committing. */
+export const DEFAULT_MPP_FREE = 1.8;
 
 /** Scope zoom clamp. */
 export const MIN_MPP = 0.12;
