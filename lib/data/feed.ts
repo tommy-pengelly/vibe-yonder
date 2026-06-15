@@ -96,21 +96,31 @@ async function shapeShared(rows: SharedRow[]): Promise<FeedYonder[]> {
 const SHARED_COLS =
   "id,user_id,caption,area,walked_m,duration_s,places,yondered,trace_public,destinations,created_at";
 
+export type SharedPage = { items: FeedYonder[]; nextCursor: string | null };
+
 /** A user's public shared yonders (for their profile). Reads `posts`, the one
  * sharing path, so the profile and the feed always agree (no more "in the feed
- * but not on my profile"). */
-export async function loadUserShared(userId: string): Promise<FeedYonder[]> {
+ * but not on my profile"). Keyset-cursor paginated like the feed. */
+export async function loadUserShared(
+  userId: string,
+  cursor: string | null = null,
+): Promise<SharedPage> {
   const sb = getSupabase();
-  if (!sb) return [];
-  const { data } = await sb
+  if (!sb) return { items: [], nextCursor: null };
+  let qy = sb
     .from("posts")
     .select(FEED_COLS)
     .eq("user_id", userId)
     .eq("kind", "yonder")
     .eq("visibility", "public")
     .order("created_at", { ascending: false })
-    .limit(50);
-  return shapeFeedYonders((data as FeedPostRow[]) ?? []);
+    .limit(FEED_PAGE);
+  if (cursor) qy = qy.lt("created_at", cursor);
+  const { data } = await qy;
+  const rows = (data as FeedPostRow[]) ?? [];
+  const nextCursor =
+    rows.length === FEED_PAGE ? (rows.at(-1)?.created_at ?? null) : null;
+  return { items: await shapeFeedYonders(rows), nextCursor };
 }
 
 export async function getSharedYonder(id: string): Promise<FeedYonder | null> {
@@ -180,22 +190,28 @@ async function shapeFeedYonders(rows: FeedPostRow[]): Promise<FeedYonder[]> {
 
 export const FEED_PAGE = 20;
 
+export type FeedPage = { items: FeedItem[]; nextCursor: string | null };
+const EMPTY_FEED: FeedPage = { items: [], nextCursor: null };
+
 /** A page of the feed: posts of any kind → typed feed items. Community =
- * everything public; following = posts by people you follow. `page` is 0-based;
- * a full page (length === FEED_PAGE) means there may be more. */
+ * everything public; following = posts by people you follow.
+ *
+ * Keyset (cursor) pagination, NOT offset: pass the previous page's `nextCursor`
+ * (the last item's created_at) to get the next page via `created_at < cursor`.
+ * Drift-proof, a post arriving mid-scroll can't shift rows across pages the way
+ * an offset would. `nextCursor` is null when there's no more. (created_at is
+ * microsecond-precise, so same-timestamp ties are effectively impossible here.) */
 export async function loadFeed(
   scope: "community" | "following",
-  page = 0,
-): Promise<FeedItem[]> {
+  cursor: string | null = null,
+): Promise<FeedPage> {
   const sb = getSupabase();
-  if (!sb) return [];
-  const from = page * FEED_PAGE;
-  const to = from + FEED_PAGE - 1;
+  if (!sb) return EMPTY_FEED;
 
   let rows: FeedPostRow[] = [];
   if (scope === "following") {
     const c = await ctx();
-    if (!c) return [];
+    if (!c) return EMPTY_FEED;
     const { data: follows } = await c.sb
       .from("follows")
       .select("following_id")
@@ -203,26 +219,32 @@ export async function loadFeed(
       .eq("status", "accepted");
     const ids =
       (follows as { following_id: string }[] | null)?.map((f) => f.following_id) ?? [];
-    if (ids.length === 0) return [];
-    const { data, error } = await c.sb
+    if (ids.length === 0) return EMPTY_FEED;
+    let qy = c.sb
       .from("posts")
       .select(FEED_COLS)
       .in("user_id", ids)
       .order("created_at", { ascending: false })
-      .range(from, to);
-    if (error) return [];
+      .limit(FEED_PAGE);
+    if (cursor) qy = qy.lt("created_at", cursor);
+    const { data, error } = await qy;
+    if (error) return EMPTY_FEED;
     rows = (data as FeedPostRow[]) ?? [];
   } else {
-    const { data, error } = await sb
+    let qy = sb
       .from("posts")
       .select(FEED_COLS)
       .eq("visibility", "public")
       .order("created_at", { ascending: false })
-      .range(from, to);
-    if (error) return [];
+      .limit(FEED_PAGE);
+    if (cursor) qy = qy.lt("created_at", cursor);
+    const { data, error } = await qy;
+    if (error) return EMPTY_FEED;
     rows = (data as FeedPostRow[]) ?? [];
   }
-  if (rows.length === 0) return [];
+  if (rows.length === 0) return EMPTY_FEED;
+  const nextCursor =
+    rows.length === FEED_PAGE ? (rows.at(-1)?.created_at ?? null) : null;
 
   const profiles = await profilesByIds(rows.map((r) => r.user_id));
   const grubs = await grubCountsFor(
@@ -360,7 +382,7 @@ export async function loadFeed(
     }
   }
 
-  return items;
+  return { items, nextCursor };
 }
 
 // ----- Ways reports (posts kind='ways') -----

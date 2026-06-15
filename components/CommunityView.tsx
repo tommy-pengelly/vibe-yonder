@@ -15,7 +15,6 @@ import {
   StickyBar,
 } from "@/components/ui";
 import {
-  FEED_PAGE,
   loadCommunity,
   loadFeed,
   loadMissions,
@@ -107,7 +106,7 @@ function FeedTab({
   onBrowseEveryone: () => void;
 }) {
   const [items, setItems] = useState<FeedItem[] | null>(null);
-  const [page, setPage] = useState(0);
+  const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -125,13 +124,14 @@ function FeedTab({
   useEffect(() => {
     let c = false;
     setItems(null);
-    setPage(0);
+    setCursor(null);
     setHasMore(true);
-    void loadFeed(scope === "following" ? "following" : "community", 0).then(
-      (it) => {
+    void loadFeed(scope === "following" ? "following" : "community", null).then(
+      ({ items: it, nextCursor }) => {
         if (c) return;
         setItems(it);
-        setHasMore(it.length === FEED_PAGE);
+        setCursor(nextCursor);
+        setHasMore(nextCursor != null);
         seed(it);
       },
     );
@@ -144,12 +144,11 @@ function FeedTab({
   const loadMore = () => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
-    const next = page + 1;
-    void loadFeed(scope === "following" ? "following" : "community", next).then(
-      (it) => {
+    void loadFeed(scope === "following" ? "following" : "community", cursor).then(
+      ({ items: it, nextCursor }) => {
         setItems((prev) => [...(prev ?? []), ...it]);
-        setPage(next);
-        setHasMore(it.length === FEED_PAGE);
+        setCursor(nextCursor);
+        setHasMore(nextCursor != null);
         seed(it);
         setLoadingMore(false);
       },

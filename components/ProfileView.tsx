@@ -29,10 +29,22 @@ export default function ProfileView({ username }: { username: string }) {
   const [counts, setCounts] = useState<FollowCounts>({ followers: 0, following: 0 });
   const [fstate, setFstate] = useState<"none" | "pending" | "accepted">("none");
   const [shared, setShared] = useState<FeedYonder[]>([]);
+  const [sharedCursor, setSharedCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [editing, setEditing] = useState(false);
 
   const isMe = !!(user && profile && user.id === profile.id);
+
+  const loadMoreShared = () => {
+    if (!profile || !sharedCursor || loadingMore) return;
+    setLoadingMore(true);
+    void loadUserShared(profile.id, sharedCursor).then((r) => {
+      setShared((prev) => [...prev, ...r.items]);
+      setSharedCursor(r.nextCursor);
+      setLoadingMore(false);
+    });
+  };
 
   useEffect(() => {
     let c = false;
@@ -42,7 +54,11 @@ export default function ProfileView({ username }: { username: string }) {
       setLoaded(true);
       if (!p) return;
       void followCounts(p.id).then((cc) => !c && setCounts(cc));
-      void loadUserShared(p.id).then((s) => !c && setShared(s));
+      void loadUserShared(p.id).then((r) => {
+        if (c) return;
+        setShared(r.items);
+        setSharedCursor(r.nextCursor);
+      });
       void followState(p.id).then((f) => !c && setFstate(f));
     });
     return () => {
@@ -169,6 +185,18 @@ export default function ProfileView({ username }: { username: string }) {
                   </Link>
                 </li>
               ))}
+              {sharedCursor && (
+                <li className="py-3">
+                  <button
+                    type="button"
+                    onClick={loadMoreShared}
+                    disabled={loadingMore}
+                    className="w-full text-sm text-[var(--muted)] hover:text-[var(--accent)] disabled:opacity-50"
+                  >
+                    {loadingMore ? "Loading…" : "Load more"}
+                  </button>
+                </li>
+              )}
             </ul>
           )}
         </section>
