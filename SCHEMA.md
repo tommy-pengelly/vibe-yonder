@@ -102,16 +102,17 @@ A `kind='yonder'` post **snapshots** an obfuscated memento into `payload` (home 
 
 ---
 
-## Not yet aligned (the refactor to this model)
+## Alignment status
 
-The model above is the **target**. As of this writing the code differs in these specific ways. Closing them is the refactor:
+The model above is the **target**, and the core refactor is **done** (migrations 0024 + 0025 applied):
 
-1. **`yonders` lacks `mission_id`, `play`, `straight_line`.** → Add them (migration). The keystone: it makes a mission attempt a real, linked, profile-visible, repeatable yonder.
-2. **Two sharing systems.** The feed reads `posts`; the public profile still reads the legacy **`shared_yonders`**. → Retire `shared_yonders`; the profile reads `posts`. *(This is why a shared mission shows in the feed but not the profile.)*
-3. **`grubs`** key on `subject_type`/`subject_id` (stale: `yonder`|`map`, id is a post id). → Key on `post_id`.
-4. **Map posts may still exist** (`kind='map'`). → Drop them; maps surface in Community → Maps by `visibility`. Posts become yonder + ways only.
+1. ✅ **`yonders` carries `mission_id` + `play` + `straight_line`** (0024). A mission attempt is now a real, linked, profile-visible, repeatable yonder — written + read by `lib/data/yonders.ts`.
+2. ✅ **One sharing path.** `shared_yonders` is retired (no longer written); `publishYonder`/`shareStatus`, the feed, and the **profile** all read `posts`. *(Fixes "shows in the feed but not the profile.")* The only lingering read is a harmless legacy-id fallback in `getSharedYonder`.
+3. ✅ **Grubs allow `subject_type='post'`** (0025); the feed/profile/detail key grubs on `post.id`.
 
-Until a migration lands, the dual-mode layer self-heals (writes best-effort, reads tolerate missing columns) so guests are never blocked.
+**Still deferred (not blocking):**
+- **Map/mission *plan* posts** (`kind='map'`) still exist (`setMapPost`); SCHEMA's end-state is plans surface in Community → Maps/Missions by `visibility`, not as feed posts. Public maps are *already* read live from the `maps` table in `loadCommunity`, so the map-post is redundant — safe to drop later. Posts should end up yonder + ways only.
+- `origin` (a mission line's A point) isn't a cloud column; a re-run uses the mission's A/B (or your current spot). Fine for now.
 
 ---
 

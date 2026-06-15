@@ -61,7 +61,7 @@ export default function SharedYonderView({ id }: { id: string }) {
     if (!requireAuth("Sign in to grub this yonder.")) return;
     setGrubState((g) => {
       const active = !g.active;
-      void setGrub("yonder", y.id, active);
+      void setGrub("post", y.id, active);
       return { count: g.count + (active ? 1 : -1), active };
     });
   };

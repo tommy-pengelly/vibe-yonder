@@ -1,6 +1,6 @@
 "use client";
 import * as local from "../storage";
-import type { Destination, Fix, SavedYonder, YonderMode } from "../types";
+import type { Destination, Fix, PlayMode, SavedYonder, YonderMode } from "../types";
 import { ctx } from "./ctx";
 
 export type YonderRow = {
@@ -18,6 +18,12 @@ export type YonderRow = {
   paused_ms: number | null;
   map_id: string | null;
   caption?: string | null;
+  // 0024: a yonder optionally realises a mission (the plan), and carries its
+  // straight-line result. This is what makes a mission attempt a real, linked,
+  // profile-visible, repeatable yonder. See SCHEMA.md.
+  mission_id?: string | null;
+  play?: string | null;
+  straight_line?: SavedYonder["straightLine"] | null;
 };
 
 export function rowToYonder(r: YonderRow): SavedYonder {
@@ -36,6 +42,9 @@ export function rowToYonder(r: YonderRow): SavedYonder {
     pausedMs: r.paused_ms ?? 0,
     mapId: r.map_id ?? undefined,
     caption: r.caption ?? undefined,
+    missionId: r.mission_id ?? undefined,
+    play: (r.play as PlayMode) ?? undefined,
+    straightLine: r.straight_line ?? undefined,
   };
 }
 
@@ -55,6 +64,9 @@ export function yonderToRow(y: SavedYonder, uid: string) {
     track: y.track,
     paused_ms: y.pausedMs,
     map_id: y.mapId ?? null,
+    mission_id: y.missionId ?? null,
+    play: y.play ?? "ambient",
+    straight_line: y.straightLine ?? null,
   };
 }
 

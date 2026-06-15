@@ -96,19 +96,21 @@ async function shapeShared(rows: SharedRow[]): Promise<FeedYonder[]> {
 const SHARED_COLS =
   "id,user_id,caption,area,walked_m,duration_s,places,yondered,trace_public,destinations,created_at";
 
-/** Shared yonders authored by people you follow (RLS gates followers-only). */
-/** A user's public shared yonders (for their profile). */
+/** A user's public shared yonders (for their profile). Reads `posts`, the one
+ * sharing path, so the profile and the feed always agree (no more "in the feed
+ * but not on my profile"). */
 export async function loadUserShared(userId: string): Promise<FeedYonder[]> {
   const sb = getSupabase();
   if (!sb) return [];
   const { data } = await sb
-    .from("shared_yonders")
-    .select(SHARED_COLS)
+    .from("posts")
+    .select(FEED_COLS)
     .eq("user_id", userId)
+    .eq("kind", "yonder")
     .eq("visibility", "public")
     .order("created_at", { ascending: false })
     .limit(50);
-  return shapeShared((data as SharedRow[]) ?? []);
+  return shapeFeedYonders((data as FeedPostRow[]) ?? []);
 }
 
 export async function getSharedYonder(id: string): Promise<FeedYonder | null> {
@@ -393,13 +395,14 @@ export async function loadCommunity(
   const sb = getSupabase();
   if (!sb) return { yonders: [], maps: [] };
 
-  const { data: sharedRows } = await sb
-    .from("shared_yonders")
-    .select(SHARED_COLS)
+  const { data: postRows } = await sb
+    .from("posts")
+    .select(FEED_COLS)
+    .eq("kind", "yonder")
     .eq("visibility", "public")
     .order("created_at", { ascending: false })
     .limit(50);
-  const yonders = await shapeShared((sharedRows as SharedRow[]) ?? []);
+  const yonders = await shapeFeedYonders((postRows as FeedPostRow[]) ?? []);
 
   const { data: mapRows } = await sb
     .from("maps")

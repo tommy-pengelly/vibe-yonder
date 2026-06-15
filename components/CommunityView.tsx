@@ -523,7 +523,7 @@ function SearchSheet({
               y={y}
               grub={a.gstate(y.id, y)}
               saved={!!a.saved[y.id]}
-              onGrub={() => a.grub("yonder", y.id)}
+              onGrub={() => a.grub("post", y.id)}
               onSave={() => a.save({ id: y.id, name: y.caption ?? y.area, destinations: y.destinations })}
             />
           ))}

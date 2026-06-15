@@ -7,7 +7,7 @@ import { ctx } from "./ctx";
 // there yet they warn and no-op, so the app is unaffected until 0013 is applied
 // (the legacy shared_yonders / map-visibility paths still run alongside).
 
-export type PostKind = "yonder" | "map" | "ways";
+export type PostKind = "yonder" | "map" | "ways" | "mission";
 export type PostVisibility = Visibility; // private | followers | public
 
 export type WaysPayload = {
