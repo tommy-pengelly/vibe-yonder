@@ -46,15 +46,8 @@ export default function PlaceDetailSheet({
   place: PlaceLite | null;
   actions?: PlaceAction[];
 }) {
-  const snapPoints = ["440px", 1];
-  const [snap, setSnap] = useState<number | string | null>(snapPoints[0]);
   const [favId, setFavId] = useState<string | null>(null);
   const [blurb, setBlurb] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (open) setSnap(snapPoints[0]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
 
   useEffect(() => {
     if (!open || !place) return;
@@ -111,16 +104,10 @@ export default function PlaceDetailSheet({
   const cat = place?.category ? categoryByKey(place.category) : undefined;
 
   return (
-    <Drawer.Root
-      open={open}
-      onOpenChange={(o) => !o && onClose()}
-      snapPoints={snapPoints}
-      activeSnapPoint={snap}
-      setActiveSnapPoint={setSnap}
-    >
+    <Drawer.Root open={open} onOpenChange={(o) => !o && onClose()}>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-50 bg-black/50" />
-        <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 h-full max-h-[97%] flex flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--surface)] outline-none">
+        <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md max-h-[88%] flex flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--surface)] outline-none">
           <div className="mx-auto mt-3 h-1 w-9 shrink-0 rounded-full bg-[var(--border)]" />
           <div className="flex-1 overflow-y-auto">
             {place && (
