@@ -81,7 +81,7 @@ export default function ModerationView() {
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-5 gap-3">
         <p className="text-sm text-[var(--muted)]">Moderation is for admins only.</p>
-        <Link href="/" className="text-sm text-[var(--accent)] hover:opacity-80">Back to Feed</Link>
+        <Link href="/community" className="text-sm text-[var(--accent)] hover:opacity-80">Back to Feed</Link>
       </div>
     );
   }

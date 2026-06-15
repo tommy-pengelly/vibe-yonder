@@ -1,11 +1,12 @@
 "use client";
-import { Compass, Map as MapIcon, Navigation, Plus, Ruler, X } from "lucide-react";
+import { Compass, Map as MapIcon, Navigation, Plus, Ruler, Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
 import BottomSheet from "@/components/ui/BottomSheet";
 import { SegmentedTabs } from "@/components/ui";
 import PlaceDetailSheet, { type PlaceLite } from "@/components/PlaceDetailSheet";
+import StarField from "@/components/StarField";
 import { loadCommunity, loadFavourites, loadMaps } from "@/lib/data";
 import { fmtDist } from "@/lib/geo";
 import type {
@@ -41,7 +42,8 @@ export default function CreateHub({
 }: {
   position: Fix | null;
   onStart: (targets: Target[], mode: YonderMode, opts?: StartOpts) => void;
-  onClose: () => void;
+  /** Omitted on the landing (it's home, nothing to close to). */
+  onClose?: () => void;
 }) {
   const router = useRouter();
   const [favourites, setFavourites] = useState<FavouritePlace[]>([]);
@@ -153,16 +155,26 @@ export default function CreateHub({
   };
 
   return (
-    <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-10 pb-6 gap-5">
+    <div className="relative flex-1 flex flex-col">
+      <StarField className="absolute inset-0 w-full h-full opacity-70" />
+      <div className="relative flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-10 pb-6 gap-5">
       <header className="flex items-center justify-between">
         <span className="text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">Yonderful</span>
-        <button type="button" onClick={onClose} aria-label="Close" className="size-9 -mr-2 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]">
-          <X className="w-4 h-4" strokeWidth={1.75} />
-        </button>
+        {onClose && (
+          <button type="button" onClick={onClose} aria-label="Close" className="size-9 -mr-2 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]">
+            <X className="w-4 h-4" strokeWidth={1.75} />
+          </button>
+        )}
       </header>
 
-      <h1 className="font-display text-4xl tracking-tight leading-[0.95]">
-        {!lineMode ? "Where to?" : !lineStart ? "From where?" : "To where?"}
+      <h1 className="font-display text-4xl tracking-tight leading-[1.02]">
+        {lineMode
+          ? !lineStart
+            ? "From where?"
+            : "To where?"
+          : typing
+            ? "Where to?"
+            : "Where will you wander?"}
       </h1>
 
       {lineMode && (
@@ -201,21 +213,26 @@ export default function CreateHub({
         </div>
       )}
 
-      <input
-        autoFocus
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder={
-          !lineMode
-            ? "Search a place to wander to…"
-            : !lineStart
-              ? "Search the start…"
-              : "Search the far point…"
-        }
-        className="w-full bg-transparent border-b border-[var(--border)] px-1 py-3 text-lg outline-none focus:border-[var(--accent)] placeholder:text-[var(--muted)]/60"
-        inputMode="search"
-        enterKeyHint="search"
-      />
+      <div className="relative">
+        <Search
+          className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]"
+          strokeWidth={1.75}
+        />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={
+            !lineMode
+              ? "Where to?"
+              : !lineStart
+                ? "Search the start…"
+                : "Search the far point…"
+          }
+          className="w-full rounded-full bg-[var(--surface-2)] border border-[var(--border)] pl-11 pr-4 py-3.5 text-base outline-none focus:border-[var(--accent)] placeholder:text-[var(--muted)]/60"
+          inputMode="search"
+          enterKeyHint="search"
+        />
+      </div>
 
       {/* Building list */}
       {building && (
@@ -268,39 +285,21 @@ export default function CreateHub({
         </ul>
       )}
 
-      {/* Idle: stacked modes */}
+      {/* Idle: your saved places (one tap = go), then the ways to go */}
       {!typing && !building && !lineMode && (
-        <div className="flex flex-col gap-2">
-          <ModeRow
-            icon={Compass}
-            title="Just wander"
-            sub="No destination, eyes up, see what you find"
-            accent
-            onClick={() => onStart([], "single")}
-          />
-          <ModeRow
-            icon={MapIcon}
-            title="Maps"
-            sub={maps.length ? "Yours, the community's, or make one" : "Browse the community or build your own"}
-            onClick={() => setPickerOpen(true)}
-          />
-          <ModeRow
-            icon={Ruler}
-            title="Mission"
-            sub="Hold a straight line A to B, earn a medal, race the board"
-            onClick={() => setLineMode(true)}
-          />
-
+        <div className="flex flex-col gap-6 mt-1">
           {favourites.length > 0 && (
-            <section className="flex flex-col gap-2 mt-4">
-              <h2 className="text-[10px] uppercase tracking-widest text-[var(--muted)]">Places</h2>
+            <section className="flex flex-col gap-2">
+              <h2 className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
+                Your places
+              </h2>
               <div className="flex flex-wrap gap-2">
                 {favourites.map((f) => (
                   <button
                     key={f.id}
                     type="button"
                     onClick={() => onStart([toTarget(f)], "single")}
-                    className="rounded-full border border-[var(--border)] px-3 py-1.5 text-sm hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                    className="rounded-full border border-[var(--border)] px-3.5 py-2 text-sm hover:border-[var(--accent)] hover:text-[var(--accent)]"
                   >
                     {f.alias || f.name}
                   </button>
@@ -308,6 +307,16 @@ export default function CreateHub({
               </div>
             </section>
           )}
+          <div className="grid grid-cols-3 gap-2.5">
+            <ModeCard
+              icon={Compass}
+              title="Just wander"
+              accent
+              onClick={() => onStart([], "single")}
+            />
+            <ModeCard icon={MapIcon} title="Maps" onClick={() => setPickerOpen(true)} />
+            <ModeCard icon={Ruler} title="Missions" onClick={() => setLineMode(true)} />
+          </div>
         </div>
       )}
 
@@ -437,46 +446,37 @@ export default function CreateHub({
             : []
         }
       />
+      </div>
     </div>
   );
 }
 
-function ModeRow({
+function ModeCard({
   icon: Icon,
   title,
-  sub,
   accent,
-  disabled,
   onClick,
 }: {
   icon: typeof Compass;
   title: string;
-  sub: string;
   accent?: boolean;
-  disabled?: boolean;
   onClick?: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={disabled}
-      className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition-colors ${
-        disabled
-          ? "border-[var(--border)] opacity-50 cursor-default"
-          : accent
-            ? "border-[var(--accent)]/50 hover:border-[var(--accent)]"
-            : "border-[var(--border)] hover:border-[var(--muted)]"
+      className={`flex flex-col items-center justify-center gap-2 rounded-2xl border px-2 py-5 text-center transition-colors ${
+        accent
+          ? "border-[var(--accent)]/50 hover:border-[var(--accent)] bg-[var(--accent)]/[0.04]"
+          : "border-[var(--border)] hover:border-[var(--muted)]"
       }`}
     >
       <Icon
-        className={`w-5 h-5 shrink-0 ${accent && !disabled ? "text-[var(--accent)]" : "text-[var(--muted)]"}`}
-        strokeWidth={1.75}
+        className={`w-6 h-6 ${accent ? "text-[var(--accent)]" : "text-[var(--muted)]"}`}
+        strokeWidth={1.5}
       />
-      <div className="min-w-0">
-        <div className="font-display text-base leading-tight">{title}</div>
-        <div className="text-xs text-[var(--muted)] truncate">{sub}</div>
-      </div>
+      <span className="font-display text-sm leading-tight">{title}</span>
     </button>
   );
 }

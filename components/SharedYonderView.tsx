@@ -52,7 +52,7 @@ export default function SharedYonderView({ id }: { id: string }) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-5 gap-3">
         <p className="text-sm text-[var(--muted)]">This yonder isn&apos;t available.</p>
-        <Link href="/" className="text-sm text-[var(--accent)] hover:opacity-80">Back to Feed</Link>
+        <Link href="/community" className="text-sm text-[var(--accent)] hover:opacity-80">Back to Feed</Link>
       </div>
     );
   }

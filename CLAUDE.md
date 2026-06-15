@@ -93,10 +93,14 @@ The discovery engine has a **taste**, and it sends people to good, **locally-run
 Guest-first. Active walk is a full-screen takeover (no nav). Membership is light: an account just unlocks saving.
 
 ```
-/                  Community        — the guest landing + everything outward-facing. Tabs below:
-                                       Following · Everyone · Maps · Missions.
-/walk              Active yonder     — launched by the centre ⊕ (telescope). Full-bleed heading-up scope,
-                                       directional head, Time + Distance (hideable), pause / finish. No nav.
+/                  Launch (home)     — the immersive "Where will you wander?" start screen, on a
+                                       star-map void. The guest landing. Search a place (aliases resolve),
+                                       tap a saved place, or Just wander / Maps / Missions. The centre nav
+                                       mark brings you here. Starting hands off to /walk.
+/community         Community         — everything outward-facing. Tabs: Following · Everyone · Maps · Missions.
+/walk              Active yonder     — the launch hands off here (sessionStorage `vibe-yonder.start`).
+                                       Full-bleed heading-up scope, directional head, Time + Distance
+                                       (hideable), pause / finish. No nav.
 /recap/[id]        Recap             — faded trace, "You yondered N×", tiles (Walked, Time, Direct,
                                        Yondered). Save, Do again, Save for later, Share.
                    (Community tabs) — Following · Everyone (the yonder feed) · Maps · Missions (public
@@ -115,7 +119,7 @@ Guest-first. Active walk is a full-screen takeover (no nav). Membership is light
 
 **Privacy invariant.** The precise `yonders.track` is owner-only — there is no public/followers read path on `yonders`. Sharing publishes an *obfuscated copy* into a **`posts`** row (home zone removed, start/finish trimmed, coordinates stripped to a 0–100 memento). You share **places + a memento, never a route**. `posts` is the *one* sharing path — there is no `shared_yonders`. Grubs are one-tap kudos on a post; there are no comments. A mission has a **board**, but it is scored by *holding the line* (deviation), never by time or speed, and it carries normalised, coordinate-free paths only. See [SCHEMA.md](SCHEMA.md).
 
-Nav: a **Community · ⊕ · Me** three-slot bottom bar. **Community** (`/`, the guest landing) is everything outward-facing — Discover (public maps + yonders + search people/places) and Following; **⊕** (centre, the brand spyglass mark) launches a yonder and is the home for game modes — an action, not a destination; **Me** (`/you`) is everything inward — your yonders (history), maps, favourites, settings. (Earlier 5-slot Feed·Maps·⊕·Find·Me is retired; `/explore` redirects to `/`, `/maps` + `/favourites` live under Me.) The active walk is a full takeover with no nav (the shell lives in `AppChrome`; `/walk` is the one immersive route). Member screens are built from `components/ui/` primitives (`PageScaffold`, `PageHeader`, `EmptyState`, `SegmentedTabs`, `BottomSheet`, `ListRow`) — the scope is never one of these. Auth is a **contextual sheet**, never a page; on sign-up, import the guest's local yonders.
+Nav: a **Community · ⊕ · Me** three-slot bottom bar. **⊕** (centre, the brand spyglass mark) is **home → `/` the launcher** (the "let's go" start screen): the app opens here, guest-first, because the first thing you want is to start wandering, not a feed. **Community** (`/community`) is everything outward-facing — Discover (public maps + missions + yonders + search people/places) and Following. **Me** (`/you`) is everything inward — your yonders (history), maps, favourites, settings. (Earlier landings are retired; `/explore` redirects to `/community`, `/maps` + `/favourites` live under Me.) The active walk is a full takeover with no nav (the shell lives in `AppChrome`; `/walk` is the one immersive route). Member screens are built from `components/ui/` primitives (`PageScaffold`, `PageHeader`, `EmptyState`, `SegmentedTabs`, `BottomSheet`, `ListRow`) — the scope is never one of these. Auth is a **contextual sheet**, never a page; on sign-up, import the guest's local yonders.
 
 ---
 
