@@ -157,22 +157,38 @@ export default function Scope({
       ctx.translate(-cx, -cy);
     }
     if (position && track.length > 1) {
-      // Your course: one warm, dotted line threading the star sky (round caps +
-      // a tight dash read as dots). setLineDash is restored by the surrounding
-      // save/restore.
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.lineWidth = 3;
-      ctx.setLineDash([0.1, 8]);
-      ctx.strokeStyle = "rgba(245, 166, 35, 0.6)";
-      ctx.beginPath();
-      const p0 = projectAt(track[0], position, cx, cy, mpp);
-      ctx.moveTo(p0.x, p0.y);
-      for (let i = 1; i < track.length; i++) {
-        const b = projectAt(track[i], position, cx, cy, mpp);
-        ctx.lineTo(b.x, b.y);
+      // Your course as evenly-spaced dots that fade with age: recent (near you)
+      // warm and bright, older sinking into the dark. Even spacing comes from
+      // sampling along the path (not line-dashing, which staggers over ragged
+      // GPS segments), so the fade and the dots both hold, the floating-compass,
+      // settled-in-fluid feel.
+      const pts = track.map((p) => projectAt(p, position, cx, cy, mpp));
+      let total = 0;
+      for (let i = 1; i < pts.length; i++) {
+        total += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
       }
-      ctx.stroke();
+      if (total > 0) {
+        const SPACING = 9;
+        let distFromStart = 0;
+        let carry = 0; // distance from this segment's start to the next dot
+        for (let i = 1; i < pts.length; i++) {
+          const a = pts[i - 1];
+          const b = pts[i];
+          const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+          let d = carry;
+          while (d <= segLen) {
+            const t = segLen === 0 ? 0 : d / segLen;
+            const frac = (distFromStart + d) / total; // 0 oldest -> 1 at you
+            ctx.fillStyle = `rgba(245, 166, 35, ${(0.1 + 0.55 * frac).toFixed(2)})`;
+            ctx.beginPath();
+            ctx.arc(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, 1.7, 0, Math.PI * 2);
+            ctx.fill();
+            d += SPACING;
+          }
+          carry = d - segLen; // leftover carried into the next segment
+          distFromStart += segLen;
+        }
+      }
     }
     ctx.restore();
 
