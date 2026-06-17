@@ -1,7 +1,7 @@
 "use client";
 import { Compass, Map as MapIcon, MapPin, Navigation, Plus, Ruler, Search, Star, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
 import BottomSheet from "@/components/ui/BottomSheet";
 import { SegmentedTabs } from "@/components/ui";
@@ -89,6 +89,21 @@ export default function CreateHub({
       name: `${a.name} → ${b.name}`,
     });
   };
+
+  // Most straight lines start where you are. Auto-fill the start with your
+  // location on entering line mode (once GPS is in), so you skip straight to
+  // picking the far point. "change" clears it to set a custom start.
+  const lineAutoStarted = useRef(false);
+  useEffect(() => {
+    if (!lineMode) {
+      lineAutoStarted.current = false;
+      return;
+    }
+    if (!lineAutoStarted.current && !lineStart && position) {
+      lineAutoStarted.current = true;
+      setLineStart({ name: "your location", lat: position.lat, lon: position.lon });
+    }
+  }, [lineMode, lineStart, position]);
 
   useEffect(() => {
     let c = false;
@@ -184,7 +199,7 @@ export default function CreateHub({
             <span>
               {!lineStart
                 ? "Where does the line start?"
-                : "The far point you'll hold the line to."}
+                : "Now the far point you'll hold the line to."}
             </span>
             <button
               type="button"
@@ -208,6 +223,14 @@ export default function CreateHub({
           {lineStart && (
             <div className="text-xs text-[var(--muted)]">
               From <span className="text-[var(--foreground)]">{lineStart.name}</span>
+              {" · "}
+              <button
+                type="button"
+                onClick={() => setLineStart(null)}
+                className="text-[var(--accent)] hover:opacity-80"
+              >
+                change
+              </button>
             </div>
           )}
         </div>
