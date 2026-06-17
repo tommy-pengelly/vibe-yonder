@@ -24,7 +24,11 @@ type Props = {
   saved: SavedYonder;
   savedForLater?: boolean;
   onRenameTitle?: (next: string) => void;
-  onNewWalk?: () => void;
+  /** Leave the recap (go home). Rendered as the primary "Done". Set on the
+   * just-finished screen; the saved-history view uses its back arrow instead. */
+  onDone?: () => void;
+  /** Re-run this outing. Offered on the saved-history view, NOT on the finish
+   * screen (where it's confusing). */
   onDoAgain?: () => void;
   onSaveForLater?: () => void;
   /** Persist a note about the wander (written here in the recap). */
@@ -42,7 +46,7 @@ export default function Recap({
   saved,
   savedForLater,
   onRenameTitle,
-  onNewWalk,
+  onDone,
   onDoAgain,
   onSaveForLater,
   onSaveCaption,
@@ -404,46 +408,42 @@ export default function Recap({
       </div>
 
       <div className="flex flex-col gap-2 mt-auto">
-        {/* Yonder is auto-kept; this is just who can see it. */}
+        {/* Three things, no more: who can see it, keep the places, leave. */}
         <ShareControl saved={saved} />
-        {(onDoAgain || onSaveForLater) && (
-          <div className="flex items-center gap-2">
-            {onDoAgain && (
-              <button
-                type="button"
-                onClick={onDoAgain}
-                className="flex-1 rounded-full border border-[var(--border)] text-[var(--foreground)] py-2.5 flex items-center justify-center gap-2 hover:border-[var(--accent)] hover:text-[var(--accent)]"
-              >
-                <RotateCcw className="w-4 h-4" strokeWidth={1.75} />
-                Do again
-              </button>
-            )}
-            {onSaveForLater && (
-              <button
-                type="button"
-                onClick={onSaveForLater}
-                disabled={savedForLater}
-                title="Keep these places as a map to wander again"
-                className="flex-1 rounded-full border border-[var(--border)] text-[var(--foreground)] py-2.5 flex items-center justify-center gap-2 hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--foreground)]"
-              >
-                <Bookmark className="w-4 h-4" strokeWidth={1.75} />
-                {savedForLater ? "Saved ✓" : "Save places"}
-              </button>
-            )}
-          </div>
+        {onSaveForLater && (
+          <button
+            type="button"
+            onClick={onSaveForLater}
+            disabled={savedForLater}
+            title="Keep these places as a map to wander again"
+            className="rounded-full border border-[var(--border)] text-[var(--foreground)] py-2.5 flex items-center justify-center gap-2 hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--foreground)]"
+          >
+            <Bookmark className="w-4 h-4" strokeWidth={1.75} />
+            {savedForLater ? "Saved as a map ✓" : "Save places as a map"}
+          </button>
+        )}
+        {onDoAgain && (
+          <button
+            type="button"
+            onClick={onDoAgain}
+            className="rounded-full border border-[var(--border)] text-[var(--foreground)] py-2.5 flex items-center justify-center gap-2 hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          >
+            <RotateCcw className="w-4 h-4" strokeWidth={1.75} />
+            Do again
+          </button>
         )}
         {signedInHint && (
           <p className="text-[11px] text-[var(--muted)] text-center">
             {signedInHint}
           </p>
         )}
-        {onNewWalk && (
+        {onDone && (
           <button
             type="button"
-            onClick={onNewWalk}
+            onClick={onDone}
             className="rounded-full bg-[var(--accent)] text-black font-semibold py-3 active:opacity-80"
           >
-            New walk
+            Done
           </button>
         )}
       </div>

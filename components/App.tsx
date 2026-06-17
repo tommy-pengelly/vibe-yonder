@@ -491,18 +491,6 @@ export default function App() {
     yonder,
   ]);
 
-  const newWalk = useCallback(() => {
-    setYonder(null);
-    setTrack([]);
-    lastFix.current = null;
-    setStartTime(null);
-    setEndTime(null);
-    setPausedMs(0);
-    setSavedYonder(null);
-    setSavedLocally(false);
-    setPhase("search");
-  }, []);
-
   const renameRecap = useCallback((name: string) => {
     setSavedYonder((y) => {
       if (!y) return y;
@@ -543,30 +531,6 @@ export default function App() {
     // become a Map, so the user can do them again from /maps.
     void saveYonderPlaces(savedYonder.name, savedYonder.destinations);
   }, [savedYonder, savedForLater]);
-
-  const doAgain = useCallback(() => {
-    if (!savedYonder) return;
-    const targets: Target[] = savedYonder.destinations.map((d) => ({
-      id: crypto.randomUUID(),
-      name: d.name,
-      label: d.label,
-      lat: d.lat,
-      lon: d.lon,
-      visited: false,
-    }));
-    setSavedYonder(null);
-    setSavedLocally(false);
-    setSavedForLater(false);
-    void beginYonder(targets, savedYonder.mode, {
-      mapId: savedYonder.mapId,
-      name: savedYonder.name,
-      // Preserve the mode so "Do again" on a straight line / mission re-runs the
-      // line (you'll walk to the start again), not a plain wander.
-      play: savedYonder.play,
-      origin: savedYonder.origin,
-      missionId: savedYonder.missionId,
-    });
-  }, [savedYonder, beginYonder]);
 
   void endTime;
 
@@ -644,8 +608,7 @@ export default function App() {
           saved={savedYonder}
           savedForLater={savedForLater}
           onRenameTitle={renameRecap}
-          onNewWalk={newWalk}
-          onDoAgain={doAgain}
+          onDone={leaveWalk}
           onSaveForLater={saveForLater}
           onSaveCaption={editCaption}
           onSavePlaces={editPlaces}

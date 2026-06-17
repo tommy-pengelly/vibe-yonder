@@ -12,7 +12,6 @@ import {
   makeAngleSmoother,
   toRad,
 } from "@/lib/geo";
-import { categoryByKey } from "@/lib/nearby";
 import type { ScopeCandidate } from "@/hooks/useDiscovery";
 import type { Fix, LatLon, Target } from "@/lib/types";
 
@@ -273,12 +272,21 @@ export default function Scope({
     // rim chevron, discovery never points. Drawn under the user dot.
     candHitsRef.current = [];
     if (position) {
-      for (const c of candidates) {
+      // Brightest first, so the notable stars win the labels; a label is skipped
+      // if it would collide with one already placed (keeps the sky legible).
+      const labelled: { x: number; y: number }[] = [];
+      const sorted = [...candidates].sort((a, b) => b.notability - a.notability);
+      for (const c of sorted) {
         const raw = projectAt(c, position, cx, cy, mpp);
         const r = Math.hypot(raw.x - cx, raw.y - cy);
         if (r >= rimR) continue;
         const { x, y } = applyRot(raw.x, raw.y);
-        drawCandidate(ctx, x, y, c);
+        const label =
+          !!c.name &&
+          c.notability >= 0.6 &&
+          !labelled.some((p) => Math.hypot(p.x - x, p.y - y) < 52);
+        drawCandidate(ctx, x, y, c, label);
+        if (label) labelled.push({ x, y });
         candHitsRef.current.push({ id: c.id, x, y });
       }
     }
@@ -448,15 +456,17 @@ function drawCandidate(
   x: number,
   y: number,
   c: ScopeCandidate,
+  label: boolean,
 ) {
-  // Brightness + size grade by notability: a bright, big star is notable (many
-  // sitelinks); a faint, small one is an obscure curio, there to be stumbled on.
+  // A restrained sky: every place is a WHITE star whose brightness + size grade
+  // by notability (bright/big = notable, faint/small = obscure). The only other
+  // colour is violet when it matches the filter you've set (gold is reserved for
+  // your next destination, drawn elsewhere). No per-type colours, no glyphs.
   const n = Math.max(0, Math.min(1, c.notability));
   const op = 0.28 + 0.62 * n;
   const r = 2.2 + 3.3 * n;
   const rgb = c.matchesLens ? LENS_RGB : STAR_RGB;
 
-  // Notable stars get a faint halo, the on-scope echo of the sheet's "✦ Noted".
   if (c.tier === "notable") {
     ctx.strokeStyle = `rgba(${rgb}, ${(op * 0.5).toFixed(2)})`;
     ctx.lineWidth = 1;
@@ -469,15 +479,10 @@ function drawCandidate(
   ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.fill();
 
-  // Only the brighter stars carry a name, so the void stays a calm sky.
-  if (c.name && n >= 0.6) {
-    const emoji = c.category ? categoryByKey(c.category)?.emoji : undefined;
+  // The name only when the caller cleared it for collision, so the void stays calm.
+  if (label && c.name) {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    if (emoji) {
-      ctx.font = "12px system-ui, sans-serif";
-      ctx.fillText(emoji, x, y - r - 9);
-    }
     ctx.fillStyle = `rgba(${rgb}, ${Math.min(0.8, op).toFixed(2)})`;
     ctx.font = "500 11px var(--font-sans), system-ui, sans-serif";
     ctx.fillText(truncate(c.name, 18), x, y + r + 10);

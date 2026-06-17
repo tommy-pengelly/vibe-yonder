@@ -1,6 +1,8 @@
 "use client";
 import {
   ExternalLink,
+  Eye,
+  EyeOff,
   Heart,
   ListChecks,
   Locate,
@@ -106,6 +108,9 @@ export default function WalkScreen({
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   // Tapping a star opens its blurb + photo; the header sparkle opens the list.
   const [detailCand, setDetailCand] = useState<ScopeCandidate | null>(null);
+  // The mode switcher: "bearing only" strips everything to the marker + place
+  // name (no numbers, no stars, no scale) — the calmest eyes-up view.
+  const [bearingOnly, setBearingOnly] = useState(false);
   const [activeGuide, setActiveGuide] = useState<string | null>(null);
   const committedIds = useMemo(
     () => new Set(yonder.targets.map((t) => t.id)),
@@ -377,11 +382,14 @@ export default function WalkScreen({
           targets={yonder.targets}
           activeIndex={focusIndex}
           mpp={mpp}
-          hideNumbers={hideNumbers}
+          hideNumbers={hideNumbers || bearingOnly}
+          minimal={bearingOnly}
           onPickTarget={onSetActive}
-          candidates={DISCOVERY_ENABLED && suggestionsOn ? candidates : undefined}
+          candidates={
+            !bearingOnly && DISCOVERY_ENABLED && suggestionsOn ? candidates : undefined
+          }
           onPickCandidate={
-            DISCOVERY_ENABLED && suggestionsOn
+            !bearingOnly && DISCOVERY_ENABLED && suggestionsOn
               ? (id) => setDetailCand(candidates.find((c) => c.id === id) ?? null)
               : undefined
           }
@@ -412,7 +420,19 @@ export default function WalkScreen({
         }
         right={
           <>
-            {DISCOVERY_ENABLED &&
+            <button
+              type="button"
+              onClick={() => setBearingOnly((v) => !v)}
+              aria-label={bearingOnly ? "Show the full sky" : "Bearing-only view"}
+              aria-pressed={bearingOnly}
+              className={`inline-flex items-center justify-center size-9 rounded-full border border-[var(--border)] bg-black/30 backdrop-blur-sm ${
+                bearingOnly ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
+              }`}
+            >
+              {bearingOnly ? <EyeOff className="w-4 h-4" strokeWidth={1.75} /> : <Eye className="w-4 h-4" strokeWidth={1.75} />}
+            </button>
+            {!bearingOnly &&
+              DISCOVERY_ENABLED &&
               (suggestionsOn ? (
                 <button
                   type="button"
@@ -455,7 +475,7 @@ export default function WalkScreen({
 
         {needsCalibration && <CalibrateHint onCalibrate={onCalibrate} />}
 
-        {zoomed && (
+        {zoomed && !bearingOnly && (
           <button
             type="button"
             onClick={resetZoom}
@@ -501,7 +521,7 @@ export default function WalkScreen({
         )}
 
         <div className="flex flex-col gap-3 pointer-events-auto">
-          {!hideNumbers && (
+          {!hideNumbers && !bearingOnly && (
             <StatStrip
               track={track}
               startTime={startTime}
@@ -569,18 +589,10 @@ export default function WalkScreen({
                   : "Signal unavailable"}
             </span>
           )}
-          {!geoError && !hideNumbers && position?.acc != null && (
+          {!geoError && !hideNumbers && !bearingOnly && position?.acc != null && (
             <span>±{Math.round(position.acc)} m</span>
           )}
         </div>
-
-        {suggestionsOn && (
-          // Discovery POIs come from OpenStreetMap (ODbL), attribution is
-          // required wherever they're shown.
-          <p className="text-center text-[9px] text-[var(--muted)]/60 pointer-events-auto">
-            Nearby places · © OpenStreetMap contributors
-          </p>
-        )}
       </div>
 
       <AddPlaceSheet

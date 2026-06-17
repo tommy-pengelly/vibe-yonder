@@ -209,17 +209,21 @@ export async function loadFeed(
   if (!sb) return EMPTY_FEED;
 
   let rows: FeedPostRow[] = [];
+  let meId: string | null = null; // for the "You" label on your own posts
   if (scope === "following") {
     const c = await ctx();
     if (!c) return EMPTY_FEED;
+    meId = c.uid;
     const { data: follows } = await c.sb
       .from("follows")
       .select("following_id")
       .eq("follower_id", c.uid)
       .eq("status", "accepted");
-    const ids =
+    const followed =
       (follows as { following_id: string }[] | null)?.map((f) => f.following_id) ?? [];
-    if (ids.length === 0) return EMPTY_FEED;
+    // Include yourself: your own shared yonders show in Following too (labelled
+    // "You"), so the feed is never empty and you see your wanders in context.
+    const ids = Array.from(new Set([...followed, c.uid]));
     let qy = c.sb
       .from("posts")
       .select(FEED_COLS)
@@ -254,7 +258,7 @@ export async function loadFeed(
 
   const items = rows.map((r): FeedItem => {
     const p = profiles[r.user_id] ?? { username: "wanderer" };
-    const who = p.displayName ?? `@${p.username}`;
+    const who = r.user_id === meId ? "You" : (p.displayName ?? `@${p.username}`);
     const handle = `@${p.username}`;
     const when = relTime(r.created_at);
     const g = grubs[r.id] ?? { count: 0, grubbed: false };
