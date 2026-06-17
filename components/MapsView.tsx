@@ -91,6 +91,7 @@ export default function MapsView() {
       <PageHeader
         kicker="Maps"
         title="Your maps"
+        backHref="/"
         action={
           <Link
             href="/maps/new"

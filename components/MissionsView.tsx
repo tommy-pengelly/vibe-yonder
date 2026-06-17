@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { EmptyState, PageHeader, PageScaffold } from "@/components/ui";
+import MissionLineViz from "@/components/MissionLineViz";
 import { loadMissions, type Mission } from "@/lib/data";
 import { fmtDist } from "@/lib/geo";
 
@@ -55,26 +56,26 @@ export default function MissionsView() {
         <EmptyState
           icon={Ruler}
           title="No missions yet"
-          body="Finish a straight-line yonder, then turn it into a mission for others to take on."
+          body="Tap + to set up a straight line, or finish a straight-line yonder and turn it into a mission for others to take on."
         />
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-3">
           {missions.map((m) => (
             <li key={m.id}>
               <Link
                 href={`/missions/${m.id}`}
-                className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3.5 hover:border-[var(--accent)]/50"
+                className="block rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden hover:border-[var(--accent)]/50 transition-colors"
               >
-                <Ruler className="w-5 h-5 text-[var(--accent)] shrink-0" strokeWidth={1.75} />
-                <div className="min-w-0 flex-1">
-                  <div className="font-display text-lg truncate">
+                <div className="px-4 pt-4 pb-1">
+                  <div className="font-display text-xl tracking-tight truncate">
                     {m.name ?? "Straight-line mission"}
                   </div>
-                  <div className="text-xs text-[var(--muted)]">
+                  <div className="text-xs text-[var(--warm)] mt-0.5">
                     {m.who} · {fmtDist(m.distanceM)} · {m.attempts ?? 0}{" "}
                     {m.attempts === 1 ? "attempt" : "attempts"}
                   </div>
                 </div>
+                <MissionLineViz attempts={[]} highlight={null} bands={m.bands} height={120} />
               </Link>
             </li>
           ))}
