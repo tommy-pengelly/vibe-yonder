@@ -5,8 +5,11 @@ import BootSplash from "./BootSplash";
 import BottomNav from "./BottomNav";
 import PaywallProvider from "./PaywallProvider";
 
-// Routes that are full-screen immersive takeovers, no persistent nav.
-const IMMERSIVE = new Set(["/walk"]);
+// The bottom nav lives ONLY on the three roots. Everything else is a one-layer
+// overlay you exit with its back/X (which pops to the root you came from), so a
+// stack can't pile up by tab-hopping between sections (there's no ⊕ inside
+// /maps etc. to push a fresh home). Every non-root screen has a back affordance.
+const ROOTS = new Set(["/", "/community", "/you"]);
 
 /**
  * App shell. The bottom nav lives here (in the layout), so it stays mounted and
@@ -16,13 +19,13 @@ const IMMERSIVE = new Set(["/walk"]);
  */
 export default function AppChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const immersive = IMMERSIVE.has(pathname);
+  const showNav = ROOTS.has(pathname);
   return (
     <div className="h-dvh flex flex-col overflow-hidden">
       <PaywallProvider>
         <main className="flex-1 overflow-y-auto flex flex-col">{children}</main>
       </PaywallProvider>
-      {!immersive && <BottomNav />}
+      {showNav && <BottomNav />}
       <BootSplash />
     </div>
   );
