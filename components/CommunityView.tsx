@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
 import { Empty, Loading, MapCard, MissionCard, WaysCard, YonderCard } from "@/components/feed/Cards";
 import { useFeedActions } from "@/components/feed/useFeedActions";
+import { primeOrientation } from "@/hooks/useHeading";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import {
   BottomSheet,
@@ -245,6 +246,7 @@ function MissionsBrowseTab() {
 
   const attempt = (m: Mission) => {
     if (typeof window === "undefined") return;
+    void primeOrientation(); // grab the compass on this tap so the scope spins
     window.sessionStorage.setItem(
       "vibe-yonder.start",
       JSON.stringify({

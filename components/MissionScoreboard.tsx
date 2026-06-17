@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import MissionLineViz from "@/components/MissionLineViz";
 import { EmptyState, PageHeader, PageScaffold } from "@/components/ui";
+import { primeOrientation } from "@/hooks/useHeading";
 import { useAuthUser } from "@/lib/auth";
 import { getMission, loadLeaderboard, type LeaderRow, type Mission } from "@/lib/data";
 import { fmtDist } from "@/lib/geo";
@@ -36,6 +37,7 @@ export default function MissionScoreboard({ id }: { id: string }) {
 
   const attempt = () => {
     if (!mission || typeof window === "undefined") return;
+    void primeOrientation(); // grab the compass on this tap so the scope spins
     window.sessionStorage.setItem(
       "vibe-yonder.start",
       JSON.stringify({

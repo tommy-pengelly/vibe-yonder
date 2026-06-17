@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
 import { Trace } from "@/components/ui/viz";
 import { useGoBack } from "@/components/ui";
+import { primeOrientation } from "@/hooks/useHeading";
 import { useAuthUser } from "@/lib/auth";
 import { getSharedYonder, reportContent, saveYonderPlaces, setGrub } from "@/lib/data";
 import { fmtDist } from "@/lib/geo";
@@ -73,6 +74,7 @@ export default function SharedYonderView({ id }: { id: string }) {
   };
   const onLoad = () => {
     if (typeof window === "undefined" || y.destinations.length === 0) return;
+    void primeOrientation(); // grab the compass on this tap so the scope spins
     const targets: Target[] = y.destinations.map((d) => ({
       id: crypto.randomUUID(),
       name: d.name,
