@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type OrientationEventWithWebkit = DeviceOrientationEvent & {
   webkitCompassHeading?: number;
@@ -9,86 +9,94 @@ type IOSDeviceOrientationEvent = typeof DeviceOrientationEvent & {
   requestPermission?: () => Promise<"granted" | "denied" | "default">;
 };
 
-// Grab device-orientation (compass) permission while we still have a user
-// gesture. On iOS, requestPermission() ONLY works from inside a tap handler, so
-// call this synchronously from the "start a yonder" tap. Once granted it stays
-// granted, so the walk screen's later requestAccess() (which runs in an effect,
-// no gesture) then succeeds and the scope spins. Without this the compass never
-// prompts and the scope stays frozen north-up.
+// A single GLOBAL compass. Listeners attach once, the latest heading lives here,
+// and every useHeading() subscribes to it. This is deliberate: iOS only grants
+// device-orientation permission from a user GESTURE, but the walk screen (the
+// consumer) mounts after a navigation, with no gesture. So the grant + attach
+// happen on the launch tap via primeOrientation(), and the walk screen just
+// reads the value. Without the singleton the walk's gesture-less request can
+// fail and the scope freezes north-up.
+let currentHeading: number | null = null;
+let attached = false;
+const subscribers = new Set<(h: number | null) => void>();
+
+function emit() {
+  for (const s of subscribers) s(currentHeading);
+}
+
+function onOrientation(raw: Event) {
+  const e = raw as OrientationEventWithWebkit;
+  let h: number | null = null;
+  if (
+    typeof e.webkitCompassHeading === "number" &&
+    !Number.isNaN(e.webkitCompassHeading)
+  ) {
+    h = e.webkitCompassHeading; // iOS: degrees clockwise from true north
+  } else if (typeof e.alpha === "number" && e.alpha != null) {
+    h = (360 - e.alpha) % 360;
+  }
+  if (h != null && h !== currentHeading) {
+    currentHeading = h;
+    emit();
+  }
+}
+
+function attach() {
+  if (attached || typeof window === "undefined") return;
+  attached = true;
+  if ("ondeviceorientationabsolute" in window) {
+    window.addEventListener("deviceorientationabsolute", onOrientation, true);
+  }
+  window.addEventListener("deviceorientation", onOrientation, true);
+}
+
+function needsPermission(): boolean {
+  if (typeof window === "undefined") return false;
+  const D = (window as unknown as { DeviceOrientationEvent?: IOSDeviceOrientationEvent })
+    .DeviceOrientationEvent;
+  return !!D && typeof D.requestPermission === "function";
+}
+
+/**
+ * Request compass permission AND attach the global listener. iOS requires this
+ * to run inside a user gesture, so call it synchronously from the "start a
+ * yonder" tap (see lib usage). Safe to call repeatedly; attaching is idempotent.
+ */
 export async function primeOrientation(): Promise<void> {
   if (typeof window === "undefined") return;
   const D = (window as unknown as { DeviceOrientationEvent?: IOSDeviceOrientationEvent })
     .DeviceOrientationEvent;
   if (D && typeof D.requestPermission === "function") {
     try {
-      await D.requestPermission();
+      const s = await D.requestPermission();
+      if (s !== "granted") return;
     } catch {
-      // denied or unavailable; the in-walk calibrate prompt is the fallback
+      return; // denied / not in a gesture; the calibrate prompt is the fallback
     }
   }
+  attach();
 }
 
 export function useHeading() {
-  const [heading, setHeading] = useState<number | null>(null);
-  const [supported, setSupported] = useState(true);
-  const attached = useRef(false);
-
-  const handler = useCallback((raw: Event) => {
-    const e = raw as OrientationEventWithWebkit;
-    let h: number | null = null;
-    if (
-      typeof e.webkitCompassHeading === "number" &&
-      !Number.isNaN(e.webkitCompassHeading)
-    ) {
-      h = e.webkitCompassHeading;
-    } else if (typeof e.alpha === "number" && e.alpha != null) {
-      h = (360 - e.alpha) % 360;
-    }
-    if (h != null) setHeading(h);
-  }, []);
-
-  const attach = useCallback(() => {
-    if (attached.current) return;
-    attached.current = true;
-    if ("ondeviceorientationabsolute" in window) {
-      window.addEventListener("deviceorientationabsolute", handler, true);
-    }
-    window.addEventListener("deviceorientation", handler, true);
-  }, [handler]);
-
-  /** MUST be called from a user gesture (button tap) on iOS. */
-  const requestAccess = useCallback(async () => {
-    if (typeof window === "undefined") return false;
-    const D = (window as unknown as { DeviceOrientationEvent?: IOSDeviceOrientationEvent })
-      .DeviceOrientationEvent;
-    if (!D) {
-      setSupported(false);
-      return false;
-    }
-    if (typeof D.requestPermission === "function") {
-      try {
-        const s = await D.requestPermission();
-        if (s === "granted") {
-          attach();
-          return true;
-        }
-        return false;
-      } catch {
-        return false;
-      }
-    }
-    attach();
-    return true;
-  }, [attach]);
+  const [heading, setHeading] = useState<number | null>(currentHeading);
 
   useEffect(() => {
+    subscribers.add(setHeading);
+    setHeading(currentHeading);
+    // Where no permission gate exists (Android, desktop), attach right away so
+    // the scope spins without an explicit prime. iOS waits for primeOrientation
+    // (a gesture) and the calibrate prompt.
+    if (!needsPermission()) attach();
     return () => {
-      if (typeof window === "undefined") return;
-      window.removeEventListener("deviceorientationabsolute", handler, true);
-      window.removeEventListener("deviceorientation", handler, true);
-      attached.current = false;
+      subscribers.delete(setHeading);
     };
-  }, [handler]);
+  }, []);
 
-  return { heading, supported, requestAccess };
+  // Kept for the calibrate prompt + the start flow: request + attach on a tap.
+  const requestAccess = useCallback(async () => {
+    await primeOrientation();
+    return true;
+  }, []);
+
+  return { heading, requestAccess };
 }
