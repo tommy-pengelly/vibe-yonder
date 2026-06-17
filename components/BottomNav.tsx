@@ -18,6 +18,7 @@ export default function BottomNav() {
       <div className="flex justify-center">
         <Link
           href="/"
+          replace
           aria-label="Start a yonder"
           className="size-14 -mt-6 rounded-full flex items-center justify-center shadow-lg shadow-black/40 active:opacity-80 ring-1 ring-[var(--accent)]/60"
           style={{
@@ -49,6 +50,7 @@ function Tab({
   return (
     <Link
       href={href}
+      replace
       className={`flex flex-col items-center gap-0.5 px-1 py-1 text-[11px] ${
         active ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
       }`}
