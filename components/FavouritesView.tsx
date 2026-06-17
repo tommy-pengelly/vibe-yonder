@@ -1,19 +1,21 @@
 "use client";
-import { Footprints, Heart, Pencil, Plus, X } from "lucide-react";
+import { Footprints, Heart, MapPin, Pencil, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useGeolocation } from "@/hooks/useGeolocation";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
 import PlacePhoto from "@/components/PlacePhoto";
 import { BottomSheet, EmptyState, PageHeader, PageScaffold } from "@/components/ui";
 import { useAuthUser } from "@/lib/auth";
+import { fmtDist } from "@/lib/geo";
 import {
   loadFavourites,
   pushFavourite,
   removeFavourite,
   setFavouriteAlias,
 } from "@/lib/data";
-import type { FavouritePlace, RankedResult } from "@/lib/types";
+import type { FavouritePlace, Fix, RankedResult } from "@/lib/types";
 
 export default function FavouritesView({
   embedded = false,
@@ -37,6 +39,7 @@ export default function FavouritesView({
   const setAddOpen = onAddOpenChange ?? setAddOpenLocal;
   const router = useRouter();
   const { user } = useAuthUser();
+  const { fix } = useGeolocation(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -207,6 +210,7 @@ export default function FavouritesView({
       open={addOpen}
       onClose={() => setAddOpen(false)}
       onAdd={addFavourite}
+      position={fix}
     />
   );
 
@@ -257,22 +261,32 @@ function AddFavouriteSheet({
   open,
   onClose,
   onAdd,
+  position,
 }: {
   open: boolean;
   onClose: () => void;
   onAdd: (r: RankedResult) => void;
+  position: Fix | null;
 }) {
-  const { q, setQ, results, loading } = usePlaceSearch(null);
+  // With your location, results are local-first and show how far away each is,
+  // so it's quick to pick the right spot (this was the "hard to add" pain).
+  const { q, setQ, results, loading } = usePlaceSearch(position);
   return (
     <BottomSheet open={open} onClose={onClose} title="Add a place" minHeightVh={60}>
-      <input
-        autoFocus
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Search a place you love…"
-        className="w-full bg-transparent border-b border-[var(--border)] px-1 py-3 text-base outline-none focus:border-[var(--accent)] placeholder:text-[var(--muted)]/60"
-        inputMode="search"
-      />
+      <div className="relative">
+        <Search
+          className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]"
+          strokeWidth={1.75}
+        />
+        <input
+          autoFocus
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search a place you love…"
+          className="w-full rounded-full bg-[var(--surface-2)] border border-[var(--border)] pl-11 pr-4 py-3 text-base outline-none focus:border-[var(--accent)] placeholder:text-[var(--muted)]/60"
+          inputMode="search"
+        />
+      </div>
       <ul className="flex flex-col divide-y divide-[var(--border)] min-h-12">
         {loading && (
           <li className="text-sm text-[var(--muted)] py-2 px-1">Searching…</li>
@@ -283,12 +297,20 @@ function AddFavouriteSheet({
           </li>
         )}
         {results.map((r, i) => (
-          <li key={`${r.lat},${r.lon},${i}`}>
+          <li key={`${r.lat},${r.lon},${i}`} className="flex items-center gap-3">
+            <span className="shrink-0 size-9 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--muted)]">
+              <MapPin className="w-4 h-4" strokeWidth={1.75} />
+            </span>
             <button
               type="button"
               onClick={() => onAdd(r)}
-              className="w-full text-left py-3 hover:text-[var(--accent)]"
+              className="flex-1 text-left py-3 min-w-0 hover:text-[var(--accent)]"
             >
+              {r.dist != null && (
+                <div className="text-[11px] font-mono text-[var(--accent)] tabular-nums">
+                  {fmtDist(r.dist)} away
+                </div>
+              )}
               <div className="font-display text-base truncate">{r.name}</div>
               <div className="text-xs text-[var(--muted)] line-clamp-1">
                 {r.label}

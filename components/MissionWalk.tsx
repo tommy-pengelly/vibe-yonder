@@ -1,5 +1,5 @@
 "use client";
-import { ExternalLink } from "lucide-react";
+import { Compass, ExternalLink, Map as MapIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ARRIVAL_RADIUS_M, DEFAULT_MPP } from "@/lib/constants";
 import { crossTrack, fmtDist, haversine } from "@/lib/geo";
@@ -48,6 +48,10 @@ export default function MissionWalk({
   const b = yonder.targets[0] ?? null;
   const armed = !!yonder.lineArmed;
   const [directionsOpen, setDirectionsOpen] = useState(false);
+  // Default to the spinning, heading-up scope (clean, you-at-centre, the line +
+  // corridor around you). Toggle to the lane "full map" overview when you want
+  // to see the whole A→B and your trace.
+  const [overview, setOverview] = useState(false);
 
   const distToStart =
     a && position ? haversine(position.lat, position.lon, a.lat, a.lon) : null;
@@ -77,7 +81,24 @@ export default function MissionWalk({
     <div className="fixed inset-0 flex flex-col">
       {armed && a && b ? (
         <div className="absolute inset-0">
-          <LaneScope position={position} a={a} b={b} track={track} hideNumbers={hideNumbers} bands={yonder.bands} />
+          {overview ? (
+            <LaneScope position={position} a={a} b={b} track={track} hideNumbers={hideNumbers} bands={yonder.bands} />
+          ) : (
+            // The spinning heading-up scope, with the line + medal corridor drawn
+            // around you (lineOrigin = A, B is the gold marker). Clean, not the
+            // overwhelming fully-zoomed lane.
+            <Scope
+              position={position}
+              heading={heading}
+              track={track}
+              targets={[b]}
+              activeIndex={0}
+              mpp={DEFAULT_MPP}
+              hideNumbers={hideNumbers}
+              minimal
+              lineOrigin={a}
+            />
+          )}
         </div>
       ) : (
         <div className="absolute inset-0">
@@ -98,6 +119,21 @@ export default function MissionWalk({
       <WalkHeader
         kicker={isMission ? "Straight-line mission" : "Straight line"}
         title={armed ? "Hold the line" : "Walk to the start"}
+        right={
+          armed && a && b ? (
+            <button
+              type="button"
+              onClick={() => setOverview((v) => !v)}
+              aria-label={overview ? "Line view" : "Full map"}
+              aria-pressed={overview}
+              className={`inline-flex items-center justify-center size-9 rounded-full border border-[var(--border)] bg-black/30 backdrop-blur-sm ${
+                overview ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
+              }`}
+            >
+              {overview ? <Compass className="w-4 h-4" strokeWidth={1.75} /> : <MapIcon className="w-4 h-4" strokeWidth={1.75} />}
+            </button>
+          ) : undefined
+        }
       />
 
       {/* Go-to-start: distance chip, or the Start button on arrival. */}

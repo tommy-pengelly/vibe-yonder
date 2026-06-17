@@ -9,6 +9,25 @@ type IOSDeviceOrientationEvent = typeof DeviceOrientationEvent & {
   requestPermission?: () => Promise<"granted" | "denied" | "default">;
 };
 
+// Grab device-orientation (compass) permission while we still have a user
+// gesture. On iOS, requestPermission() ONLY works from inside a tap handler, so
+// call this synchronously from the "start a yonder" tap. Once granted it stays
+// granted, so the walk screen's later requestAccess() (which runs in an effect,
+// no gesture) then succeeds and the scope spins. Without this the compass never
+// prompts and the scope stays frozen north-up.
+export async function primeOrientation(): Promise<void> {
+  if (typeof window === "undefined") return;
+  const D = (window as unknown as { DeviceOrientationEvent?: IOSDeviceOrientationEvent })
+    .DeviceOrientationEvent;
+  if (D && typeof D.requestPermission === "function") {
+    try {
+      await D.requestPermission();
+    } catch {
+      // denied or unavailable; the in-walk calibrate prompt is the fallback
+    }
+  }
+}
+
 export function useHeading() {
   const [heading, setHeading] = useState<number | null>(null);
   const [supported, setSupported] = useState(true);

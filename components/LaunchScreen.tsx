@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { primeOrientation } from "@/hooks/useHeading";
 import CreateHub from "./CreateHub";
 
 // The landing: the immersive "let's go" launcher. It reuses CreateHub, but
@@ -15,6 +16,10 @@ export default function LaunchScreen() {
     <CreateHub
       position={fix}
       onStart={(targets, mode, opts) => {
+        // Grab compass permission NOW, while we have the tap (iOS needs a
+        // gesture); the walk screen requests it again in an effect where the
+        // gesture is gone, so without this the scope wouldn't spin.
+        void primeOrientation();
         // A wander with no targets must be flagged ambient, or the /walk handoff
         // ignores it (it only starts on targets.length || play === "ambient").
         const play = opts?.play ?? (targets.length === 0 ? "ambient" : undefined);
