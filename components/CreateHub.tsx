@@ -284,38 +284,19 @@ export default function CreateHub({
         </ul>
       )}
 
-      {/* Idle: your saved places (one tap = go), then the ways to go */}
+      {/* Idle: the ways to go, each its own pathway (browse -> detail -> act).
+          Just wander is the one instant action; the rest open their screen. */}
       {!typing && !building && !lineMode && (
-        <div className="flex flex-col gap-6 mt-1">
-          {favourites.length > 0 && (
-            <section className="flex flex-col gap-2">
-              <h2 className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
-                Your places
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {favourites.map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => onStart([toTarget(f)], "single")}
-                    className="rounded-full border border-[var(--border)] px-3.5 py-2 text-sm hover:border-[var(--accent)] hover:text-[var(--accent)]"
-                  >
-                    {f.alias || f.name}
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-          <div className="grid grid-cols-3 gap-2.5">
-            <ModeCard
-              icon={Compass}
-              title="Just wander"
-              accent
-              onClick={() => onStart([], "single")}
-            />
-            <ModeCard icon={MapIcon} title="Maps" onClick={() => router.push("/maps")} />
-            <ModeCard icon={Ruler} title="Missions" onClick={() => router.push("/missions")} />
-          </div>
+        <div className="grid grid-cols-2 gap-2.5 mt-1">
+          <ModeCard
+            icon={Compass}
+            title="Just wander"
+            accent
+            onClick={() => onStart([], "single")}
+          />
+          <ModeCard icon={MapIcon} title="Maps" onClick={() => router.push("/maps")} />
+          <ModeCard icon={Ruler} title="Missions" onClick={() => router.push("/missions")} />
+          <ModeCard icon={Star} title="Places" onClick={() => router.push("/favourites")} />
         </div>
       )}
 

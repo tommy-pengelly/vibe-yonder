@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { primeOrientation } from "@/hooks/useHeading";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
 import PlacePhoto from "@/components/PlacePhoto";
 import { BottomSheet, EmptyState, PageHeader, PageScaffold } from "@/components/ui";
@@ -53,6 +54,7 @@ export default function FavouritesView({
 
   const startYonder = (f: FavouritePlace) => {
     if (typeof window === "undefined") return;
+    void primeOrientation(); // grab the compass on this tap so the scope spins
     window.sessionStorage.setItem(
       "vibe-yonder.start",
       JSON.stringify({
