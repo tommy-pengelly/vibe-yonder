@@ -4,9 +4,8 @@
 // right now," not a per-user entitlement (that's the Yonder+ gating in
 // lib/plans.ts). Use a flag to park a feature that isn't pulling its weight yet.
 
-// The on-walk DISCOVERY layer: the faint constellation of nearby places on the
-// scope, the "around you" suggestions sheet, and the /api/nearby (Overpass)
-// fetches behind them. Off by default while the discovery taste is reworked, so
-// a wander stays a clean void: you, the marker, the place. Set
-// NEXT_PUBLIC_DISCOVERY=on to bring it back.
-export const DISCOVERY_ENABLED = process.env.NEXT_PUBLIC_DISCOVERY === "on";
+// The on-walk DISCOVERY layer: the constellation of nearby places on the scope,
+// the "around you" suggestions sheet, and the /api/nearby (Overpass + Wikidata)
+// fetches behind them. ON by default now the federated engine is good; set
+// NEXT_PUBLIC_DISCOVERY=off to park it again.
+export const DISCOVERY_ENABLED = process.env.NEXT_PUBLIC_DISCOVERY !== "off";
