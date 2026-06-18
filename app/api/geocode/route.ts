@@ -92,12 +92,10 @@ async function viaOverpassNearby(
     .split("")
     .map((c) => (/[a-z]/i.test(c) ? `[${c.toLowerCase()}${c.toUpperCase()}]` : c))
     .join("");
-  const r = 3000;
-  const around = `(around:${r},${near.lat},${near.lon})`;
-  const query =
-    `[out:json][timeout:15];` +
-    `(nwr["name"~"${ci}"]${around};nwr["brand"~"${ci}"]${around););` +
-    `out center 40;`;
+  const around = `(around:3000,${near.lat},${near.lon})`;
+  const nameSel = `nwr["name"~"${ci}"]${around};`;
+  const brandSel = `nwr["brand"~"${ci}"]${around};`;
+  const query = `[out:json][timeout:15];(${nameSel}${brandSel});out center 40;`;
   for (const endpoint of OVERPASS_ENDPOINTS) {
     try {
       const res = await fetch(endpoint, {
