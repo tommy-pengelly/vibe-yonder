@@ -29,6 +29,12 @@ export async function GET(req: NextRequest) {
   const lon = parseFloat(sp.get("lon") ?? "");
   const near =
     Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null;
+  // Nearby-POI search radius (metres): small by default to stay local + light;
+  // the client can pass a bigger value to "search wider". Clamped.
+  const radiusRaw = parseInt(sp.get("radius") ?? "", 10);
+  const radius = Number.isFinite(radiusRaw)
+    ? Math.min(15000, Math.max(500, radiusRaw))
+    : 1500;
 
   try {
     if (PROVIDER === "nominatim") {
@@ -42,7 +48,7 @@ export async function GET(req: NextRequest) {
     // the other.
     const [photon, overpass] = await Promise.allSettled([
       viaPhoton(q, near),
-      near ? viaOverpassNearby(q, near) : Promise.resolve<GeocodeResult[]>([]),
+      near ? viaOverpassNearby(q, near, radius) : Promise.resolve<GeocodeResult[]>([]),
     ]);
     const photonRes = photon.status === "fulfilled" ? photon.value : [];
     const nearbyRes = overpass.status === "fulfilled" ? overpass.value : [];
@@ -82,6 +88,7 @@ type OverpassEl = {
 async function viaOverpassNearby(
   q: string,
   near: { lat: number; lon: number },
+  radius: number,
 ): Promise<GeocodeResult[]> {
   const term = q.replace(/[^a-z0-9 ]/gi, " ").trim();
   if (term.length < 2) return [];
@@ -98,7 +105,7 @@ async function viaOverpassNearby(
   // hugely. The 3km radius still covers you. Photon keeps precise coords.
   const clat = near.lat.toFixed(2);
   const clon = near.lon.toFixed(2);
-  const around = `(around:3000,${clat},${clon})`;
+  const around = `(around:${radius},${clat},${clon})`;
   const nameSel = `nwr["name"~"${ci}"]${around};`;
   const brandSel = `nwr["brand"~"${ci}"]${around};`;
   const query = `[out:json][timeout:15];(${nameSel}${brandSel});out center 40;`;

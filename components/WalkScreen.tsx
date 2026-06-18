@@ -1,5 +1,6 @@
 "use client";
 import {
+  Check,
   ExternalLink,
   Eye,
   EyeOff,
@@ -401,21 +402,33 @@ export default function WalkScreen({
         title={headerLabel.title}
         titleAccessory={
           activeTarget ? (
-            <button
-              type="button"
-              onClick={() => void toggleFavourite()}
-              aria-label={favId ? "Remove from places" : "Save this place"}
-              aria-pressed={favId != null}
-              className={`shrink-0 size-7 flex items-center justify-center ${
-                favId ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
-              }`}
-            >
-              <Heart
-                className="w-5 h-5"
-                strokeWidth={1.75}
-                fill={favId ? "var(--accent)" : "none"}
-              />
-            </button>
+            <div className="flex items-center gap-0.5">
+              {!activeTarget.visited && (
+                <button
+                  type="button"
+                  onClick={() => onSetVisited(activeTarget.id, true)}
+                  aria-label="Mark this place visited"
+                  className="shrink-0 size-7 flex items-center justify-center text-[var(--muted)] hover:text-[var(--accent)]"
+                >
+                  <Check className="w-5 h-5" strokeWidth={1.75} />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => void toggleFavourite()}
+                aria-label={favId ? "Remove from places" : "Save this place"}
+                aria-pressed={favId != null}
+                className={`shrink-0 size-7 flex items-center justify-center ${
+                  favId ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                }`}
+              >
+                <Heart
+                  className="w-5 h-5"
+                  strokeWidth={1.75}
+                  fill={favId ? "var(--accent)" : "none"}
+                />
+              </button>
+            </div>
           ) : undefined
         }
         right={

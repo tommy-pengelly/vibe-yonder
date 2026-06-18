@@ -15,6 +15,9 @@ import type { FavouritePlace, Fix, GeocodeResult, RankedResult } from "@/lib/typ
 export function usePlaceSearch(
   position: Fix | null,
   favourites: FavouritePlace[] = [],
+  /** Nearby-POI search radius (m). Omit for the route default (1500). Changing
+   * it re-runs the search, so a "search wider" control can widen the net. */
+  radius?: number,
 ) {
   const [q, setQ] = useState("");
   const [geo, setGeo] = useState<RankedResult[]>([]);
@@ -51,7 +54,8 @@ export function usePlaceSearch(
       const pos = posRef.current;
       try {
         const near = pos ? `&lat=${pos.lat}&lon=${pos.lon}` : "";
-        const res = await fetch(`/api/geocode?q=${encodeURIComponent(term)}${near}`);
+        const rad = radius ? `&radius=${radius}` : "";
+        const res = await fetch(`/api/geocode?q=${encodeURIComponent(term)}${near}${rad}`);
         if (myReq !== reqId.current) return;
         if (!res.ok) {
           setError("Search failed");
@@ -71,7 +75,7 @@ export function usePlaceSearch(
       }
     }, 300);
     return () => clearTimeout(handle);
-  }, [q]);
+  }, [q, radius]);
 
   const reset = () => {
     setQ("");

@@ -41,7 +41,12 @@ export default function CreateHub({
 }) {
   const router = useRouter();
   const [favourites, setFavourites] = useState<FavouritePlace[]>([]);
-  const { q, setQ, results, loading } = usePlaceSearch(position, favourites);
+  const [wide, setWide] = useState(false);
+  const { q, setQ, results, loading } = usePlaceSearch(
+    position,
+    favourites,
+    wide ? 8000 : undefined,
+  );
   const [picks, setPicks] = useState<Target[]>([]);
   const [mode, setMode] = useState<YonderMode>("collection");
   const [detail, setDetail] = useState<(PlaceLite & RankedResult) | null>(null);
@@ -281,6 +286,17 @@ export default function CreateHub({
               </button>
             </li>
           ))}
+          {position && q.trim().length >= 3 && (
+            <li className="py-2.5 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setWide((w) => !w)}
+                className="text-xs text-[var(--muted)] hover:text-[var(--accent)]"
+              >
+                {wide ? "Searching wider · tap to narrow" : "Not here? Search wider"}
+              </button>
+            </li>
+          )}
         </ul>
       )}
 
