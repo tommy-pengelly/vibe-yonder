@@ -465,9 +465,9 @@ function ordinal(n: number): string {
   return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
 }
 
-// Publish a straight line as a mission. Defaults to the standard medal tiers; a
-// "Customise" reveal lets the creator set each band (preset quick-fills + raw
-// metres). Future: gate customising behind premium.
+// Publish a straight line as a mission. The medal bands are front-and-centre so
+// the creator tunes how hard their line is, preset quick-fills (Casual /
+// Standard / Precision) + raw metres per medal.
 function MakeMissionSheet({
   open,
   onClose,
@@ -479,7 +479,7 @@ function MakeMissionSheet({
   busy: boolean;
   onCreate: (bands: MedalBands) => void;
 }) {
-  const [custom, setCustom] = useState(false);
+  const [custom, setCustom] = useState(true);
   const [bands, setBands] = useState<MedalBands>(DEFAULT_BANDS);
   const keys = ["platinum", "gold", "silver", "bronze"] as const;
   return (

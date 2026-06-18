@@ -90,9 +90,27 @@ export default function MissionScoreboard({ id }: { id: string }) {
             compare={comparing ? 0 : null}
             bands={mission?.bands}
           />
-          <p className="text-[10px] uppercase tracking-widest text-[var(--muted)] text-center">
-            Every run, held against the line · tap a name to trace it
-          </p>
+          {highlight != null && !comparing && board[highlight] ? (
+            <div className="rounded-2xl border border-[var(--accent)]/40 bg-[var(--surface)] px-4 py-3 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-display text-base truncate">
+                  #{highlight + 1} · {board[highlight].handle}
+                  {board[highlight].isMe ? " · you" : ""}
+                </div>
+                <div className="text-[11px] font-mono text-[var(--muted)] tabular-nums">
+                  max {fmtDist(board[highlight].maxDeviation)} off · avg{" "}
+                  {fmtDist(board[highlight].avgDeviation)} off
+                </div>
+              </div>
+              <div className="font-display text-lg text-[var(--accent)] shrink-0">
+                {MEDAL_LABEL[board[highlight].medal]}
+              </div>
+            </div>
+          ) : (
+            <p className="text-[10px] uppercase tracking-widest text-[var(--muted)] text-center">
+              Every run, held against the line · tap a name to trace it
+            </p>
+          )}
           {canCompare && (
             <button
               type="button"

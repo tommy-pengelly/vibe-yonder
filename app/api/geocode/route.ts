@@ -92,7 +92,13 @@ async function viaOverpassNearby(
     .split("")
     .map((c) => (/[a-z]/i.test(c) ? `[${c.toLowerCase()}${c.toUpperCase()}]` : c))
     .join("");
-  const around = `(around:3000,${near.lat},${near.lon})`;
+  // Snap the centre to a ~1km grid (2dp ≈ 1.1km) so everyone searching the same
+  // term in the same area shares ONE cached Overpass result — turns a per-user
+  // cache miss into a hit and cuts the load on the (per-IP-limited) endpoint
+  // hugely. The 3km radius still covers you. Photon keeps precise coords.
+  const clat = near.lat.toFixed(2);
+  const clon = near.lon.toFixed(2);
+  const around = `(around:3000,${clat},${clon})`;
   const nameSel = `nwr["name"~"${ci}"]${around};`;
   const brandSel = `nwr["brand"~"${ci}"]${around};`;
   const query = `[out:json][timeout:15];(${nameSel}${brandSel});out center 40;`;
