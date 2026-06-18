@@ -1,7 +1,7 @@
 "use client";
-import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { PageHeader, PageScaffold } from "@/components/ui";
 import { useAuthUser, signOut } from "@/lib/auth";
 import { amAdmin } from "@/lib/data";
 import { useSettings } from "@/lib/settings";
@@ -29,24 +29,8 @@ export default function SettingsView() {
   };
 
   return (
-    <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-8 pb-10 gap-6">
-      <header className="flex items-center gap-3">
-        <Link
-          href="/you"
-          aria-label="Back"
-          className="size-9 -ml-2 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]"
-        >
-          <ArrowLeft className="w-4 h-4" strokeWidth={1.75} />
-        </Link>
-        <div>
-          <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
-            Settings
-          </span>
-          <h1 className="font-display text-3xl tracking-tight leading-none">
-            Your settings
-          </h1>
-        </div>
-      </header>
+    <PageScaffold>
+      <PageHeader kicker="Settings" title="Your settings" backHref="/you" />
 
       <section className="flex flex-col gap-4">
         <h2 className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
@@ -153,7 +137,7 @@ export default function SettingsView() {
           </p>
         )}
       </section>
-    </div>
+    </PageScaffold>
   );
 }
 

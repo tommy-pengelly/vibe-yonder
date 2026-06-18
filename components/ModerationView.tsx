@@ -1,8 +1,8 @@
 "use client";
-import { ArrowLeft, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useGoBack } from "@/components/ui";
+import { PageHeader, PageScaffold } from "@/components/ui";
 import { useAuthUser } from "@/lib/auth";
 import {
   amAdmin,
@@ -26,7 +26,6 @@ import {
 import type { ReportItem } from "@/lib/types";
 
 export default function ModerationView() {
-  const goBack = useGoBack("/you");
   const { user } = useAuthUser();
   const [admin, setAdmin] = useState<boolean | null>(null);
   const [reports, setReports] = useState<ReportItem[]>([]);
@@ -94,18 +93,12 @@ export default function ModerationView() {
   const targetHref = (r: ReportItem) => (r.targetType === "yonder" ? `/yonder/${r.targetId}` : undefined);
 
   return (
-    <>
-      <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-8 pb-10 gap-5">
-        <header className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={goBack} aria-label="Back" className="size-9 -ml-2 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]">
-              <ArrowLeft className="w-4 h-4" strokeWidth={1.75} />
-            </button>
-            <div>
-              <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">Admin</span>
-              <h1 className="font-display text-2xl tracking-tight leading-none">Moderation</h1>
-            </div>
-          </div>
+    <PageScaffold>
+      <PageHeader
+        kicker="Admin"
+        title="Moderation"
+        backHref="/you"
+        action={
           <button
             type="button"
             onClick={() => setShowResolved((v) => !v)}
@@ -113,9 +106,10 @@ export default function ModerationView() {
           >
             {showResolved ? "Hide resolved" : "Show resolved"}
           </button>
-        </header>
+        }
+      />
 
-        <section className="flex flex-col gap-3 rounded-2xl border border-[var(--border)] p-4">
+      <section className="flex flex-col gap-3 rounded-2xl border border-[var(--border)] p-4">
           <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
             Yonder+ (comp accounts)
           </span>
@@ -234,7 +228,6 @@ export default function ModerationView() {
             })}
           </ul>
         )}
-      </div>
-    </>
+    </PageScaffold>
   );
 }

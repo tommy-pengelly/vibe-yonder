@@ -1,11 +1,11 @@
 "use client";
-import { ArrowLeft, Bookmark, Flag, Navigation, Sprout } from "lucide-react";
+import { Bookmark, Flag, Navigation, Sprout } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
 import { Trace } from "@/components/ui/viz";
-import { useGoBack } from "@/components/ui";
+import { PageHeader, PageScaffold } from "@/components/ui";
 import { primeOrientation } from "@/hooks/useHeading";
 import { useAuthUser } from "@/lib/auth";
 import { getSharedYonder, reportContent, saveYonderPlaces, setGrub } from "@/lib/data";
@@ -19,7 +19,6 @@ function fmtYondered(v: number): string {
 
 export default function SharedYonderView({ id }: { id: string }) {
   const router = useRouter();
-  const goBack = useGoBack("/");
   const { user } = useAuthUser();
   const [y, setY] = useState<FeedYonder | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -95,10 +94,8 @@ export default function SharedYonderView({ id }: { id: string }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-6 pb-10 gap-3">
-      <button type="button" onClick={goBack} aria-label="Back" className="size-9 -ml-2 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]">
-        <ArrowLeft className="w-4 h-4" strokeWidth={1.75} />
-      </button>
+    <PageScaffold>
+      <PageHeader title="Yonder" backHref="/community" />
 
       {/* The shared yonder, as an expanded feed card (header → media → stats →
           actions), matching the Community card. */}
@@ -160,6 +157,6 @@ export default function SharedYonderView({ id }: { id: string }) {
       </button>
 
       <AuthModal open={authOpen} reason={authReason} onClose={() => setAuthOpen(false)} />
-    </div>
+    </PageScaffold>
   );
 }

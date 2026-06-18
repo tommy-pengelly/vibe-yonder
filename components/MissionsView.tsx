@@ -1,9 +1,8 @@
 "use client";
 import { Plus, Ruler } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { EmptyState, PageHeader, PageScaffold } from "@/components/ui";
+import { BrowseCard, EmptyState, PageHeader, PageScaffold } from "@/components/ui";
 import MissionLineViz from "@/components/MissionLineViz";
 import { loadMissions, type Mission } from "@/lib/data";
 import { fmtDist } from "@/lib/geo";
@@ -62,21 +61,14 @@ export default function MissionsView() {
         <ul className="flex flex-col gap-3">
           {missions.map((m) => (
             <li key={m.id}>
-              <Link
+              <BrowseCard
                 href={`/missions/${m.id}`}
-                className="block rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden hover:border-[var(--accent)]/50 transition-colors"
-              >
-                <div className="px-4 pt-4 pb-1">
-                  <div className="font-display text-xl tracking-tight truncate">
-                    {m.name ?? "Straight-line mission"}
-                  </div>
-                  <div className="text-xs text-[var(--warm)] mt-0.5">
-                    {m.who} · {fmtDist(m.distanceM)} · {m.attempts ?? 0}{" "}
-                    {m.attempts === 1 ? "attempt" : "attempts"}
-                  </div>
-                </div>
-                <MissionLineViz attempts={[]} highlight={null} bands={m.bands} height={120} />
-              </Link>
+                title={m.name ?? "Straight-line mission"}
+                meta={`${m.who} · ${fmtDist(m.distanceM)} · ${m.attempts ?? 0} ${
+                  m.attempts === 1 ? "attempt" : "attempts"
+                }`}
+                viz={<MissionLineViz attempts={[]} highlight={null} bands={m.bands} height={120} />}
+              />
             </li>
           ))}
         </ul>

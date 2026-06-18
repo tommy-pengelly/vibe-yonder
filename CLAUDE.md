@@ -127,6 +127,7 @@ Nav: a **Community · ⊕ · Me** three-slot bottom bar. **⊕** (centre, the br
 
 - **Next.js App Router + TypeScript.** Screens thin; logic in `lib/` (geo, stats — *never pace* —, rank, maps, wake). Framework-free and testable.
 - **Client components** for sensors/canvas; the **scope is a `<canvas>`**.
+- **UI is componentised — see [COMPONENTS.md](COMPONENTS.md) (the component law).** Member screens are `PageScaffold` + `PageHeader` + shared primitives from `components/ui/` (`Card`, `BrowseCard`, `Tile`, `Chip`, `Button`, `IconButton`, `ListRow`, `EmptyState`, `BottomSheet`). Don't hand-roll card surfaces, stat tiles, pills, buttons, or page shells. Only the launcher, the walk, and the recap opt out (special by design).
 - **Supabase** for auth + data, **Row Level Security on every table** (rows tied to `auth.uid()`). Guest data in `localStorage`, imported on sign-up. **The object model lives in [SCHEMA.md](SCHEMA.md) — read it before touching the schema, `lib/data/*`, or anything social.** The dual-mode layer (`lib/data/*`) is cloud-when-signed-in, `localStorage` otherwise; every op is async.
 - **Two server routes**, both keyless, identifying User-Agent + cache:
   - `/api/geocode` — place search. Default provider **Photon** (proximity-biased, autocomplete-friendly); set `GEOCODER=nominatim` to fall back. Passes `importance` through for ranking. (We left Nominatim's *public* server because it bans search-as-you-type and commercial production traffic.)

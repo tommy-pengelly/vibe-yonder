@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import SimilarNearby from "@/components/SimilarNearby";
+import { Button, PageScaffold } from "@/components/ui";
 import { fmtDist } from "@/lib/geo";
 import { getMap, saveMap } from "@/lib/data";
 import {
@@ -151,7 +152,7 @@ export default function MapEditor({ editId }: { editId?: string } = {}) {
   const showOrderControls = mode === "ordered";
 
   return (
-    <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-8 pb-10 gap-5">
+    <PageScaffold>
       <header className="flex items-center gap-3">
         <Link
           href="/maps"
@@ -295,15 +296,15 @@ export default function MapEditor({ editId }: { editId?: string } = {}) {
         />
       )}
 
-      <button
-        type="button"
+      <Button
+        variant="primary"
         onClick={() => void save()}
         disabled={items.length === 0}
-        className="mt-auto rounded-full bg-[var(--accent)] text-black font-semibold py-3 active:opacity-80 disabled:opacity-30"
+        className="mt-auto"
       >
         Save map
-      </button>
-    </div>
+      </Button>
+    </PageScaffold>
   );
 }
 

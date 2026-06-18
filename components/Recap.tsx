@@ -17,6 +17,7 @@ import type {
   SavedYonder,
 } from "@/lib/types";
 import BottomSheet from "./ui/BottomSheet";
+import { Tile } from "@/components/ui";
 import PlacePhoto from "./PlacePhoto";
 import ShareControl from "./ShareControl";
 
@@ -606,31 +607,3 @@ function RecapAddPlace({
   );
 }
 
-function Tile({
-  label,
-  value,
-  hero,
-}: {
-  label: string;
-  value: string;
-  hero?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-2xl border border-[var(--border)] px-4 py-4 flex flex-col ${
-        hero ? "bg-[var(--surface)]" : "bg-transparent"
-      }`}
-    >
-      <div className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
-        {label}
-      </div>
-      <div
-        className={`font-display tabular-nums mt-1 ${
-          hero ? "text-3xl text-[var(--accent)]" : "text-2xl"
-        }`}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
