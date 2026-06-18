@@ -10,7 +10,14 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BottomSheet, EmptyState, PageHeader, PageScaffold } from "@/components/ui";
+import {
+  BottomSheet,
+  BrowseCard,
+  EmptyState,
+  IconButton,
+  PageHeader,
+  PageScaffold,
+} from "@/components/ui";
 import { DotMap } from "@/components/ui/viz";
 import { useAuthUser } from "@/lib/auth";
 import { deleteMap, loadMaps } from "@/lib/data";
@@ -120,46 +127,40 @@ export default function MapsView() {
       ) : (
         <ul className="flex flex-col gap-3">
           {maps.map((m) => (
-            <li key={m.id} className="relative">
-              <Link
+            <li key={m.id}>
+              <BrowseCard
                 href={`/maps/${m.id}`}
-                className="block rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden hover:border-[var(--accent)]/50 transition-colors"
-              >
-                <div className="px-4 pt-4 pb-1 pr-12">
-                  <div className="flex items-center gap-2">
-                    <div className="font-display text-xl tracking-tight truncate">
-                      {m.name}
-                    </div>
-                    {m.visibility === "public" && (
-                      <span className="shrink-0 text-[9px] uppercase tracking-widest text-[var(--accent)] border border-[var(--accent)]/40 rounded-full px-1.5 py-0.5">
-                        Shared
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-[var(--warm)] mt-0.5">
-                    {mapSubtitle(m)}
-                  </div>
-                </div>
-                {m.items.length > 0 && (
-                  <DotMap
-                    points={toUnitBox(m.items)}
-                    height={120}
-                    scaleLabel={
-                      m.items.length > 1
-                        ? `${fmtDist(spanMeters(m.items))} across`
-                        : undefined
-                    }
+                title={m.name}
+                badge={
+                  m.visibility === "public" ? (
+                    <span className="shrink-0 text-[9px] uppercase tracking-widest text-[var(--accent)] border border-[var(--accent)]/40 rounded-full px-1.5 py-0.5">
+                      Shared
+                    </span>
+                  ) : undefined
+                }
+                meta={mapSubtitle(m)}
+                viz={
+                  m.items.length > 0 ? (
+                    <DotMap
+                      points={toUnitBox(m.items)}
+                      height={120}
+                      scaleLabel={
+                        m.items.length > 1
+                          ? `${fmtDist(spanMeters(m.items))} across`
+                          : undefined
+                      }
+                    />
+                  ) : undefined
+                }
+                action={
+                  <IconButton
+                    icon={MoreVertical}
+                    label={`Actions for ${m.name}`}
+                    onClick={() => setActionMap(m)}
+                    className="bg-[var(--background)]/40"
                   />
-                )}
-              </Link>
-              <button
-                type="button"
-                onClick={() => setActionMap(m)}
-                aria-label={`Actions for ${m.name}`}
-                className="absolute top-3 right-3 size-8 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)] bg-[var(--background)]/40"
-              >
-                <MoreVertical className="w-4 h-4" strokeWidth={1.75} />
-              </button>
+                }
+              />
             </li>
           ))}
         </ul>
