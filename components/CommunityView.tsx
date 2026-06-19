@@ -227,7 +227,7 @@ function FeedItemCard({
       grub={a.gstate(y.id, y)}
       saved={!!a.saved[y.id]}
       onGrub={() => a.grub("post", y.id)}
-      onSave={() => a.save({ id: y.id, name: y.caption ?? y.area, destinations: y.destinations })}
+      onSave={() => a.saveYonder(y)}
     />
   );
 }
@@ -496,7 +496,7 @@ function SearchSheet({
               grub={a.gstate(y.id, y)}
               saved={!!a.saved[y.id]}
               onGrub={() => a.grub("post", y.id)}
-              onSave={() => a.save({ id: y.id, name: y.caption ?? y.area, destinations: y.destinations })}
+              onSave={() => a.saveYonder(y)}
             />
           ))}
           {results &&

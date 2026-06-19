@@ -2,8 +2,9 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuthUser } from "@/lib/auth";
+import { yonderSavePlan } from "@/components/feed/Cards";
 import { saveMission, saveYonderPlaces, setGrub } from "@/lib/data";
-import type { Destination, FeedMission, Target } from "@/lib/types";
+import type { Destination, FeedMission, FeedYonder, Target } from "@/lib/types";
 
 type GrubMap = Record<string, { count: number; active: boolean }>;
 
@@ -50,6 +51,17 @@ export function useFeedActions() {
     if (saved[item.id]) return;
     setSaved((s) => ({ ...s, [item.id]: true }));
     void saveYonderPlaces(item.name, item.destinations);
+  };
+
+  // Saving a yonder saves the PLAN under it: its mission (a straight line) or a
+  // map of its places (created if needed). Never the yonder itself.
+  const saveYonder = (y: FeedYonder) => {
+    if (!requireAuth("Sign in to keep this for later.")) return;
+    const plan = yonderSavePlan(y);
+    if (!plan || saved[y.id]) return;
+    setSaved((s) => ({ ...s, [y.id]: true }));
+    if (plan.kind === "mission" && y.missionId) void saveMission(y.missionId, true);
+    else void saveYonderPlaces(y.caption ?? y.area, y.destinations);
   };
 
   // Bookmark a mission (keyed on the post id for optimistic state).
@@ -101,6 +113,7 @@ export function useFeedActions() {
     gstate,
     grub,
     save,
+    saveYonder,
     saveMissionPost,
     attemptMission,
   };

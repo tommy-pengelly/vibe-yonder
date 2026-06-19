@@ -121,17 +121,35 @@ function Stats({ children }: { children: ReactNode }) {
   );
 }
 
-// Social footer: grub bottom-left (kudos position), Save bottom-right.
+// What "Save" on a yonder actually keeps: the plan underneath it. A straight
+// line saves its mission; a multi-place wander saves a map; a single place a
+// favourite; an ambient wander has nothing to save (null ⇒ no Save button).
+export function yonderSavePlan(
+  y: FeedYonder,
+): { kind: "mission" | "map" | "place"; label: string } | null {
+  if (y.missionId) return { kind: "mission", label: "Save mission" };
+  if (y.destinations.length >= 2) return { kind: "map", label: "Save map" };
+  if (y.destinations.length === 1) return { kind: "place", label: "Save place" };
+  return null;
+}
+
+// Social footer: grub bottom-left (kudos position), Save bottom-right. The save
+// label is explicit (Save map / Save mission) so it never implies you're saving
+// "the yonder" itself; omit it when there's nothing under the wander to keep.
 function SocialFooter({
   grub,
   onGrub,
   saved,
   onSave,
+  saveLabel = "Save",
+  showSave = true,
 }: {
   grub: { count: number; active: boolean };
   onGrub: () => void;
   saved: boolean;
   onSave: () => void;
+  saveLabel?: string;
+  showSave?: boolean;
 }) {
   return (
     <div
@@ -140,17 +158,19 @@ function SocialFooter({
     >
       <GrubButton count={grub.count} active={grub.active} onToggle={onGrub} />
       <div className="flex-1" />
-      <button
-        type="button"
-        onClick={onSave}
-        disabled={saved}
-        className={`inline-flex items-center gap-1.5 text-[13px] py-1.5 px-1 ${
-          saved ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
-        }`}
-      >
-        <Bookmark className="w-4 h-4" strokeWidth={1.75} />
-        {saved ? "Saved" : "Save"}
-      </button>
+      {showSave && (
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={saved}
+          className={`inline-flex items-center gap-1.5 text-[13px] py-1.5 px-1 ${
+            saved ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
+          }`}
+        >
+          <Bookmark className="w-4 h-4" strokeWidth={1.75} />
+          {saved ? "Saved" : saveLabel}
+        </button>
+      )}
     </div>
   );
 }
@@ -291,10 +311,18 @@ export function YonderCard({
   onGrub: () => void;
   onSave: () => void;
 }) {
+  const plan = yonderSavePlan(y);
   return (
     <CardShell href={`/yonder/${y.id}`}>
       <YonderCardBody y={y} />
-      <SocialFooter grub={grub} onGrub={onGrub} saved={saved} onSave={onSave} />
+      <SocialFooter
+        grub={grub}
+        onGrub={onGrub}
+        saved={saved}
+        onSave={onSave}
+        saveLabel={plan?.label ?? "Save"}
+        showSave={!!plan}
+      />
     </CardShell>
   );
 }
