@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import AppChrome from "@/components/AppChrome";
 import "./globals.css";
 
@@ -84,6 +85,7 @@ export default function RootLayout({
     >
       <body>
         <AppChrome>{children}</AppChrome>
+        <Analytics />
       </body>
     </html>
   );
