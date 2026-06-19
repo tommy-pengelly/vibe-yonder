@@ -125,48 +125,62 @@ export default function Scope({
     // is layered like real space, a wide diffuse halo, then a STACK of clumpy
     // two-tone blobs (one per member place) blended additively so they melt into
     // one organic, multi-hued shape that follows the cluster (never a disc).
-    if (position && !minimal) {
+    //
+    // Wrapped so a canvas error (some engines throw on gradients) can NEVER take
+    // down the rest of the scope: catch, restore, carry on. A soft glow is the
+    // most disposable thing on screen, the dot and markers are not.
+    if (position && !minimal && nebulae.length && Number.isFinite(mpp) && mpp > 0) {
+      // A radius the canvas will accept (finite, positive, bounded).
+      const okR = (r: number) => Number.isFinite(r) && r > 0.5;
       ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      for (const neb of nebulae) {
-        const cRaw = projectAt(neb, position, cx, cy, mpp);
-        const cPos = applyRot(cRaw.x, cRaw.y);
-        const spreadPx = neb.radiusM / mpp;
-        if (Math.hypot(cPos.x - cx, cPos.y - cy) - (spreadPx + rimR * 0.7) > rimR)
-          continue;
+      try {
+        ctx.globalCompositeOperation = "lighter";
+        for (const neb of nebulae) {
+          const cRaw = projectAt(neb, position, cx, cy, mpp);
+          const cPos = applyRot(cRaw.x, cRaw.y);
+          const spreadPx = neb.radiusM / mpp;
+          if (Math.hypot(cPos.x - cx, cPos.y - cy) - (spreadPx + rimR * 0.7) > rimR)
+            continue;
 
-        // 1) Diffuse halo: one big, very faint cloud, rose centre to plum edge.
-        const haloR = Math.min(rimR * 1.5, Math.max(70, spreadPx * 1.6));
-        const halo = ctx.createRadialGradient(cPos.x, cPos.y, 0, cPos.x, cPos.y, haloR);
-        halo.addColorStop(0, `rgba(${NEBULA_CORE}, 0.05)`);
-        halo.addColorStop(0.55, `rgba(${NEBULA_EDGE}, 0.035)`);
-        halo.addColorStop(1, `rgba(${NEBULA_EDGE}, 0)`);
-        ctx.fillStyle = halo;
-        ctx.beginPath();
-        ctx.arc(cPos.x, cPos.y, haloR, 0, Math.PI * 2);
-        ctx.fill();
+          // 1) Diffuse halo: one big, very faint cloud, rose centre to plum edge.
+          const haloR = Math.min(rimR * 1.5, Math.max(70, spreadPx * 1.6));
+          if (okR(haloR)) {
+            const halo = ctx.createRadialGradient(cPos.x, cPos.y, 0, cPos.x, cPos.y, haloR);
+            halo.addColorStop(0, `rgba(${NEBULA_CORE}, 0.05)`);
+            halo.addColorStop(0.55, `rgba(${NEBULA_EDGE}, 0.035)`);
+            halo.addColorStop(1, `rgba(${NEBULA_EDGE}, 0)`);
+            ctx.fillStyle = halo;
+            ctx.beginPath();
+            ctx.arc(cPos.x, cPos.y, haloR, 0, Math.PI * 2);
+            ctx.fill();
+          }
 
-        // 2) Structure: a soft blob per member place, size + hue varied so the
-        //    gas looks clumpy and multi-toned. Tight knot ⇒ small/bright,
-        //    sprawl ⇒ wide/soft. Seeds are position-based so it never flickers.
-        const base = spreadPx / Math.sqrt(neb.weight) + 24;
-        for (const p of neb.points) {
-          const raw = projectAt(p, position, cx, cy, mpp);
-          const { x, y } = applyRot(raw.x, raw.y);
-          const key = `${p.lat.toFixed(5)},${p.lon.toFixed(5)}`;
-          const s1 = hashUnit(key, 7);
-          const rPx = Math.min(rimR, base * (0.55 + s1 * 1.1));
-          const rgb = hashUnit(key, 11) < 0.38 ? NEBULA_EDGE : NEBULA_CORE;
-          const grad = ctx.createRadialGradient(x, y, 0, x, y, rPx);
-          grad.addColorStop(0, `rgba(${rgb}, ${(0.045 + s1 * 0.03).toFixed(3)})`);
-          grad.addColorStop(1, `rgba(${rgb}, 0)`);
-          ctx.fillStyle = grad;
-          ctx.beginPath();
-          ctx.arc(x, y, rPx, 0, Math.PI * 2);
-          ctx.fill();
+          // 2) Structure: a soft blob per member place, size + hue varied so the
+          //    gas looks clumpy and multi-toned. Tight knot ⇒ small/bright,
+          //    sprawl ⇒ wide/soft. Seeds are position-based so it never flickers.
+          const base = spreadPx / Math.sqrt(neb.weight) + 24;
+          for (const p of neb.points) {
+            const raw = projectAt(p, position, cx, cy, mpp);
+            const { x, y } = applyRot(raw.x, raw.y);
+            const key = `${p.lat.toFixed(5)},${p.lon.toFixed(5)}`;
+            const s1 = hashUnit(key, 7);
+            const rPx = Math.min(rimR, base * (0.55 + s1 * 1.1));
+            if (!okR(rPx)) continue;
+            const rgb = hashUnit(key, 11) < 0.38 ? NEBULA_EDGE : NEBULA_CORE;
+            const grad = ctx.createRadialGradient(x, y, 0, x, y, rPx);
+            grad.addColorStop(0, `rgba(${rgb}, ${(0.045 + s1 * 0.03).toFixed(3)})`);
+            grad.addColorStop(1, `rgba(${rgb}, 0)`);
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(x, y, rPx, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
+      } catch {
+        // swallow: the nebula is decoration, never worth a blank scope
+      } finally {
+        ctx.restore();
       }
-      ctx.restore();
     }
 
     // --- Straight-line corridor: the line A→B + faint medal bands, drawn
