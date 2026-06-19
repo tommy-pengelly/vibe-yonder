@@ -2,6 +2,37 @@
 // map's relative POI scatter. Points are pre-normalised to a 0–100 box (see
 // lib/geo `toUnitBox`, or the obfuscated 0–100 mementos from shared content).
 
+// A four-point twinkle (a place you saw), drawn instead of a plain dot so the
+// recap reads as a sky. Concave sides give the sparkle; a faint halo softens it.
+// cx/cy/r are in the same units as the surrounding viewBox.
+export function Twinkle({
+  cx,
+  cy,
+  r = 3.2,
+  color = "var(--foreground)",
+  opacity = 0.85,
+}: {
+  cx: number;
+  cy: number;
+  r?: number;
+  color?: string;
+  opacity?: number;
+}) {
+  const ir = r * 0.34; // inner radius → pointy arms
+  const pts: string[] = [];
+  for (let i = 0; i < 8; i++) {
+    const ang = (Math.PI / 4) * i - Math.PI / 2;
+    const rad = i % 2 === 0 ? r : ir;
+    pts.push(`${(cx + rad * Math.cos(ang)).toFixed(2)},${(cy + rad * Math.sin(ang)).toFixed(2)}`);
+  }
+  return (
+    <g opacity={opacity}>
+      <circle cx={cx} cy={cy} r={r * 1.5} fill={color} opacity={0.12} />
+      <polygon points={pts.join(" ")} fill={color} />
+    </g>
+  );
+}
+
 // A small scale caption (e.g. "≈ 1.2 km across") in the corner of a card.
 function ScaleTag({ label }: { label?: string }) {
   if (!label) return null;
@@ -17,11 +48,14 @@ export function Trace({
   height = 150,
   fill = false,
   scaleLabel,
+  stars,
 }: {
   points: number[][];
   height?: number;
   fill?: boolean;
   scaleLabel?: string;
+  /** Places seen, in the same 0–100 frame as `points`, drawn as twinkles. */
+  stars?: number[][];
 }) {
   const d =
     points.length < 2
@@ -36,6 +70,9 @@ export function Trace({
           className="w-full h-full block"
           aria-hidden="true"
         >
+          {stars?.map(([x, y], i) => (
+            <Twinkle key={i} cx={x} cy={y} r={2.6} />
+          ))}
           <path
             d={d}
             fill="none"

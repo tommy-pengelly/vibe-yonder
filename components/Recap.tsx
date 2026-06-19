@@ -17,6 +17,7 @@ import type {
   SavedYonder,
 } from "@/lib/types";
 import BottomSheet from "./ui/BottomSheet";
+import { Twinkle } from "./ui/viz";
 import PlacePhoto from "./PlacePhoto";
 import ShareControl from "./ShareControl";
 
@@ -224,12 +225,9 @@ export default function Recap({
             className="w-full h-auto"
             aria-label="Walk path"
           >
-            {/* The places you saw, as faint stars the course threads. */}
+            {/* The places you saw, as faint twinkles the course threads. */}
             {destPts.map(([x, y], i) => (
-              <g key={`s${i}`}>
-                <circle cx={x} cy={y} r={7} fill="none" stroke="var(--foreground)" strokeWidth={1} opacity={0.22} />
-                <circle cx={x} cy={y} r={2.6} fill="var(--foreground)" opacity={0.8} />
-              </g>
+              <Twinkle key={`s${i}`} cx={x} cy={y} r={7} opacity={0.8} />
             ))}
             {/* Your course: a dotted line, warm but quiet, threading the sky. */}
             <path

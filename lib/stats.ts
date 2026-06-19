@@ -51,11 +51,17 @@ export function projectTrack(
   const maxLon = Math.max(...lons);
   const kx = Math.cos((((minLat + maxLat) / 2) * Math.PI) / 180);
   const span = Math.max((maxLon - minLon) * kx, maxLat - minLat, 1e-7);
+  const rangeW = W - 2 * pad;
+  const rangeH = H - 2 * pad;
+  // Centre the shorter axis so the constellation sits in the middle of the
+  // frame, not pinned to a corner (one shared span keeps the shape's aspect).
+  const offX = (rangeW - (((maxLon - minLon) * kx) / span) * rangeW) / 2;
+  const offY = (rangeH - ((maxLat - minLat) / span) * rangeH) / 2;
   return track.map(
     (p) =>
       [
-        pad + (((p.lon - minLon) * kx) / span) * (W - 2 * pad),
-        H - pad - ((p.lat - minLat) / span) * (H - 2 * pad),
+        pad + offX + (((p.lon - minLon) * kx) / span) * rangeW,
+        H - pad - offY - ((p.lat - minLat) / span) * rangeH,
       ] as const,
   );
 }

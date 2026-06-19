@@ -87,10 +87,14 @@ export function toUnitBoxMulti(
   const kx = Math.cos((((minLat + maxLat) / 2) * Math.PI) / 180);
   const span = Math.max((maxLon - minLon) * kx, maxLat - minLat, 1e-7);
   const range = 100 - 2 * pad;
+  // Centre the shorter axis: one shared span keeps aspect, so the narrower axis
+  // underfills the box. Offset it by half the slack instead of pinning an edge.
+  const offX = (range - (((maxLon - minLon) * kx) / span) * range) / 2;
+  const offY = (range - ((maxLat - minLat) / span) * range) / 2;
   return tracks.map((tr) =>
     tr.map((p) => [
-      pad + (((p.lon - minLon) * kx) / span) * range,
-      100 - pad - ((p.lat - minLat) / span) * range,
+      pad + offX + (((p.lon - minLon) * kx) / span) * range,
+      100 - pad - offY - ((p.lat - minLat) / span) * range,
     ]),
   );
 }
@@ -127,10 +131,14 @@ export function toUnitBox(
   const kx = Math.cos((((minLat + maxLat) / 2) * Math.PI) / 180);
   const span = Math.max((maxLon - minLon) * kx, maxLat - minLat, 1e-7);
   const range = 100 - 2 * pad;
+  // Centre the shorter axis (see toUnitBoxMulti) so the shape sits in the
+  // middle of the card rather than pinned to a corner.
+  const offX = (range - (((maxLon - minLon) * kx) / span) * range) / 2;
+  const offY = (range - ((maxLat - minLat) / span) * range) / 2;
   return pts.map((p) => {
     if (pts.length === 1) return [50, 50];
-    const x = pad + (((p.lon - minLon) * kx) / span) * range;
-    const y = 100 - pad - ((p.lat - minLat) / span) * range; // north up
+    const x = pad + offX + (((p.lon - minLon) * kx) / span) * range;
+    const y = 100 - pad - offY - ((p.lat - minLat) / span) * range; // north up
     return [x, y];
   });
 }

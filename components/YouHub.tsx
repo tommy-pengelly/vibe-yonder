@@ -27,7 +27,7 @@ import {
   type Mission,
   unreadNotificationCount,
 } from "@/lib/data";
-import { fmtDist, spanMeters, toUnitBox } from "@/lib/geo";
+import { fmtDist, spanMeters, toUnitBox, toUnitBoxMulti } from "@/lib/geo";
 import { MEDAL_LABEL } from "@/lib/straightline";
 import type { SavedYonder, StoredMap } from "@/lib/types";
 
@@ -544,7 +544,12 @@ function PlacesTab({ yonders }: { yonders: SavedYonder[] }) {
 }
 
 function HistoryCard({ y }: { y: SavedYonder }) {
-  const pts = toUnitBox((y.track ?? []).map((p) => ({ lat: p.lat, lon: p.lon })));
+  // Project the track and the places seen into one shared frame so the
+  // twinkles sit where they really were along the path.
+  const [pts, starPts] = toUnitBoxMulti([
+    (y.track ?? []).map((p) => ({ lat: p.lat, lon: p.lon })),
+    (y.destinations ?? []).map((d) => ({ lat: d.lat, lon: d.lon })),
+  ]);
   const sl = y.play === "straightline" ? y.straightLine : undefined;
   return (
     <Link
@@ -567,7 +572,12 @@ function HistoryCard({ y }: { y: SavedYonder }) {
         </div>
       </div>
       {pts.length > 1 && (
-        <Trace points={pts} height={110} scaleLabel={fmtDist(y.walked ?? 0)} />
+        <Trace
+          points={pts}
+          stars={starPts}
+          height={110}
+          scaleLabel={fmtDist(y.walked ?? 0)}
+        />
       )}
     </Link>
   );
