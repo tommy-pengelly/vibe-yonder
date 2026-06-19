@@ -272,21 +272,14 @@ export default function Scope({
     // rim chevron, discovery never points. Drawn under the user dot.
     candHitsRef.current = [];
     if (position) {
-      // Brightest first, so the notable stars win the labels; a label is skipped
-      // if it would collide with one already placed (keeps the sky legible).
-      const labelled: { x: number; y: number }[] = [];
-      const sorted = [...candidates].sort((a, b) => b.notability - a.notability);
-      for (const c of sorted) {
+      // No names in the sky: stars are points of light, never a label list. The
+      // name lives on tap (the blurb sheet). Brightness/size carry notability.
+      for (const c of candidates) {
         const raw = projectAt(c, position, cx, cy, mpp);
         const r = Math.hypot(raw.x - cx, raw.y - cy);
         if (r >= rimR) continue;
         const { x, y } = applyRot(raw.x, raw.y);
-        const label =
-          !!c.name &&
-          c.notability >= 0.6 &&
-          !labelled.some((p) => Math.hypot(p.x - x, p.y - y) < 52);
-        drawCandidate(ctx, x, y, c, label);
-        if (label) labelled.push({ x, y });
+        drawCandidate(ctx, x, y, c);
         candHitsRef.current.push({ id: c.id, x, y });
       }
     }
@@ -456,37 +449,60 @@ function drawCandidate(
   x: number,
   y: number,
   c: ScopeCandidate,
-  label: boolean,
 ) {
-  // A restrained sky: every place is a WHITE star whose brightness + size grade
-  // by notability (bright/big = notable, faint/small = obscure). The only other
-  // colour is violet when it matches the filter you've set (gold is reserved for
-  // your next destination, drawn elsewhere). No per-type colours, no glyphs.
+  // A restrained sky: every place is a WHITE twinkle whose brightness + size
+  // grade by notability (bright/big = notable, faint/small = obscure). The only
+  // other colour is violet when it matches the filter you've set (gold is
+  // reserved for your next destination, drawn elsewhere). No per-type colours,
+  // no names: the void stays calm; the name is one tap away.
+  //
+  // Each star is a little snowflake, its spike count, twist and arm-length
+  // seeded off its id so no two look alike, but it's STATIC (no per-frame
+  // flicker, that would break the minimal-motion rule).
   const n = Math.max(0, Math.min(1, c.notability));
   const op = 0.28 + 0.62 * n;
-  const r = 2.2 + 3.3 * n;
+  const R = 2.4 + 3.4 * n;
   const rgb = c.matchesLens ? LENS_RGB : STAR_RGB;
 
-  if (c.tier === "notable") {
-    ctx.strokeStyle = `rgba(${rgb}, ${(op * 0.5).toFixed(2)})`;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(x, y, r + 4, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-  ctx.fillStyle = `rgba(${rgb}, ${op.toFixed(2)})`;
+  const spikes = 4 + Math.floor(hashUnit(c.id, 1) * 3); // 4 · 5 · 6 arms
+  const twist = hashUnit(c.id, 2) * Math.PI; // its own rotation
+  const inner = 0.32 + hashUnit(c.id, 3) * 0.2; // arm thinness, 0.32–0.52
+
+  // A soft halo so the brighter stars glow a touch (replaces the old ring).
+  ctx.fillStyle = `rgba(${rgb}, ${(op * (c.tier === "notable" ? 0.16 : 0.1)).toFixed(3)})`;
   ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.arc(x, y, R * 1.8, 0, Math.PI * 2);
   ctx.fill();
 
-  // The name only when the caller cleared it for collision, so the void stays calm.
-  if (label && c.name) {
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = `rgba(${rgb}, ${Math.min(0.8, op).toFixed(2)})`;
-    ctx.font = "500 11px var(--font-sans), system-ui, sans-serif";
-    ctx.fillText(truncate(c.name, 18), x, y + r + 10);
+  // The twinkle: a concave star polygon, alternating outer/inner radius.
+  ctx.fillStyle = `rgba(${rgb}, ${op.toFixed(2)})`;
+  ctx.beginPath();
+  for (let i = 0; i < spikes * 2; i++) {
+    const ang = twist + (i * Math.PI) / spikes;
+    const rad = i % 2 === 0 ? R : R * inner;
+    const px = x + rad * Math.cos(ang);
+    const py = y + rad * Math.sin(ang);
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
   }
+  ctx.closePath();
+  ctx.fill();
+
+  // A bright pin-point core, stronger on the notable ones, for the glint.
+  ctx.fillStyle = `rgba(${rgb}, ${Math.min(1, op + (c.tier === "notable" ? 0.2 : 0.1)).toFixed(2)})`;
+  ctx.beginPath();
+  ctx.arc(x, y, Math.max(0.6, R * 0.26), 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// Deterministic 0–1 from a string id (+ salt for independent draws), so a star
+// keeps the same shape every frame instead of flickering. FNV-1a, cheap.
+function hashUnit(id: string, salt: number): number {
+  let h = (2166136261 ^ salt) >>> 0;
+  for (let i = 0; i < id.length; i++) {
+    h = Math.imul(h ^ id.charCodeAt(i), 16777619);
+  }
+  return ((h >>> 0) % 100000) / 100000;
 }
 
 function projectAt(

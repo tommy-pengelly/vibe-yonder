@@ -109,7 +109,13 @@ export function useDiscovery({
         lon: s.lon,
         dist: s.dist,
         notability: notability(s),
-        matchesLens: activeGuide != null && s.lensTheme === activeGuide,
+        // Violet when it matches the active lens: either it was fetched under
+        // that theme (lensTheme) OR its own category is that theme, so stars
+        // already in the sky recolour the moment you pick a guide, not only
+        // freshly-fetched ones.
+        matchesLens:
+          activeGuide != null &&
+          (s.lensTheme === activeGuide || s.category === activeGuide),
         tier: notabilityTier(s),
         name: s.name,
         category: s.category,

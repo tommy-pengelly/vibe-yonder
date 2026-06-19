@@ -126,7 +126,9 @@ async function fromNamed(lat: number, lon: number, name: string): Promise<Blurb 
     query?: { pages?: Record<string, WikiPage> };
   };
   const pick = Object.values(data.query?.pages ?? {})
-    .filter((p) => p.extract?.trim() && p.coordinates?.length)
+    // Name match AND proximity: search ranks the famous neighbour first, so a
+    // statue beside the stadium must not inherit the stadium's blurb.
+    .filter((p) => p.extract?.trim() && p.coordinates?.length && nameOverlap(p.title, name))
     .map((p) => ({ p, dist: haversine(lat, lon, p.coordinates![0].lat, p.coordinates![0].lon) }))
     .filter((c) => c.dist <= VERIFY_M)
     .sort((a, b) => a.dist - b.dist)[0]?.p;

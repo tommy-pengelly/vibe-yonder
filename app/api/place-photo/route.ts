@@ -138,7 +138,12 @@ async function fromWikipediaNamed(
     query?: { pages?: Record<string, WikiPage> };
   };
   const candidates = Object.values(data.query?.pages ?? {})
-    .filter((p) => p.thumbnail?.source && p.coordinates?.length)
+    // Both guards: the article must SHARE A WORD with the place name (so a
+    // generic "Statue" can't borrow the famous stadium next door that search
+    // ranked first) AND sit near the coords. Proximity alone wasn't enough.
+    .filter(
+      (p) => p.thumbnail?.source && p.coordinates?.length && nameOverlap(p.title, name),
+    )
     .map((p) => ({
       p,
       dist: haversine(lat, lon, p.coordinates![0].lat, p.coordinates![0].lon),
