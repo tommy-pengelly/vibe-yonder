@@ -285,8 +285,11 @@ export default function App() {
     setPausedMs(0);
     setSavedYonder(null);
     setSavedLocally(false);
-    setPhase("search");
-  }, []);
+    // Leave /walk entirely (back to where you launched, the home launcher in the
+    // common case) rather than dropping onto the in-walk search screen, which
+    // read as a phantom "start a yonder" overlay stuck open after a discard.
+    leaveWalk();
+  }, [leaveWalk]);
 
   // Toggle a target's visited state (both directions: arrival chip + the
   // destinations panel). Mirrors the mark back to the source map.

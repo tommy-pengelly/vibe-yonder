@@ -28,8 +28,6 @@ import {
   DEFAULT_MPP_FREE,
   MAX_MPP,
   MIN_MPP,
-  RIM_FRACTION,
-  SCALE_LEVELS_M,
 } from "@/lib/constants";
 import { haversine, fmtDist } from "@/lib/geo";
 import { directionsOptions } from "@/lib/maps";
@@ -323,26 +321,12 @@ export default function WalkScreen({
     }
   }, []);
 
-  const onTouchEnd = useCallback(
-    (e: React.TouchEvent) => {
-      if (e.touches.length !== 0) return;
-      gestureRef.current.startDist = undefined;
-      // Snap mpp to a level whose centre-to-rim distance is a round metres value.
-      const rimR = Math.min(window.innerWidth, window.innerHeight) * RIM_FRACTION;
-      const impliedMetres = rimR * mpp;
-      let best = SCALE_LEVELS_M[0];
-      let bestRatio = Math.abs(Math.log(best / impliedMetres));
-      for (const lvl of SCALE_LEVELS_M) {
-        const r = Math.abs(Math.log(lvl / impliedMetres));
-        if (r < bestRatio) {
-          best = lvl;
-          bestRatio = r;
-        }
-      }
-      setMpp(best / rimR);
-    },
-    [mpp],
-  );
+  const onTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length !== 0) return;
+    // Stay at exactly the zoom you let go at, no snapping to scale levels. The
+    // scale key is a bar (its length tracks mpp), so it stays legible at any zoom.
+    gestureRef.current.startDist = undefined;
+  }, []);
 
   const baseMpp = yonder.targets.length === 0 ? DEFAULT_MPP_FREE : DEFAULT_MPP;
   const resetZoom = useCallback(() => {
