@@ -1,5 +1,6 @@
 "use client";
-import { Heart, Navigation, X } from "lucide-react";
+import { Eye, EyeOff, Heart, Navigation, Search, X } from "lucide-react";
+import { useState } from "react";
 import PlacePhoto from "@/components/PlacePhoto";
 import BottomSheet from "@/components/ui/BottomSheet";
 import { categoryByKey, THEMES } from "@/lib/nearby";
@@ -20,6 +21,8 @@ export default function SuggestionsSheet({
   onSaveForLater,
   onDecline,
   onTurnOff,
+  bearingOnly,
+  onToggleBearingOnly,
   hideNumbers,
 }: {
   open: boolean;
@@ -31,8 +34,21 @@ export default function SuggestionsSheet({
   onSaveForLater: (c: ScopeCandidate) => void;
   onDecline: (id: string) => void;
   onTurnOff: () => void;
+  bearingOnly: boolean;
+  onToggleBearingOnly: () => void;
   hideNumbers: boolean;
 }) {
+  const [q, setQ] = useState("");
+  const term = q.trim().toLowerCase();
+  // Hone what's around: filter the live suggestions by name/type, no new search
+  // of the wider world (that would turn discovery into a directory).
+  const shown = term
+    ? suggestions.filter((c) =>
+        `${c.name ?? ""} ${c.typeLabel ?? ""} ${c.category ?? ""}`
+          .toLowerCase()
+          .includes(term),
+      )
+    : suggestions;
   return (
     <BottomSheet open={open} onClose={onClose} title="Around you" minHeightVh={72}>
       <div className="flex gap-2 overflow-x-auto -mx-5 px-5 pb-3 [scrollbar-width:none]">
@@ -56,13 +72,36 @@ export default function SuggestionsSheet({
         })}
       </div>
 
-      {suggestions.length === 0 ? (
+      <div className="flex items-center gap-2 mb-3 rounded-full border border-[var(--border)] focus-within:border-[var(--accent)] px-3">
+        <Search className="w-4 h-4 shrink-0 text-[var(--muted)]" strokeWidth={1.75} />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Hone in… a café, the park, a name"
+          className="flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-[var(--muted)]/60"
+          inputMode="search"
+        />
+        {q && (
+          <button
+            type="button"
+            onClick={() => setQ("")}
+            aria-label="Clear"
+            className="text-[var(--muted)] hover:text-[var(--foreground)]"
+          >
+            <X className="w-4 h-4" strokeWidth={1.75} />
+          </button>
+        )}
+      </div>
+
+      {shown.length === 0 ? (
         <p className="text-sm text-[var(--muted)] py-10 text-center">
-          Nothing&apos;s caught the light yet, keep wandering, eyes up.
+          {term
+            ? "Nothing around matches that, try another word."
+            : "Nothing's caught the light yet, keep wandering, eyes up."}
         </p>
       ) : (
         <div className="flex gap-3 overflow-x-auto -mx-5 px-5 pb-2 snap-x snap-mandatory [scrollbar-width:none]">
-          {suggestions.map((c) => (
+          {shown.map((c) => (
             <SuggestionCard
               key={c.id}
               c={c}
@@ -75,13 +114,28 @@ export default function SuggestionsSheet({
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={onTurnOff}
-        className="mt-4 mx-auto block text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
-      >
-        Turn off suggestions for this wander
-      </button>
+      <div className="mt-4 flex flex-col items-center gap-3">
+        <button
+          type="button"
+          onClick={onToggleBearingOnly}
+          aria-pressed={bearingOnly}
+          className="inline-flex items-center gap-1.5 text-sm text-[var(--muted)] hover:text-[var(--accent)]"
+        >
+          {bearingOnly ? (
+            <EyeOff className="w-4 h-4" strokeWidth={1.75} />
+          ) : (
+            <Eye className="w-4 h-4" strokeWidth={1.75} />
+          )}
+          {bearingOnly ? "Show the full sky" : "Calm view, just the marker"}
+        </button>
+        <button
+          type="button"
+          onClick={onTurnOff}
+          className="block text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
+        >
+          Turn off suggestions for this wander
+        </button>
+      </div>
     </BottomSheet>
   );
 }

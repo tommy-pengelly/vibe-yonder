@@ -2,8 +2,6 @@
 import {
   Check,
   ExternalLink,
-  Eye,
-  EyeOff,
   Heart,
   ListChecks,
   Locate,
@@ -17,7 +15,12 @@ import { useDiscovery, type ScopeCandidate } from "@/hooks/useDiscovery";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
 import SuggestionsSheet from "@/components/SuggestionsSheet";
 import PlaceDetailSheet from "@/components/PlaceDetailSheet";
-import { getFavourite, pushFavourite, removeFavourite } from "@/lib/data";
+import {
+  getFavourite,
+  loadFavourites,
+  pushFavourite,
+  removeFavourite,
+} from "@/lib/data";
 import {
   ARRIVAL_RADIUS_M,
   ARRIVAL_REARM_RATIO,
@@ -33,6 +36,7 @@ import { directionsOptions } from "@/lib/maps";
 import { DISCOVERY_ENABLED } from "@/lib/flags";
 import type {
   ActiveYonder,
+  FavouritePlace,
   Fix,
   Target,
 } from "@/lib/types";
@@ -119,6 +123,7 @@ export default function WalkScreen({
   );
   const {
     candidates,
+    nebulae,
     skip: skipCandidate,
     commit: commitCandidate,
   } = useDiscovery({
@@ -128,6 +133,29 @@ export default function WalkScreen({
     activeGuide,
     committedIds,
   });
+
+  // Your saved places, shown as hollow amber rings on the scope, eyes-up
+  // reminders. Each is dismissable for this wander (not deleted).
+  const [savedPlaces, setSavedPlaces] = useState<FavouritePlace[]>([]);
+  const [dismissedSaved, setDismissedSaved] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let c = false;
+    void loadFavourites().then((f) => !c && setSavedPlaces(f));
+    return () => {
+      c = true;
+    };
+  }, []);
+  const visibleSaved = useMemo(
+    () =>
+      savedPlaces
+        .filter((p) => !dismissedSaved.has(p.id))
+        // Don't double up where a saved place is already a destination.
+        .filter(
+          (p) => !yonder.targets.some((t) => haversine(t.lat, t.lon, p.lat, p.lon) < 25),
+        )
+        .map((p) => ({ id: p.id, lat: p.lat, lon: p.lon, name: p.alias ?? p.name })),
+    [savedPlaces, dismissedSaved, yonder.targets],
+  );
 
   // Promote a suggestion to the place you're heading for next.
   const takeNext = useCallback(
@@ -394,6 +422,13 @@ export default function WalkScreen({
               ? (id) => setDetailCand(candidates.find((c) => c.id === id) ?? null)
               : undefined
           }
+          nebulae={
+            !bearingOnly && DISCOVERY_ENABLED && suggestionsOn ? nebulae : undefined
+          }
+          savedPlaces={!bearingOnly ? visibleSaved : undefined}
+          onDismissSaved={(id) =>
+            setDismissedSaved((s) => new Set(s).add(id))
+          }
         />
       </div>
 
@@ -433,19 +468,7 @@ export default function WalkScreen({
         }
         right={
           <>
-            <button
-              type="button"
-              onClick={() => setBearingOnly((v) => !v)}
-              aria-label={bearingOnly ? "Show the full sky" : "Bearing-only view"}
-              aria-pressed={bearingOnly}
-              className={`inline-flex items-center justify-center size-9 rounded-full border border-[var(--border)] bg-black/30 backdrop-blur-sm ${
-                bearingOnly ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
-              }`}
-            >
-              {bearingOnly ? <EyeOff className="w-4 h-4" strokeWidth={1.75} /> : <Eye className="w-4 h-4" strokeWidth={1.75} />}
-            </button>
-            {!bearingOnly &&
-              DISCOVERY_ENABLED &&
+            {DISCOVERY_ENABLED &&
               (suggestionsOn ? (
                 <button
                   type="button"
@@ -656,6 +679,11 @@ export default function WalkScreen({
           onDecline={skipCandidate}
           onTurnOff={() => {
             setSuggestionsOn(false);
+            setSuggestionsOpen(false);
+          }}
+          bearingOnly={bearingOnly}
+          onToggleBearingOnly={() => {
+            setBearingOnly((v) => !v);
             setSuggestionsOpen(false);
           }}
           hideNumbers={hideNumbers}

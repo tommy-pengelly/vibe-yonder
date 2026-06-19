@@ -12,7 +12,7 @@ import {
   makeAngleSmoother,
   toRad,
 } from "@/lib/geo";
-import type { ScopeCandidate } from "@/hooks/useDiscovery";
+import type { Nebula, ScopeCandidate } from "@/hooks/useDiscovery";
 import type { Fix, LatLon, Target } from "@/lib/types";
 
 type Props = {
@@ -30,6 +30,12 @@ type Props = {
   candidates?: ScopeCandidate[];
   /** Tapping a candidate dot opens its detail/reveal. */
   onPickCandidate?: (id: string) => void;
+  /** Rosy "lots to see" glows under the stars (dense patches of the pool). */
+  nebulae?: Nebula[];
+  /** Your saved places, drawn as hollow amber rings, tap to dismiss for now. */
+  savedPlaces?: { id: string; lat: number; lon: number; name?: string }[];
+  /** Tapping a saved ring dismisses it for this session. */
+  onDismissSaved?: (id: string) => void;
   /** Straight-line mode: A (start). The line runs A→targets[0]; faint corridor. */
   lineOrigin?: LatLon | null;
   /** Minimal: hide the scale key (e.g. navigating to a mission start). */
@@ -43,6 +49,10 @@ const MUTED_TEXT = "rgba(173, 168, 157, 0.55)";
 // lens tints violet. RGB triplets so opacity can encode notability.
 const STAR_RGB = "237, 237, 237";
 const LENS_RGB = "167, 139, 250";
+// Nebula gas, two tones so the cloud shifts colour across itself like real
+// space: a warm rose core fading to a cooler plum fringe ("lots to see here").
+const NEBULA_CORE = "236, 130, 140";
+const NEBULA_EDGE = "150, 102, 176";
 
 export default function Scope({
   position,
@@ -55,6 +65,9 @@ export default function Scope({
   onPickTarget,
   candidates = [],
   onPickCandidate,
+  nebulae = [],
+  savedPlaces = [],
+  onDismissSaved,
   lineOrigin,
   minimal = false,
 }: Props) {
@@ -65,6 +78,8 @@ export default function Scope({
   // Drawn candidate-dot positions, hit-tested separately so a tap routes to the
   // reveal rather than to target focus.
   const candHitsRef = useRef<{ id: string; x: number; y: number }[]>([]);
+  // Drawn saved-place ring positions, tapped to dismiss for the session.
+  const savedHitsRef = useRef<{ id: string; x: number; y: number }[]>([]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -104,6 +119,55 @@ export default function Scope({
         y: cy + dx * sinR + dy * cosR,
       };
     };
+
+    // Nebulae: rosy gas where the pool is dense ("lots to see here"), drawn
+    // first so everything else sits on top. Density, not notability. Each cloud
+    // is layered like real space, a wide diffuse halo, then a STACK of clumpy
+    // two-tone blobs (one per member place) blended additively so they melt into
+    // one organic, multi-hued shape that follows the cluster (never a disc).
+    if (position && !minimal) {
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (const neb of nebulae) {
+        const cRaw = projectAt(neb, position, cx, cy, mpp);
+        const cPos = applyRot(cRaw.x, cRaw.y);
+        const spreadPx = neb.radiusM / mpp;
+        if (Math.hypot(cPos.x - cx, cPos.y - cy) - (spreadPx + rimR * 0.7) > rimR)
+          continue;
+
+        // 1) Diffuse halo: one big, very faint cloud, rose centre to plum edge.
+        const haloR = Math.min(rimR * 1.5, Math.max(70, spreadPx * 1.6));
+        const halo = ctx.createRadialGradient(cPos.x, cPos.y, 0, cPos.x, cPos.y, haloR);
+        halo.addColorStop(0, `rgba(${NEBULA_CORE}, 0.05)`);
+        halo.addColorStop(0.55, `rgba(${NEBULA_EDGE}, 0.035)`);
+        halo.addColorStop(1, `rgba(${NEBULA_EDGE}, 0)`);
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(cPos.x, cPos.y, haloR, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 2) Structure: a soft blob per member place, size + hue varied so the
+        //    gas looks clumpy and multi-toned. Tight knot ⇒ small/bright,
+        //    sprawl ⇒ wide/soft. Seeds are position-based so it never flickers.
+        const base = spreadPx / Math.sqrt(neb.weight) + 24;
+        for (const p of neb.points) {
+          const raw = projectAt(p, position, cx, cy, mpp);
+          const { x, y } = applyRot(raw.x, raw.y);
+          const key = `${p.lat.toFixed(5)},${p.lon.toFixed(5)}`;
+          const s1 = hashUnit(key, 7);
+          const rPx = Math.min(rimR, base * (0.55 + s1 * 1.1));
+          const rgb = hashUnit(key, 11) < 0.38 ? NEBULA_EDGE : NEBULA_CORE;
+          const grad = ctx.createRadialGradient(x, y, 0, x, y, rPx);
+          grad.addColorStop(0, `rgba(${rgb}, ${(0.045 + s1 * 0.03).toFixed(3)})`);
+          grad.addColorStop(1, `rgba(${rgb}, 0)`);
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(x, y, rPx, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
 
     // --- Straight-line corridor: the line A→B + faint medal bands, drawn
     // under the trail. Bands are offset perpendicular in screen pixels
@@ -284,6 +348,28 @@ export default function Scope({
       }
     }
 
+    // Your saved places: hollow amber rings (saved, not your current target),
+    // on-canvas only. Tap one to dismiss it for this wander.
+    savedHitsRef.current = [];
+    if (position && !minimal) {
+      for (const sp of savedPlaces) {
+        const raw = projectAt(sp, position, cx, cy, mpp);
+        const r = Math.hypot(raw.x - cx, raw.y - cy);
+        if (r >= rimR) continue;
+        const { x, y } = applyRot(raw.x, raw.y);
+        ctx.strokeStyle = `rgba(245, 166, 35, 0.7)`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = `rgba(245, 166, 35, 0.35)`;
+        ctx.beginPath();
+        ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        savedHitsRef.current.push({ id: sp.id, x, y });
+      }
+    }
+
     // The dot: an upward arrowhead (you, heading-up). Dimmer while acquiring.
     {
       const o = position ? 1 : 0.45;
@@ -393,7 +479,7 @@ export default function Scope({
     ctx.textAlign = "right";
     ctx.textBaseline = "alphabetic";
     ctx.fillText(formatScale(snapMetres), sxRight, syBaseline - 8);
-  }, [position, heading, track, targets, activeIndex, mpp, hideNumbers, candidates, lineOrigin, minimal]);
+  }, [position, heading, track, targets, activeIndex, mpp, hideNumbers, candidates, nebulae, savedPlaces, lineOrigin, minimal]);
 
   const handleClick = (e: ReactMouseEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -416,6 +502,11 @@ export default function Scope({
     const cand = onPickCandidate ? nearest(candHitsRef.current) : null;
     if (cand) {
       onPickCandidate!(cand);
+      return;
+    }
+    const saved = onDismissSaved ? nearest(savedHitsRef.current) : null;
+    if (saved) {
+      onDismissSaved!(saved);
       return;
     }
     const target = onPickTarget ? nearest(hitsRef.current) : null;
