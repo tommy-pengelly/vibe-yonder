@@ -2,6 +2,7 @@
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { goBack } from "@/lib/nav";
 
 // The standard member-screen header: an uppercase tracked kicker + a Fraunces
 // title, with an optional back chevron (left) and a single action slot (right).
@@ -19,20 +20,14 @@ export default function PageHeader({
   action?: ReactNode;
 }) {
   const router = useRouter();
-  const goBack = () => {
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-    } else if (backHref) {
-      router.push(backHref);
-    }
-  };
+  const onBack = () => goBack(router, backHref ?? "/");
   return (
     <header className="flex items-start justify-between gap-3">
       <div className="flex items-center gap-3 min-w-0">
         {backHref && (
           <button
             type="button"
-            onClick={goBack}
+            onClick={onBack}
             aria-label="Back"
             className="size-9 -ml-2 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)] shrink-0"
           >

@@ -1,11 +1,11 @@
 "use client";
-import { ArrowLeft, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import { Pencil, RotateCcw, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import MapShareControl from "@/components/MapShareControl";
 import PlacePhoto from "@/components/PlacePhoto";
-import { useGoBack } from "@/components/ui";
+import { PageHeader, PageScaffold } from "@/components/ui";
 import { DotMap, Traces } from "@/components/ui/viz";
 import { useAuthUser } from "@/lib/auth";
 import {
@@ -21,7 +21,6 @@ import type { SavedYonder, StoredMap, Target } from "@/lib/types";
 
 export default function MapDetail({ id }: { id: string }) {
   const router = useRouter();
-  const goBack = useGoBack("/maps");
   const { user } = useAuthUser();
   const [map, setMap] = useState<StoredMap | null>(null);
   const [yonders, setYonders] = useState<SavedYonder[]>([]);
@@ -112,33 +111,17 @@ export default function MapDetail({ id }: { id: string }) {
   };
 
   return (
-    <>
-      <div className="flex-1 flex flex-col w-full max-w-md mx-auto px-5 pt-8 pb-10 gap-6">
-        <header className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              type="button"
-              onClick={goBack}
-              aria-label="Back"
-              className="size-9 -ml-2 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)] shrink-0"
-            >
-              <ArrowLeft className="w-4 h-4" strokeWidth={1.75} />
-            </button>
-            <div className="min-w-0">
-              <span className="text-[10px] uppercase tracking-widest text-[var(--muted)]">
-                {map.mode === "ordered" ? "Step through" : "Wander between"}
-              </span>
-              <h1 className="font-display text-3xl tracking-tight leading-none truncate">
-                {map.name}
-              </h1>
-              <p className="text-sm text-[var(--warm)] mt-1">
-                {isOwner
-                  ? `${remaining.length} of ${map.items.length} left`
-                  : `${map.items.length} ${map.items.length === 1 ? "place" : "places"} to wander`}
-              </p>
-            </div>
-          </div>
-        </header>
+      <PageScaffold>
+        <PageHeader
+          kicker={map.mode === "ordered" ? "Step through" : "Wander between"}
+          title={map.name}
+          backHref="/maps"
+        />
+        <p className="text-sm text-[var(--warm)] -mt-4">
+          {isOwner
+            ? `${remaining.length} of ${map.items.length} left`
+            : `${map.items.length} ${map.items.length === 1 ? "place" : "places"} to wander`}
+        </p>
 
         {map.items.length > 0 && (
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
@@ -317,7 +300,6 @@ export default function MapDetail({ id }: { id: string }) {
             </>
           )}
         </div>
-      </div>
-    </>
+      </PageScaffold>
   );
 }

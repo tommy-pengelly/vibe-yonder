@@ -3,6 +3,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import BootSplash from "./BootSplash";
 import BottomNav from "./BottomNav";
+import NavTracker from "./NavTracker";
 import PaywallProvider from "./PaywallProvider";
 
 // The bottom nav lives ONLY on the three roots. Everything else is a one-layer
@@ -22,6 +23,7 @@ export default function AppChrome({ children }: { children: ReactNode }) {
   const showNav = ROOTS.has(pathname);
   return (
     <div className="h-dvh flex flex-col overflow-hidden">
+      <NavTracker />
       <PaywallProvider>
         <main className="flex-1 overflow-y-auto flex flex-col">{children}</main>
       </PaywallProvider>

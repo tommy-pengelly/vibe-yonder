@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 import { DotMap, Trace, Traces } from "@/components/ui/viz";
 import { fmtDist } from "@/lib/geo";
 import { MEDAL_LABEL } from "@/lib/straightline";
+import type { Mission } from "@/lib/data";
 import type { FeedMap, FeedMission, FeedWays, FeedYonder } from "@/lib/types";
 
 export { DotMap, Trace } from "@/components/ui/viz";
@@ -51,7 +52,7 @@ export function Empty({
 
 // The whole card opens its detail. Inner links/buttons stopPropagation so they
 // act on their own without triggering the card navigation.
-function CardShell({ href, children }: { href: string; children: ReactNode }) {
+export function CardShell({ href, children }: { href: string; children: ReactNode }) {
   const router = useRouter();
   return (
     <div
@@ -154,6 +155,47 @@ function SocialFooter({
   );
 }
 
+// Save (left) + a primary Attempt CTA (right): the action row shared by every
+// mission card (feed post and the community catalog). Stops propagation so taps
+// hit the buttons, not the card's open-detail navigation.
+function SaveAttemptBar({
+  saved,
+  onSave,
+  onAttempt,
+}: {
+  saved: boolean;
+  onSave: () => void;
+  onAttempt: () => void;
+}) {
+  return (
+    <div
+      className="flex items-center px-3.5 pt-2.5 pb-3.5 gap-2"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        type="button"
+        onClick={onSave}
+        disabled={saved}
+        className={`inline-flex items-center gap-1.5 text-[13px] py-1.5 px-1 ${
+          saved ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
+        }`}
+      >
+        <Bookmark className="w-4 h-4" strokeWidth={1.75} />
+        {saved ? "Saved" : "Save"}
+      </button>
+      <div className="flex-1" />
+      <button
+        type="button"
+        onClick={onAttempt}
+        className="inline-flex items-center gap-1.5 rounded-full border border-[var(--accent)]/60 text-[var(--accent)] text-xs font-semibold px-3 py-1.5 hover:bg-[var(--accent)] hover:text-black"
+      >
+        <Navigation className="w-3.5 h-3.5" strokeWidth={1.75} />
+        Attempt
+      </button>
+    </div>
+  );
+}
+
 export function GrubButton({
   count,
   active,
@@ -181,21 +223,18 @@ export function GrubButton({
 
 // ---- Activity: a yonder someone did ----------------------------------------
 
-export function YonderCard({
+// The card's visual body (header → media → stats), no shell and no footer. The
+// feed card wraps this in CardShell + SocialFooter; the /yonder/[id] detail
+// renders it raw with its own action row, so both stay one design.
+export function YonderCardBody({
   y,
-  grub,
-  saved,
-  onGrub,
-  onSave,
+  traceHeight = 150,
 }: {
   y: FeedYonder;
-  grub: { count: number; active: boolean };
-  saved: boolean;
-  onGrub: () => void;
-  onSave: () => void;
+  traceHeight?: number;
 }) {
   return (
-    <CardShell href={`/yonder/${y.id}`}>
+    <>
       <CardHeader
         who={y.who}
         handle={y.handle}
@@ -204,7 +243,7 @@ export function YonderCard({
       />
       <Caption text={y.caption} />
       <div className="relative mt-3">
-        <Trace points={y.trace} height={150} />
+        <Trace points={y.trace} height={traceHeight} />
         <div className="absolute left-4 bottom-2.5 font-mono text-[11px] text-[var(--muted)]">
           {y.area}
         </div>
@@ -235,6 +274,26 @@ export function YonderCard({
           ? `${MEDAL_LABEL[y.medal]} · held the line`
           : `${fmtDist(y.walked)} · ${y.mins} min · ${y.places} ${y.places === 1 ? "place" : "places"} seen`}
       </Stats>
+    </>
+  );
+}
+
+export function YonderCard({
+  y,
+  grub,
+  saved,
+  onGrub,
+  onSave,
+}: {
+  y: FeedYonder;
+  grub: { count: number; active: boolean };
+  saved: boolean;
+  onGrub: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <CardShell href={`/yonder/${y.id}`}>
+      <YonderCardBody y={y} />
       <SocialFooter grub={grub} onGrub={onGrub} saved={saved} onSave={onSave} />
     </CardShell>
   );
@@ -308,31 +367,39 @@ export function MissionCard({
           No attempts yet, be the first to hold it.
         </p>
       )}
-      <div
-        className="flex items-center px-3.5 pt-2.5 pb-3.5 gap-2"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={saved}
-          className={`inline-flex items-center gap-1.5 text-[13px] py-1.5 px-1 ${
-            saved ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
-          }`}
-        >
-          <Bookmark className="w-4 h-4" strokeWidth={1.75} />
-          {saved ? "Saved" : "Save"}
-        </button>
-        <div className="flex-1" />
-        <button
-          type="button"
-          onClick={onAttempt}
-          className="inline-flex items-center gap-1.5 rounded-full border border-[var(--accent)]/60 text-[var(--accent)] text-xs font-semibold px-3 py-1.5 hover:bg-[var(--accent)] hover:text-black"
-        >
-          <Navigation className="w-3.5 h-3.5" strokeWidth={1.75} />
-          Attempt
-        </button>
+      <SaveAttemptBar saved={saved} onSave={onSave} onAttempt={onAttempt} />
+    </CardShell>
+  );
+}
+
+// ---- Plan: a mission in the community catalog ------------------------------
+// The browse-tab card. Same shell + action bar as the feed MissionCard, but a
+// catalog header (no author/podium): the whole card opens /missions/[id].
+
+export function MissionBrowseCard({
+  m,
+  saved,
+  onSave,
+  onAttempt,
+}: {
+  m: Mission;
+  saved: boolean;
+  onSave: () => void;
+  onAttempt: () => void;
+}) {
+  return (
+    <CardShell href={`/missions/${m.id}`}>
+      <div className="flex items-center gap-2 px-3.5 pt-3.5">
+        <Ruler className="w-4 h-4 text-[var(--accent)] shrink-0" strokeWidth={1.75} />
+        <div className="font-display text-[17px] truncate leading-tight">
+          {m.name ?? "Straight-line mission"}
+        </div>
       </div>
+      <Stats>
+        {m.who} · {fmtDist(m.distanceM)} line · {m.attempts ?? 0}{" "}
+        {m.attempts === 1 ? "attempt" : "attempts"}
+      </Stats>
+      <SaveAttemptBar saved={saved} onSave={onSave} onAttempt={onAttempt} />
     </CardShell>
   );
 }

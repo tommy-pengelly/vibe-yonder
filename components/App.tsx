@@ -37,6 +37,7 @@ import {
   saveActiveSession,
 } from "@/lib/storage";
 import { keepAwake } from "@/lib/wake";
+import { goBack } from "@/lib/nav";
 import AuthModal from "./AuthModal";
 import CreateHub from "./CreateHub";
 import Recap from "./Recap";
@@ -51,11 +52,9 @@ export default function App() {
   const router = useRouter();
   // Leaving /walk: pop it off history (back to wherever you launched from)
   // rather than pushing a new route, which would leave the launcher in the
-  // back stack and trap you bouncing onto it.
-  const leaveWalk = useCallback(() => {
-    if (typeof window !== "undefined" && window.history.length > 1) router.back();
-    else router.push("/");
-  }, [router]);
+  // back stack and trap you bouncing onto it. goBack falls back to home only
+  // when /walk was opened cold (nothing in-app to pop).
+  const leaveWalk = useCallback(() => goBack(router, "/"), [router]);
   const [phase, setPhase] = useState<Phase>("search");
   const [yonder, setYonder] = useState<ActiveYonder | null>(null);
 

@@ -20,14 +20,15 @@ export default function MissionsView() {
     };
   }, []);
 
-  // "New mission" = set up a fresh straight line. Reuse the launcher's line mode
-  // (the create flow lives there) via the createMode hint, so creating and
-  // browsing share one pathway.
+  // "New mission" = set up a fresh straight line. Open /walk's search phase in
+  // line mode (the create flow lives there) via the createMode hint. /walk is a
+  // proper overlay, so back returns here; pushing the home root would re-root the
+  // stack mid-flow. Same pathway YouHub's "New mission" uses.
   const newMission = () => {
     if (typeof window !== "undefined") {
       window.sessionStorage.setItem("vibe-yonder.createMode", "line");
     }
-    router.push("/");
+    router.push("/walk");
   };
 
   return (

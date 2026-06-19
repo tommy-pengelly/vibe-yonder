@@ -1,21 +1,15 @@
 "use client";
-import { ArrowLeft, Bookmark, Flag, Navigation, Sprout } from "lucide-react";
+import { ArrowLeft, Bookmark, Flag, Navigation } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
-import { Trace } from "@/components/ui/viz";
+import { GrubButton, YonderCardBody } from "@/components/feed/Cards";
 import { useGoBack } from "@/components/ui";
 import { primeOrientation } from "@/hooks/useHeading";
 import { useAuthUser } from "@/lib/auth";
 import { getSharedYonder, reportContent, saveYonderPlaces, setGrub } from "@/lib/data";
-import { fmtDist } from "@/lib/geo";
-import { MEDAL_LABEL } from "@/lib/straightline";
 import type { FeedYonder, Target } from "@/lib/types";
-
-function fmtYondered(v: number): string {
-  return v >= 10 ? Math.round(v).toString() : v.toFixed(v >= 2 ? 1 : 2);
-}
 
 export default function SharedYonderView({ id }: { id: string }) {
   const router = useRouter();
@@ -100,48 +94,13 @@ export default function SharedYonderView({ id }: { id: string }) {
         <ArrowLeft className="w-4 h-4" strokeWidth={1.75} />
       </button>
 
-      {/* The shared yonder, as an expanded feed card (header → media → stats →
-          actions), matching the Community card. */}
+      {/* The shared yonder is the same card as the feed (YonderCardBody), shown
+          larger and with its own action row (grub · Save · Yonder this). */}
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
-        <Link href={`/u/${y.handle.slice(1)}`} className="flex items-center gap-2.5 px-3.5 pt-3.5">
-          <div className="size-10 shrink-0 rounded-full bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center font-display text-sm text-[var(--warm)]">
-            {y.who.replace(/[@.]/g, "").slice(0, 2).toUpperCase()}
-          </div>
-          <div className="min-w-0">
-            <div className="font-display text-base leading-tight truncate hover:text-[var(--accent)]">{y.who}</div>
-            <div className="text-[11px] text-[var(--muted)]">{y.handle} · {y.when} · {y.area}</div>
-          </div>
-        </Link>
-
-        {y.caption && <p className="text-sm leading-relaxed mx-3.5 mt-2.5 text-pretty">{y.caption}</p>}
-
-        <div className="relative mt-3">
-          <Trace points={y.trace} height={200} />
-          <div className="absolute left-4 bottom-2.5 font-mono text-[11px] text-[var(--muted)]">{y.area}</div>
-          <div className="absolute right-4 top-3 text-right">
-            {y.medal ? (
-              <>
-                <div className="font-display text-[24px] leading-none text-[var(--accent)] tracking-tight">{MEDAL_LABEL[y.medal]}</div>
-                <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--muted)] mt-0.5">Straight line</div>
-              </>
-            ) : (
-              <>
-                <div className="font-display text-[28px] leading-none text-[var(--accent)] tabular-nums tracking-tight">{fmtYondered(y.yondered)}×</div>
-                <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--muted)] mt-0.5">Yondered</div>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="font-mono text-[11px] text-[var(--muted)] px-3.5 pt-3 tabular-nums">
-          {fmtDist(y.walked)} · {y.mins} min · {y.places} {y.places === 1 ? "place" : "places"} seen
-        </div>
+        <YonderCardBody y={y} traceHeight={200} />
 
         <div className="flex items-center px-3.5 pt-2.5 pb-3.5 gap-2">
-          <button type="button" onClick={onGrub} aria-pressed={grub.active} aria-label="Grub"
-            className={`inline-flex items-center gap-1.5 py-1.5 font-mono text-[13px] tabular-nums ${grub.active ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}>
-            <Sprout className="w-[17px] h-[17px]" strokeWidth={1.75} /> {grub.count}
-          </button>
+          <GrubButton count={grub.count} active={grub.active} onToggle={onGrub} />
           <div className="flex-1" />
           <button type="button" onClick={onSave} disabled={saved}
             className={`inline-flex items-center gap-1.5 text-[13px] py-1.5 px-1 ${saved ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}>

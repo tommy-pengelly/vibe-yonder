@@ -1,16 +1,25 @@
 "use client";
-import { Bookmark, Navigation, Ruler, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthModal from "@/components/AuthModal";
-import { Empty, Loading, MapCard, MissionCard, WaysCard, YonderCard } from "@/components/feed/Cards";
+import {
+  Empty,
+  Loading,
+  MapCard,
+  MissionBrowseCard,
+  MissionCard,
+  WaysCard,
+  YonderCard,
+} from "@/components/feed/Cards";
 import { useFeedActions } from "@/components/feed/useFeedActions";
 import { primeOrientation } from "@/hooks/useHeading";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import {
   BottomSheet,
   InfiniteScroll,
+  PageHeader,
   PageScaffold,
   SegmentedTabs,
   StickyBar,
@@ -23,7 +32,6 @@ import {
   saveMission,
   searchProfiles,
 } from "@/lib/data";
-import { fmtDist } from "@/lib/geo";
 import type { FeedItem, FeedMap, FeedYonder, Profile } from "@/lib/types";
 
 type Tab = "following" | "everyone" | "discover" | "missions";
@@ -39,12 +47,7 @@ export default function CommunityView() {
   return (
     <>
       <PageScaffold>
-        <div>
-          <span className="text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">
-            Community
-          </span>
-          <h1 className="font-display text-3xl tracking-tight leading-none">Roam</h1>
-        </div>
+        <PageHeader kicker="Community" title="Roam" />
 
         <StickyBar>
           <div className="flex items-center gap-2">
@@ -285,45 +288,13 @@ function MissionsBrowseTab() {
   return (
     <div className="flex flex-col gap-3.5">
       {missions.map((m) => (
-        <div
+        <MissionBrowseCard
           key={m.id}
-          className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden"
-        >
-          <Link href={`/missions/${m.id}`} className="block px-3.5 pt-3.5">
-            <div className="flex items-center gap-2">
-              <Ruler className="w-4 h-4 text-[var(--accent)] shrink-0" strokeWidth={1.75} />
-              <div className="font-display text-[17px] truncate leading-tight">
-                {m.name ?? "Straight-line mission"}
-              </div>
-            </div>
-            <div className="font-mono text-[11px] text-[var(--muted)] pt-2 tabular-nums">
-              {m.who} · {fmtDist(m.distanceM)} line · {m.attempts ?? 0}{" "}
-              {m.attempts === 1 ? "attempt" : "attempts"}
-            </div>
-          </Link>
-          <div className="flex items-center px-3.5 pt-2.5 pb-3.5 gap-2">
-            <button
-              type="button"
-              onClick={() => save(m)}
-              disabled={!!saved[m.id]}
-              className={`inline-flex items-center gap-1.5 text-[13px] py-1.5 px-1 ${
-                saved[m.id] ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
-              }`}
-            >
-              <Bookmark className="w-4 h-4" strokeWidth={1.75} />
-              {saved[m.id] ? "Saved" : "Save"}
-            </button>
-            <div className="flex-1" />
-            <button
-              type="button"
-              onClick={() => attempt(m)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--accent)]/60 text-[var(--accent)] text-xs font-semibold px-3 py-1.5 hover:bg-[var(--accent)] hover:text-black"
-            >
-              <Navigation className="w-3.5 h-3.5" strokeWidth={1.75} />
-              Attempt
-            </button>
-          </div>
-        </div>
+          m={m}
+          saved={!!saved[m.id]}
+          onSave={() => save(m)}
+          onAttempt={() => attempt(m)}
+        />
       ))}
     </div>
   );
