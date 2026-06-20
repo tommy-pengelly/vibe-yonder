@@ -1,4 +1,4 @@
-import { alongFraction, crossTrack } from "./geo";
+import { alongFraction, crossTrack, haversine } from "./geo";
 import type { LatLon, Medal, MedalBands } from "./types";
 
 export type { MedalBands } from "./types";
@@ -65,7 +65,14 @@ export const MEDAL_LABEL: Record<Medal, string> = {
   silver: "Silver",
   bronze: "Bronze",
   none: "Finisher",
+  dnf: "DNF",
 };
+
+// You must actually reach the end for any medal: completing ≥90% of the line's
+// length, OR getting within FINISH_FLOOR_M of B. Otherwise it's a DNF, so you
+// can't win platinum by holding a tight line for ten metres and stopping.
+const FINISH_FRACTION = 0.9;
+const FINISH_FLOOR_M = 30;
 
 export function medalFor(maxDeviation: number, bands: MedalBands = DEFAULT_BANDS): Medal {
   for (const b of bandList(bands)) if (maxDeviation <= b.half) return b.medal;
@@ -91,21 +98,29 @@ export function scoreStraightLine(
   bands: MedalBands = DEFAULT_BANDS,
 ): StraightLineScore {
   if (track.length === 0) {
-    return { maxDeviation: 0, avgDeviation: 0, inCorridorPct: 100, medal: "platinum" };
+    // No movement after arming the line: a DNF, never a free platinum.
+    return { maxDeviation: 0, avgDeviation: 0, inCorridorPct: 0, medal: "dnf" };
   }
   let max = 0;
   let sum = 0;
   let inside = 0;
+  let maxAlong = 0; // furthest along the line you got (0..1)
+  let minDistB = Infinity; // closest you came to the end B
   for (const p of track) {
     const d = Math.abs(crossTrack(p, a, b));
     if (d > max) max = d;
     sum += d;
     if (d <= bands.bronze) inside++;
+    const f = alongFraction(p, a, b);
+    if (f > maxAlong) maxAlong = f;
+    const db = haversine(p.lat, p.lon, b.lat, b.lon);
+    if (db < minDistB) minDistB = db;
   }
+  const finished = maxAlong >= FINISH_FRACTION || minDistB <= FINISH_FLOOR_M;
   return {
     maxDeviation: max,
     avgDeviation: sum / track.length,
     inCorridorPct: (inside / track.length) * 100,
-    medal: medalFor(max, bands),
+    medal: finished ? medalFor(max, bands) : "dnf",
   };
 }

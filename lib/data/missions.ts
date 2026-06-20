@@ -243,6 +243,9 @@ export async function recordAttempt(
   s: { maxDeviation: number; avgDeviation: number; inCorridorPct: number; medal: Medal },
   path?: LinePoint[],
 ): Promise<void> {
+  // A DNF (you didn't reach the end) never makes the board: you have to finish
+  // the line to be ranked, so a tight-but-abandoned attempt can't place.
+  if (s.medal === "dnf") return;
   const c = await ctx();
   if (!c) return;
   const { data: existing } = await c.sb

@@ -291,7 +291,9 @@ export function YonderCardBody({
       </div>
       <Stats>
         {y.medal
-          ? `${MEDAL_LABEL[y.medal]} · held the line`
+          ? y.medal === "dnf"
+            ? "DNF · didn't reach the end"
+            : `${MEDAL_LABEL[y.medal]} · held the line`
           : `${fmtDist(y.walked)} · ${y.mins} min · ${y.places} ${y.places === 1 ? "place" : "places"} seen`}
       </Stats>
     </>

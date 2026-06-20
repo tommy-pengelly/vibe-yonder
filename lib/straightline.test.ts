@@ -46,9 +46,23 @@ describe("scoreStraightLine", () => {
       { lat: 51.505, lon: -0.1 }, // on line
       { lat: 51.51, lon: -0.1006 }, // ~40 m off → silver-band worst
       { lat: 51.515, lon: -0.1 }, // back on line
+      { lat: 51.52, lon: -0.1 }, // reaches B (finishes the line)
     ];
     const s = scoreStraightLine(track, A, B);
     expect(s.medal).toBe("silver");
     expect(s.avgDeviation).toBeLessThan(s.maxDeviation);
+  });
+
+  it("a tight line that stops short of B is a DNF, never a medal", () => {
+    // Dead-straight but only ~20% of the way to B: you can't win by quitting.
+    const track = [];
+    for (let i = 0; i <= 4; i++) track.push({ lat: 51.5 + i * 0.001, lon: -0.1 });
+    const s = scoreStraightLine(track, A, B);
+    expect(s.maxDeviation).toBeLessThan(2); // held the line perfectly…
+    expect(s.medal).toBe("dnf"); // …but didn't finish it
+  });
+
+  it("an empty (armed-then-finished) track is a DNF, not a free platinum", () => {
+    expect(scoreStraightLine([], A, B).medal).toBe("dnf");
   });
 });

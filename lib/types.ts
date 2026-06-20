@@ -52,7 +52,9 @@ export type Target = {
 
 export type PlayMode = "ambient" | "straightline";
 
-export type Medal = "platinum" | "gold" | "silver" | "bronze" | "none";
+// "none" = finished the line but outside every band; "dnf" = didn't reach the
+// end (no medal at all, so you can't win by stopping early on a tight line).
+export type Medal = "platinum" | "gold" | "silver" | "bronze" | "none" | "dnf";
 
 /** Corridor half-widths (m) per medal, set by a mission's creator. */
 export type MedalBands = {

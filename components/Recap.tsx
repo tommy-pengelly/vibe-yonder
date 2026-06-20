@@ -327,7 +327,11 @@ export default function Recap({
         <div className="flex flex-col items-center gap-1">
           <p className="font-display text-3xl tracking-tight text-center leading-tight">
             <span className="text-[var(--accent)]">{MEDAL_LABEL[sl.medal]}</span>
-            {sl.medal === "none" ? ", you finished the line." : ", you held the line."}
+            {sl.medal === "dnf"
+              ? ", you didn't reach the end."
+              : sl.medal === "none"
+                ? ", you finished the line."
+                : ", you held the line."}
           </p>
           {saved.missionId && placement && (
             <p className="text-sm text-[var(--warm)]">
