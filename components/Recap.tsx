@@ -60,19 +60,62 @@ export default function Recap({
   );
   // Project the track AND the places-seen into one frame, so the recap reads as
   // a little constellation: your dotted course threading the place-stars.
-  const { points, destPts } = useMemo(() => {
+  const { points, destPts, corridor } = useMemo(() => {
     const destFix: Fix[] = saved.destinations.map((d) => ({
       lat: d.lat,
       lon: d.lon,
       acc: null,
       t: 0,
     }));
-    const all = projectTrack([...(saved.track as Fix[]), ...destFix], W, H);
-    return {
-      points: all.slice(0, saved.track.length),
-      destPts: all.slice(saved.track.length),
-    };
-  }, [saved.track, saved.destinations]);
+    // A mission/straight-line yonder: project A (origin) into the same frame so
+    // we can draw the line A→B and its medal-band corridor (B = first place).
+    const slOn =
+      saved.play === "straightline" && !!saved.origin && saved.destinations.length > 0;
+    const originFix: Fix[] =
+      slOn && saved.origin
+        ? [{ lat: saved.origin.lat, lon: saved.origin.lon, acc: null, t: 0 }]
+        : [];
+    const all = projectTrack([...(saved.track as Fix[]), ...destFix, ...originFix], W, H);
+    const points = all.slice(0, saved.track.length);
+    const destPts = all.slice(saved.track.length, saved.track.length + destFix.length);
+
+    let corridor: {
+      a: readonly [number, number];
+      b: readonly [number, number];
+      bands: { points: string; opacity: number }[];
+    } | null = null;
+    if (slOn) {
+      const a = all[all.length - 1]; // origin (A)
+      const b = destPts[0]; // far point (B)
+      const dx = b[0] - a[0];
+      const dy = b[1] - a[1];
+      const len = Math.hypot(dx, dy) || 1;
+      const px = -dy / len; // perpendicular unit
+      const py = dx / len;
+      const widths = saved.straightLine?.bands;
+      const bands: { points: string; opacity: number }[] = [];
+      if (widths && saved.direct > 0) {
+        const mPerPx = saved.direct / len;
+        // Widest (bronze) first/under, tightest (platinum) on top + brightest.
+        const tiers: [number, number][] = [
+          [widths.bronze, 0.05],
+          [widths.silver, 0.07],
+          [widths.gold, 0.1],
+          [widths.platinum, 0.14],
+        ];
+        for (const [m, opacity] of tiers) {
+          const off = m / mPerPx;
+          if (!off) continue;
+          bands.push({
+            points: `${a[0] + px * off},${a[1] + py * off} ${b[0] + px * off},${b[1] + py * off} ${b[0] - px * off},${b[1] - py * off} ${a[0] - px * off},${a[1] - py * off}`,
+            opacity,
+          });
+        }
+      }
+      corridor = { a, b, bands };
+    }
+    return { points, destPts, corridor };
+  }, [saved.track, saved.destinations, saved.play, saved.origin, saved.straightLine, saved.direct]);
 
   const pathD = useMemo(() => {
     if (points.length === 0) return "";
@@ -225,6 +268,25 @@ export default function Recap({
             className="w-full h-auto"
             aria-label="Walk path"
           >
+            {/* A mission's line + its medal-band corridor (the limits you held
+                to), drawn under your course so the wiggle reads against it. */}
+            {corridor && (
+              <>
+                {corridor.bands.map((band, i) => (
+                  <polygon key={`band${i}`} points={band.points} fill="var(--accent)" opacity={band.opacity} />
+                ))}
+                <line
+                  x1={corridor.a[0]}
+                  y1={corridor.a[1]}
+                  x2={corridor.b[0]}
+                  y2={corridor.b[1]}
+                  stroke="var(--accent)"
+                  strokeWidth={1.5}
+                  opacity={0.4}
+                  strokeDasharray="5 6"
+                />
+              </>
+            )}
             {/* The places you saw, as faint twinkles the course threads. */}
             {destPts.map(([x, y], i) => (
               <Twinkle key={`s${i}`} cx={x} cy={y} r={7} opacity={0.8} />

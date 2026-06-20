@@ -30,7 +30,7 @@ import type {
   Target,
   YonderMode,
 } from "@/lib/types";
-import { linePath, scoreStraightLine } from "@/lib/straightline";
+import { DEFAULT_BANDS, linePath, scoreStraightLine } from "@/lib/straightline";
 import {
   clearActiveSession,
   loadActiveSession,
@@ -423,6 +423,21 @@ export default function App() {
       lat: t.lat,
       lon: t.lon,
     }));
+    // A straight-line/mission's far point IS the place: keep it even if you held
+    // the line without getting within the "seen" radius, so the recap can show
+    // it in the table and draw the line to it.
+    const farPoint = yonder?.play === "straightline" ? yonder?.targets[0] : undefined;
+    if (
+      farPoint &&
+      !destinations.some((d) => d.lat === farPoint.lat && d.lon === farPoint.lon)
+    ) {
+      destinations.unshift({
+        name: farPoint.name,
+        label: farPoint.label,
+        lat: farPoint.lat,
+        lon: farPoint.lon,
+      });
+    }
     const autoName =
       yonder?.name ??
       (seen.length > 1
@@ -436,7 +451,7 @@ export default function App() {
     const slTarget = yonder?.targets[0];
     const armedAt = yonder?.lineArmedAt ?? 0;
     const scoredTrack = track.filter((p) => p.t >= armedAt);
-    const straightLine =
+    const slScore =
       yonder?.play === "straightline" && yonder?.lineArmed && slOrigin && slTarget
         ? scoreStraightLine(
             scoredTrack,
@@ -445,6 +460,10 @@ export default function App() {
             yonder.bands,
           )
         : undefined;
+    // Keep the corridor widths with the result so the recap can draw the limits.
+    const straightLine = slScore
+      ? { ...slScore, bands: yonder?.bands ?? DEFAULT_BANDS }
+      : undefined;
 
     const y: SavedYonder = {
       id: crypto.randomUUID(),

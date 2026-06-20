@@ -166,6 +166,9 @@ export type SavedYonder = {
     avgDeviation: number;
     inCorridorPct: number;
     medal: Medal;
+    /** The medal corridor half-widths, kept so the recap can draw the line's
+     * limits (the band corridor) at the right scale. */
+    bands?: MedalBands;
   };
   missionId?: string;
 };
