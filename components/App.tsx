@@ -13,11 +13,13 @@ import { haversine } from "@/lib/geo";
 import { useSettings } from "@/lib/settings";
 import { summarize } from "@/lib/stats";
 import {
+  deleteYonder,
   getMap,
   pushYonder,
   recordAttempt,
   saveMap,
   saveYonderPlaces,
+  unpublishYonder,
   updateYonder,
 } from "@/lib/data";
 import type {
@@ -633,6 +635,11 @@ export default function App() {
           onSaveForLater={saveForLater}
           onSaveCaption={editCaption}
           onSavePlaces={editPlaces}
+          onDiscard={() => {
+            void deleteYonder(savedYonder.id);
+            void unpublishYonder(savedYonder.id);
+            leaveWalk();
+          }}
           signedInHint={
             signedInHint ? (
               <button

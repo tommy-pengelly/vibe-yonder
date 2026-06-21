@@ -6,7 +6,13 @@ import { useEffect, useState } from "react";
 import Recap from "@/components/Recap";
 import { useGoBack } from "@/components/ui";
 import { useAuthUser } from "@/lib/auth";
-import { getYonder, saveYonderPlaces, updateYonder } from "@/lib/data";
+import {
+  deleteYonder,
+  getYonder,
+  saveYonderPlaces,
+  unpublishYonder,
+  updateYonder,
+} from "@/lib/data";
 import type { Destination, SavedYonder, Target } from "@/lib/types";
 
 export default function RecapViewer({ id }: { id: string }) {
@@ -92,6 +98,12 @@ export default function RecapViewer({ id }: { id: string }) {
     void saveYonderPlaces(yonder.name, yonder.destinations);
   };
 
+  const discard = () => {
+    void deleteYonder(yonder.id);
+    void unpublishYonder(yonder.id);
+    goBack();
+  };
+
   return (
     <div className="relative">
       <button
@@ -110,6 +122,7 @@ export default function RecapViewer({ id }: { id: string }) {
         onSaveForLater={saveForLater}
         onSaveCaption={editCaption}
         onSavePlaces={editPlaces}
+        onDiscard={discard}
       />
     </div>
   );

@@ -1,18 +1,22 @@
 "use client";
-import { Check, Globe, Lock, Share2, Users } from "lucide-react";
+import { Check, Eye, Globe, Lock, Share2, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuthUser } from "@/lib/auth";
-import { publishYonder, shareStatus, unpublishYonder } from "@/lib/data";
+import { publishYonder, shareStatus } from "@/lib/data";
 import { useSettings } from "@/lib/settings";
 import type { SavedYonder } from "@/lib/types";
 import AuthModal from "./AuthModal";
 import BottomSheet from "./ui/BottomSheet";
 
-type Vis = "public" | "followers" | null;
+// null = not shared yet (no post). "private" = unlisted: a post exists so a link
+// opens, but it lists in no feed.
+type Vis = "public" | "followers" | "private" | null;
 
-/** Self-contained share control for a recap. Publishing writes an obfuscated
- * copy (the precise track never leaves the owner); the home zone is removed and
- * the start/finish trimmed. Gates on sign-in. */
+/** The recap's outward controls: a Share button (send a friend the link to the
+ * obfuscated yonder) and a Visibility control (public / followers / private).
+ * Publishing writes an obfuscated copy (the precise track never leaves the
+ * owner); the home zone is removed and the start/finish trimmed. Gates on
+ * sign-in. */
 export default function ShareControl({ saved }: { saved: SavedYonder }) {
   const { user } = useAuthUser();
   const { settings } = useSettings();
@@ -21,6 +25,7 @@ export default function ShareControl({ saved }: { saved: SavedYonder }) {
   const [authOpen, setAuthOpen] = useState(false);
   const [caption, setCaption] = useState(saved.caption ?? "");
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     let c = false;
@@ -36,10 +41,47 @@ export default function ShareControl({ saved }: { saved: SavedYonder }) {
     };
   }, [user, saved.id]);
 
-  const label =
-    status === "public" ? "Shared · Public" : status === "followers" ? "Shared · Followers" : "Share";
+  const visLabel =
+    status === "public" ? "Public" : status === "followers" ? "Followers" : "Private";
 
-  const onOpen = () => {
+  // Share the link with a friend. The link is independent of your feed setting:
+  // anyone with it can open the (obfuscated) yonder. If you haven't shared yet,
+  // a link needs a post, so we create an UNLISTED one (visibility private, in no
+  // feed) without touching whatever visibility you'd chosen, then hand off to
+  // the native share sheet.
+  const onShare = async () => {
+    if (!user) {
+      setAuthOpen(true);
+      return;
+    }
+    setBusy(true);
+    let s = await shareStatus(saved.id);
+    if (!s) {
+      await publishYonder(saved, {
+        visibility: "private",
+        caption,
+        zone: settings.privacyZone,
+      });
+      s = await shareStatus(saved.id);
+      setStatus("private");
+    }
+    setBusy(false);
+    if (!s?.postId || typeof window === "undefined") return;
+    const url = `${window.location.origin}/yonder/${s.postId}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: saved.name, text: `A yonder: ${saved.name}`, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1800);
+      }
+    } catch {
+      // user dismissed the share sheet; nothing to do
+    }
+  };
+
+  const openVisibility = () => {
     if (!user) {
       setAuthOpen(true);
       return;
@@ -47,31 +89,47 @@ export default function ShareControl({ saved }: { saved: SavedYonder }) {
     setOpen(true);
   };
 
-  const choose = async (vis: Vis) => {
+  // Set the FEED visibility. "private" = unlisted: keep the post (so a shared
+  // link still opens) but drop it from every feed; if there's no post yet,
+  // there's nothing to list, so it stays unshared.
+  const choose = async (vis: "public" | "followers" | "private") => {
     setBusy(true);
-    if (vis === null) await unpublishYonder(saved.id);
-    else await publishYonder(saved, { visibility: vis, caption, zone: settings.privacyZone });
-    setStatus(vis);
+    if (vis === "private") {
+      if (status !== null) {
+        await publishYonder(saved, { visibility: "private", caption, zone: settings.privacyZone });
+        setStatus("private");
+      }
+    } else {
+      await publishYonder(saved, { visibility: vis, caption, zone: settings.privacyZone });
+      setStatus(vis);
+    }
     setBusy(false);
     setOpen(false);
   };
 
   return (
     <>
-      <button
-        type="button"
-        onClick={onOpen}
-        className="rounded-full border border-[var(--border)] text-[var(--foreground)] py-2.5 flex items-center justify-center gap-2 hover:border-[var(--accent)] hover:text-[var(--accent)]"
-      >
-        <Share2 className="w-4 h-4" strokeWidth={1.75} />
-        {label}
-      </button>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => void onShare()}
+          disabled={busy}
+          className="flex-1 rounded-full border border-[var(--border)] text-[var(--foreground)] py-2.5 flex items-center justify-center gap-2 hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-50"
+        >
+          <Share2 className="w-4 h-4" strokeWidth={1.75} />
+          {copied ? "Link copied" : "Share"}
+        </button>
+        <button
+          type="button"
+          onClick={openVisibility}
+          className="flex-1 rounded-full border border-[var(--border)] text-[var(--foreground)] py-2.5 flex items-center justify-center gap-2 hover:border-[var(--accent)] hover:text-[var(--accent)]"
+        >
+          <Eye className="w-4 h-4" strokeWidth={1.75} />
+          {visLabel}
+        </button>
+      </div>
 
-      <BottomSheet
-        open={open}
-        onClose={() => setOpen(false)}
-        title="Share this yonder"
-      >
+      <BottomSheet open={open} onClose={() => setOpen(false)} title="Who can see this yonder">
         <p className="text-xs text-[var(--muted)] -mt-1 leading-relaxed">
           You share the places + an obfuscated trace memento, never your route.
           Your start and finish near home stay hidden.
@@ -84,9 +142,9 @@ export default function ShareControl({ saved }: { saved: SavedYonder }) {
           className="w-full resize-none rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)] placeholder:text-[var(--muted)]/60"
         />
         <div className="flex flex-col gap-2">
-          <Choice icon={Globe} label="Public" sub="Anyone can discover it" active={status === "public"} onClick={() => choose("public")} busy={busy} />
-          <Choice icon={Users} label="Followers" sub="Only people who follow you" active={status === "followers"} onClick={() => choose("followers")} busy={busy} />
-          <Choice icon={Lock} label="Private" sub="Just you, unshare" active={status === null} onClick={() => choose(null)} busy={busy} />
+          <Choice icon={Globe} label="Public" sub="Anyone can discover it in the feed" active={status === "public"} onClick={() => choose("public")} busy={busy} />
+          <Choice icon={Users} label="Followers" sub="In the feed for people who follow you" active={status === "followers"} onClick={() => choose("followers")} busy={busy} />
+          <Choice icon={Lock} label="Private" sub="In no feed, but a shared link still opens" active={status === "private" || status === null} onClick={() => choose("private")} busy={busy} />
         </div>
       </BottomSheet>
 

@@ -1,5 +1,5 @@
 "use client";
-import { Bookmark, Pencil, Plus, RotateCcw, X } from "lucide-react";
+import { Bookmark, Pencil, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -36,6 +36,8 @@ type Props = {
   onSaveCaption?: (text: string) => void;
   /** Persist the edited places-seen list. */
   onSavePlaces?: (places: Destination[]) => void;
+  /** Throw this yonder away (delete + leave). Two-tap to confirm. */
+  onDiscard?: () => void;
   /** Optional secondary line under Save, e.g. "Sign in to keep across devices." */
   signedInHint?: React.ReactNode;
 };
@@ -52,6 +54,7 @@ export default function Recap({
   onSaveForLater,
   onSaveCaption,
   onSavePlaces,
+  onDiscard,
   signedInHint,
 }: Props) {
   const summary = useMemo(
@@ -134,6 +137,7 @@ export default function Recap({
   const inputRef = useRef<HTMLInputElement>(null);
   const [caption, setCaption] = useState(saved.caption ?? "");
   const [addOpen, setAddOpen] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   useEffect(() => {
     setDraft(saved.name);
@@ -508,6 +512,19 @@ export default function Recap({
             className="rounded-full bg-[var(--accent)] text-black font-semibold py-3 active:opacity-80"
           >
             Done
+          </button>
+        )}
+        {onDiscard && (
+          <button
+            type="button"
+            onClick={() => (confirmDiscard ? onDiscard() : setConfirmDiscard(true))}
+            onBlur={() => setConfirmDiscard(false)}
+            className={`self-center inline-flex items-center gap-1.5 text-xs pt-1 ${
+              confirmDiscard ? "text-red-400" : "text-[var(--muted)] hover:text-red-400"
+            }`}
+          >
+            <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />
+            {confirmDiscard ? "Tap again to discard" : "Discard this yonder"}
           </button>
         )}
       </div>

@@ -25,7 +25,9 @@ const TABLE_MISSING = "posts table not found, apply migration 0013";
  * public-safe memento, never the precise track. */
 export async function createYonderPost(
   y: SavedYonder,
-  opts: { visibility: Exclude<Visibility, "private">; caption?: string; zone?: PrivacyZone },
+  // visibility "private" = unlisted: a post still exists (so a shared link
+  // opens), it just never appears in any feed.
+  opts: { visibility: Visibility; caption?: string; zone?: PrivacyZone },
 ): Promise<void> {
   const c = await ctx();
   if (!c) return;

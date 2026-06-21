@@ -224,10 +224,14 @@ export async function loadFeed(
     // Include yourself: your own shared yonders show in Following too (labelled
     // "You"), so the feed is never empty and you see your wanders in context.
     const ids = Array.from(new Set([...followed, c.uid]));
+    // Posts are readable by id (the unlisted-link model), so the feed itself
+    // must filter visibility: a private/unlisted post never lists in any feed,
+    // even your own; followers + public from people you follow do.
     let qy = c.sb
       .from("posts")
       .select(FEED_COLS)
       .in("user_id", ids)
+      .neq("visibility", "private")
       .order("created_at", { ascending: false })
       .limit(FEED_PAGE);
     if (cursor) qy = qy.lt("created_at", cursor);

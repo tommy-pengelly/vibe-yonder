@@ -4,7 +4,9 @@ import type { SavedYonder, Visibility } from "../types";
 import { ctx } from "./ctx";
 import { createYonderPost, deleteYonderPost } from "./posts";
 
-export type ShareVisibility = Exclude<Visibility, "private">;
+// Any visibility, including "private" = unlisted (a post exists so a shared
+// link opens, but it never lists in a feed).
+export type ShareVisibility = Visibility;
 
 /**
  * Publish an OBFUSCATED copy of a finished yonder as a `posts` row, the ONE
@@ -24,18 +26,24 @@ export async function unpublishYonder(yonderId: string): Promise<void> {
   await deleteYonderPost(yonderId);
 }
 
-/** Current share status of one of your own yonders (for the recap control). */
+/** Current share status of one of your own yonders (for the recap control).
+ * Returns the post id too, so the recap can build a shareable /yonder/[id] link. */
 export async function shareStatus(
   yonderId: string,
-): Promise<{ visibility: ShareVisibility } | null> {
+): Promise<{ visibility: ShareVisibility; postId: string } | null> {
   const c = await ctx();
   if (!c) return null;
   const { data } = await c.sb
     .from("posts")
-    .select("visibility")
+    .select("id,visibility")
     .eq("user_id", c.uid)
     .eq("kind", "yonder")
     .eq("ref_id", yonderId)
     .maybeSingle();
-  return data ? { visibility: (data as { visibility: ShareVisibility }).visibility } : null;
+  return data
+    ? {
+        visibility: (data as { visibility: ShareVisibility }).visibility,
+        postId: (data as { id: string }).id,
+      }
+    : null;
 }
